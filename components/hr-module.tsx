@@ -138,7 +138,9 @@ export function HRModule() {
       .map((d) => {
         const daySchedule = (schedule as any)[d.key]
         if (!daySchedule) return null
-        return `${d.label.slice(0, 3)}: ${daySchedule.start}-${daySchedule.end}`
+        const intervals = Array.isArray(daySchedule) ? daySchedule : [daySchedule]
+        const times = intervals.map(i => `${i.start}-${i.end}`).join(", ")
+        return `${d.label.slice(0, 3)}: ${times}`
       })
       .filter(Boolean)
       .join(" | ")
@@ -309,39 +311,51 @@ export function HRModule() {
           <div className="space-y-4 pt-4">
             {DAYS_OF_WEEK.map((day) => {
               const schedule = editingSchedule?.[day.key]
-              const isWorking = !!schedule
+              const intervals = Array.isArray(schedule) ? schedule : (schedule ? [schedule] : [])
+              const isWorking = intervals.length > 0
               
               return (
-                <div key={day.key} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <Switch 
-                      checked={isWorking}
-                      onCheckedChange={(checked) => {
-                        if(checked) {
-                          setEditingSchedule({
-                            ...editingSchedule,
-                            [day.key]: { start: "09:00", end: "18:00" }
-                          })
-                        } else {
-                          const newSched = {...editingSchedule}
-                          delete newSched[day.key]
-                          setEditingSchedule(newSched)
-                        }
-                      }}
-                    />
-                    <span className={`font-medium ${isWorking ? 'text-foreground' : 'text-muted-foreground'}`}>
-                      {day.label}
-                    </span>
+                <div key={day.key} className="flex flex-col p-3 bg-secondary/30 rounded-lg border border-border/50 gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Switch 
+                        checked={isWorking}
+                        onCheckedChange={(checked) => {
+                          if(checked) {
+                            setEditingSchedule({
+                              ...editingSchedule,
+                              [day.key]: [{ start: "09:00", end: "18:00" }]
+                            })
+                          } else {
+                            const newSched = {...editingSchedule}
+                            delete newSched[day.key]
+                            setEditingSchedule(newSched)
+                          }
+                        }}
+                      />
+                      <span className={`font-medium ${isWorking ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {day.label}
+                      </span>
+                    </div>
+                    {isWorking && (
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        const newIntervals = [...intervals, { start: "15:00", end: "19:00" }]
+                        setEditingSchedule({...editingSchedule, [day.key]: newIntervals})
+                      }} className="h-6 w-6 p-0 text-[#D1B98D]">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                   
-                  {isWorking && (
-                    <div className="flex items-center gap-2">
+                  {isWorking && intervals.map((interval: any, index: number) => (
+                    <div key={index} className="flex items-center justify-end gap-2 pr-2">
                       <Select 
-                        value={schedule.start}
-                        onValueChange={(val) => setEditingSchedule({
-                          ...editingSchedule,
-                          [day.key]: { ...schedule, start: val }
-                        })}
+                        value={interval.start}
+                        onValueChange={(val) => {
+                          const newIntervals = [...intervals]
+                          newIntervals[index].start = val
+                          setEditingSchedule({...editingSchedule, [day.key]: newIntervals})
+                        }}
                       >
                        <SelectTrigger className="w-[85px] h-8 text-[11px] bg-input border-border"><SelectValue/></SelectTrigger>
                        <SelectContent className="bg-card border-border">
@@ -350,19 +364,32 @@ export function HRModule() {
                       </Select>
                       <span className="text-muted-foreground text-xs">a</span>
                       <Select 
-                        value={schedule.end}
-                        onValueChange={(val) => setEditingSchedule({
-                          ...editingSchedule,
-                          [day.key]: { ...schedule, end: val }
-                        })}
+                        value={interval.end}
+                        onValueChange={(val) => {
+                          const newIntervals = [...intervals]
+                          newIntervals[index].end = val
+                          setEditingSchedule({...editingSchedule, [day.key]: newIntervals})
+                        }}
                       >
                        <SelectTrigger className="w-[85px] h-8 text-[11px] bg-input border-border"><SelectValue/></SelectTrigger>
                        <SelectContent className="bg-card border-border">
                          {TIME_OPTIONS.map(t => <SelectItem key={`end-${t}`} value={t}>{t}</SelectItem>)}
                        </SelectContent>
                       </Select>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500 hover:text-red-400" onClick={() => {
+                        const newIntervals = intervals.filter((_: any, i: number) => i !== index)
+                        if (newIntervals.length === 0) {
+                          const newSched = {...editingSchedule}
+                          delete newSched[day.key]
+                          setEditingSchedule(newSched)
+                        } else {
+                          setEditingSchedule({...editingSchedule, [day.key]: newIntervals})
+                        }
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
-                  )}
+                  ))}
                 </div>
               )
             })}

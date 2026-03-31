@@ -16,8 +16,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#829177] flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 shadow-2xl">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full bg-[#829177] rounded-3xl p-8 border border-[#5a6852] shadow-2xl">
         <div className="flex flex-col items-center text-center mb-8">
           <Image 
             src="/images/c427logodorado.png" 
@@ -27,7 +27,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             priority 
             className="mb-2 object-contain filter drop-shadow-md"
           />
-          <p className="text-white/70 text-sm mt-3">Sistema de Gestión Clínica</p>
+          <p className="text-white/90 text-sm mt-3 font-medium">Sistema de Gestión Clínica</p>
         </div>
 
         <div className="space-y-6">

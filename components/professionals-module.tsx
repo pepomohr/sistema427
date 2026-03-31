@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { 
   Clock, 
@@ -17,7 +19,9 @@ import {
   ArrowRightCircle,
   CalendarDays,
   X,
-  Plus
+  Plus,
+  Trash2,
+  Edit2
 } from "lucide-react"
 
 export function ProfessionalsModule({ view = "atencion", professionalId }: { view?: "atencion" | "agenda" | "comisiones", professionalId?: string }) {
@@ -31,7 +35,9 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     startAttention,
     finishAttention,
     fetchServices,
-    fetchProducts
+    fetchProducts,
+    addAppointment,
+    cancelAppointment
   } = useClinicStore()
 
   const activeTab = view
@@ -42,6 +48,15 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const [aptProducts, setAptProducts] = useState<Record<string, any[]>>({})
   const [activeSvcCat, setActiveSvcCat] = useState<Record<string, string>>({})
   const [activeProdCat, setActiveProdCat] = useState<Record<string, string>>({})
+
+  // Scheduling local state
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false)
+  const [schedulingDate, setSchedulingDate] = useState(new Date().toISOString().split("T")[0])
+  const [schedulingServiceCat, setSchedulingServiceCat] = useState<string>("")
+  const [schedulingService, setSchedulingService] = useState("")
+  const [schedulingTime, setSchedulingTime] = useState("")
+  const [schedulingPatientId, setSchedulingPatientId] = useState("")
+  const [schedulingPaidAmount, setSchedulingPaidAmount] = useState<number | "">("")
 
   useEffect(() => {
     if (typeof fetchServices === 'function') fetchServices()
@@ -140,6 +155,70 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   }
 
   const getPatientName = (patientId: string) => patients.find(p => p.id === patientId)?.name || 'Paciente Desconocido'
+
+  const availableSlots = useMemo(() => {
+    if (!currentProfessional || !schedulingDate) return []
+    
+    const defaultSchedule = { start: "09:00", end: "20:00" }
+    const date = new Date(schedulingDate)
+    const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
+    
+    const daySchedules = (currentProfessional.schedule as any)?.[dayName]
+    const intervals = Array.isArray(daySchedules) ? daySchedules : (daySchedules ? [daySchedules] : [defaultSchedule])
+    
+    const allSlots: string[] = []
+    
+    intervals.forEach((interval: any) => {
+      if(!interval || !interval.start || !interval.end) return;
+      const startHour = parseInt(interval.start.split(":")[0])
+      const endHour = parseInt(interval.end.split(":")[0])
+      
+      for (let h = startHour; h < endHour; h++) {
+        allSlots.push(`${h.toString().padStart(2, "0")}:00`)
+        allSlots.push(`${h.toString().padStart(2, "0")}:30`)
+      }
+    })
+    
+    const bookedSlots = appointments
+      .filter(
+        (a) =>
+          a.professionalId === currentProfessional.id &&
+          new Date(a.date).toDateString() === date.toDateString() &&
+          a.status !== "cancelado"
+      )
+      .map((a) => a.time)
+    
+    return allSlots.filter((slot) => !bookedSlots.includes(slot)).sort()
+  }, [currentProfessional, schedulingDate, appointments])
+
+  const handleScheduleAppointment = () => {
+    if (!schedulingPatientId || !currentProfessional || !schedulingService || !schedulingTime) return
+    const service = services.find((s) => s.id === schedulingService)
+    if (!service) return
+    
+    // Correct timezone adjusting for the date
+    const finalDate = new Date(schedulingDate)
+    // Add timezone offset to avoid previous day error
+    finalDate.setMinutes(finalDate.getMinutes() + finalDate.getTimezoneOffset())
+    
+    addAppointment({
+      patientId: schedulingPatientId,
+      professionalId: currentProfessional.id,
+      date: finalDate,
+      time: schedulingTime,
+      services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
+      products: [],
+      status: Number(schedulingPaidAmount) > 0 ? "confirmado" : "programado",
+      totalAmount: service.price,
+      paidAmount: Number(schedulingPaidAmount) || 0,
+    })
+    
+    setSchedulingService("")
+    setSchedulingTime("")
+    setSchedulingPaidAmount("")
+    setSchedulingPatientId("")
+    setShowScheduleDialog(false)
+  }
 
   return (
     <div className="space-y-6">
@@ -339,10 +418,77 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-[#D1B98D]" /> 
-              Turnos para {selectedDate?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-[#D1B98D]" /> 
+                Turnos para {selectedDate?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
+              </h3>
+              
+              <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+                <DialogTrigger asChild>
+                  <Button className="bg-[#D1B98D] hover:bg-[#b59e74] text-[#2d3529] font-bold">
+                    <Plus className="h-4 w-4 mr-2" /> Agendar Turno
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border text-foreground sm:max-w-[450px]">
+                  <DialogHeader>
+                    <DialogTitle className="text-[#D1B98D]">Agendar Turno Personal</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label>Paciente</Label>
+                      <Select value={schedulingPatientId} onValueChange={setSchedulingPatientId}>
+                        <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Seleccionar Paciente..." /></SelectTrigger>
+                        <SelectContent className="bg-card border-border max-h-[200px]">
+                          {patients.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Fecha</Label>
+                        <Input type="date" value={schedulingDate} onChange={(e) => setSchedulingDate(e.target.value)} className="bg-input border-border" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Horario</Label>
+                        <Select value={schedulingTime} onValueChange={setSchedulingTime}>
+                          <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Hora..." /></SelectTrigger>
+                          <SelectContent className="bg-card border-border max-h-[150px]">
+                            {availableSlots.length > 0 ? availableSlots.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>) : <SelectItem value="none" disabled>Sin Turnos Disponibles</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Servicio</Label>
+                      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                        {Object.keys(servicesByCategory).map(cat => (
+                          <Badge 
+                            key={cat} 
+                            variant={schedulingServiceCat === cat ? "default" : "outline"}
+                            className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${schedulingServiceCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-white/50 border-white/10 hover:bg-white/5'}`}
+                            onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
+                          >
+                            {cat}
+                          </Badge>
+                        ))}
+                      </div>
+                      {schedulingServiceCat && (
+                        <Select value={schedulingService} onValueChange={setSchedulingService}>
+                          <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Servicio..." /></SelectTrigger>
+                          <SelectContent className="bg-card border-border max-h-[150px]">
+                            {servicesByCategory[schedulingServiceCat]?.map(s => <SelectItem key={s.id} value={s.id}>{s.name} - ${s.price}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <Button onClick={handleScheduleAppointment} disabled={!schedulingPatientId || !schedulingService || !schedulingTime || !schedulingDate} className="w-full bg-[#D1B98D] text-[#2d3529] font-bold">
+                      Confirmar Turno
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
             {agendaAppointments.length === 0 ? (
                <Card className="bg-transparent border-dashed border-white/10">
@@ -379,9 +525,21 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                     }
 
                     return (
-                      <Badge variant={apt.status === 'programado' || apt.status === 'confirmado' ? 'default' : 'outline'} className={`text-[9px] uppercase tracking-wider ${badgeColor}`}>
-                        {badgeLabel}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={apt.status === 'programado' || apt.status === 'confirmado' ? 'default' : 'outline'} className={`text-[9px] uppercase tracking-wider ${badgeColor}`}>
+                          {badgeLabel}
+                        </Badge>
+                        {currentUser?.role === 'admin' && (apt.status === 'programado' || apt.status === 'confirmado') && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10" 
+                            onClick={() => { if(window.confirm('¿Seguro que querés cancelar este turno?')) cancelAppointment(apt.id); }}
+                          >
+                            <Trash2 className="h-4 w-4"/>
+                          </Button>
+                        )}
+                      </div>
                     )
                   })()}
                 </div>

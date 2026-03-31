@@ -214,6 +214,14 @@ interface ClinicStore {
   updatePatient: (id: string, updates: Partial<Patient>) => Promise<void>
   addAppointment: (appointment: Omit<Appointment, 'id'>) => void
   getProfessionalsForService: (serviceId: string) => Professional[]
+
+  // Supabase Products & Services Admin
+  addService: (service: Omit<Service, 'id'>) => Promise<void>
+  updateService: (id: string, updates: Partial<Service>) => Promise<void>
+  deleteService: (id: string) => Promise<void>
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>
+  deleteProduct: (id: string) => Promise<void>
 }
 
  
@@ -495,6 +503,102 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     } catch (err) {
       console.error('Error fetching products:', err);
     }
+  },
+
+  addService: async (service) => {
+    try {
+      const { data, error } = await supabase.from('services').insert([{
+        name: service.name,
+        price: service.price,
+        price_cash: service.priceCash,
+        duration: service.duration,
+        category: service.category
+      }]).select().single()
+      
+      if (!error && data) {
+        set(state => ({ services: [...state.services, {
+          id: data.id,
+          name: data.name,
+          price: data.price,
+          priceCash: data.price_cash || data.price,
+          duration: data.duration || 60,
+          category: data.category
+        }]}))
+      }
+    } catch (err) { console.error(err) }
+  },
+
+  updateService: async (id, updates) => {
+    try {
+      const updatePayload: any = {}
+      if (updates.name !== undefined) updatePayload.name = updates.name
+      if (updates.price !== undefined) updatePayload.price = updates.price
+      if (updates.priceCash !== undefined) updatePayload.price_cash = updates.priceCash
+      if (updates.duration !== undefined) updatePayload.duration = updates.duration
+      if (updates.category !== undefined) updatePayload.category = updates.category
+
+      const { error } = await supabase.from('services').update(updatePayload).eq('id', id)
+      if (!error) {
+        set(state => ({ services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) }))
+      }
+    } catch (err) { console.error(err) }
+  },
+
+  deleteService: async (id) => {
+    try {
+      const { error } = await supabase.from('services').delete().eq('id', id)
+      if (!error) {
+        set(state => ({ services: state.services.filter(s => s.id !== id) }))
+      }
+    } catch (err) { console.error(err) }
+  },
+
+  addProduct: async (product) => {
+    try {
+      const { data, error } = await supabase.from('products').insert([{
+        name: product.name,
+        price_cash: product.priceCash,
+        price_list: product.priceList,
+        stock: product.stock,
+        category: product.category
+      }]).select().single()
+      
+      if (!error && data) {
+        set(state => ({ products: [...state.products, {
+          id: data.id,
+          name: data.name,
+          priceCash: data.price_cash || 0,
+          priceList: data.price_list || 0,
+          stock: data.stock || 0,
+          category: data.category
+        }]}))
+      }
+    } catch (err) { console.error(err) }
+  },
+
+  updateProduct: async (id, updates) => {
+    try {
+      const updatePayload: any = {}
+      if (updates.name !== undefined) updatePayload.name = updates.name
+      if (updates.priceCash !== undefined) updatePayload.price_cash = updates.priceCash
+      if (updates.priceList !== undefined) updatePayload.price_list = updates.priceList
+      if (updates.stock !== undefined) updatePayload.stock = updates.stock
+      if (updates.category !== undefined) updatePayload.category = updates.category
+
+      const { error } = await supabase.from('products').update(updatePayload).eq('id', id)
+      if (!error) {
+        set(state => ({ products: state.products.map(p => p.id === id ? { ...p, ...updates } : p) }))
+      }
+    } catch (err) { console.error(err) }
+  },
+
+  deleteProduct: async (id) => {
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', id)
+      if (!error) {
+        set(state => ({ products: state.products.filter(p => p.id !== id) }))
+      }
+    } catch (err) { console.error(err) }
   },
 
   getProfessionalAppointments: (id, date) => {

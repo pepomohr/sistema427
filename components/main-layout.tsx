@@ -15,20 +15,22 @@ import {
   Menu,
   X,
   Wallet,
-  Award
+  Award,
+  Settings
 } from "lucide-react"
 import { ReceptionModule } from "@/components/reception-module"
 import { ProfessionalsModule } from "@/components/professionals-module"
 import { ChargeModule } from "@/components/charge-module"
 import { ReportsModule } from "@/components/reports-module"
 import { HRModule } from "@/components/hr-module"
+import { SystemConfigModule } from "@/components/system-config-module"
 
 interface MainLayoutProps {
   user: User
   onLogout: () => void
 }
 
-type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "agenda" | "atencion" | "comisiones" | "cobrar" | "reportes" | "rrhh"
+type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "agenda" | "atencion" | "comisiones" | "cobrar" | "reportes" | "rrhh" | "config"
 
 interface Tab {
   id: TabId
@@ -47,6 +49,7 @@ const allTabs: Tab[] = [
   { id: "cobrar", label: "Cobrar", icon: CreditCard, roles: ["recepción", "admin"] },
   { id: "rrhh", label: "RRHH", icon: UserCog, roles: ["admin"] },
   { id: "reportes", label: "Reportes", icon: BarChart3, roles: ["admin"] },
+  { id: "config", label: "Configuración", icon: Settings, roles: ["admin"] }
 ]
 
 export function MainLayout({ user, onLogout }: MainLayoutProps) {
@@ -74,6 +77,8 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
         return <ReportsModule />
       case "rrhh":
         return <HRModule />
+      case "config":
+        return <SystemConfigModule />
       default:
         return <ReceptionModule activeView="pacientes" />
     }

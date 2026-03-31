@@ -258,19 +258,23 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     const defaultSchedule = { start: "09:00", end: "20:00" }
     
     const date = new Date(schedulingDate)
-    // NextJS locale issues can cause "long" to return different things. "en-US" explicitly returns monday, tuesday...
     const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
     
-    const daySchedule = (professional.schedule as any)?.[dayName] || defaultSchedule
+    const daySchedules = (professional.schedule as any)?.[dayName]
+    const intervals = Array.isArray(daySchedules) ? daySchedules : (daySchedules ? [daySchedules] : [defaultSchedule])
     
     const allSlots: string[] = []
-    const startHour = parseInt(daySchedule.start.split(":")[0])
-    const endHour = parseInt(daySchedule.end.split(":")[0])
     
-    for (let h = startHour; h < endHour; h++) {
-      allSlots.push(`${h.toString().padStart(2, "0")}:00`)
-      allSlots.push(`${h.toString().padStart(2, "0")}:30`)
-    }
+    intervals.forEach((interval: any) => {
+      if(!interval || !interval.start || !interval.end) return;
+      const startHour = parseInt(interval.start.split(":")[0])
+      const endHour = parseInt(interval.end.split(":")[0])
+      
+      for (let h = startHour; h < endHour; h++) {
+        allSlots.push(`${h.toString().padStart(2, "0")}:00`)
+        allSlots.push(`${h.toString().padStart(2, "0")}:30`)
+      }
+    })
     
     const bookedSlots = (appointments || [])
       .filter(
@@ -281,7 +285,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       )
       .map((a) => a.time)
     
-    return allSlots.filter((slot) => !bookedSlots.includes(slot))
+    return allSlots.filter((slot) => !bookedSlots.includes(slot)).sort()
   }, [schedulingProfessional, schedulingDate, professionals, appointments])
 
   const handleScheduleAppointment = () => {
