@@ -238,7 +238,7 @@ export function ReportsModule() {
         <h2 className="text-2xl font-bold text-[#D1B98D]">Reportes</h2>
         
         {/* Neto/Bruto Switch */}
-        <div className="flex items-center gap-4 p-3 bg-card rounded-lg border border-border">
+        <div className="flex items-center gap-4 p-3 bg-card rounded-lg border border-gray-200">
           <div className="flex items-center gap-2">
             <span className={`text-sm font-medium ${!showNeto ? "text-[#D1B98D]" : "text-muted-foreground"}`}>
               Bruto
@@ -263,7 +263,7 @@ export function ReportsModule() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-card border-border">
+        <Card className="bg-card border-gray-200">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -286,7 +286,7 @@ export function ReportsModule() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className="bg-card border-gray-200">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -309,7 +309,7 @@ export function ReportsModule() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className="bg-card border-gray-200">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -326,7 +326,7 @@ export function ReportsModule() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border">
+        <Card className="bg-card border-gray-200">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -359,19 +359,19 @@ export function ReportsModule() {
               <h3 className="font-medium text-foreground">Deducciones del Mes</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-3 bg-card rounded-lg border border-border">
+              <div className="p-3 bg-card rounded-lg border border-gray-200">
                 <p className="text-sm text-muted-foreground">Comisiones Profesionales</p>
                 <p className="text-xl font-bold text-orange-400">
                   -${calculateCommissions.toLocaleString()}
                 </p>
               </div>
-              <div className="p-3 bg-card rounded-lg border border-border">
+              <div className="p-3 bg-card rounded-lg border border-gray-200">
                 <p className="text-sm text-muted-foreground">Gastos Fijos (est.)</p>
                 <p className="text-xl font-bold text-orange-400">
                   -${fixedCosts.toLocaleString()}
                 </p>
               </div>
-              <div className="p-3 bg-card rounded-lg border border-border">
+              <div className="p-3 bg-card rounded-lg border border-gray-200">
                 <p className="text-sm text-muted-foreground">Total Deducciones</p>
                 <p className="text-xl font-bold text-orange-400">
                   -${(calculateCommissions + fixedCosts).toLocaleString()}
@@ -384,7 +384,7 @@ export function ReportsModule() {
 
       {/* Charts Section */}
       <Tabs defaultValue="facturacion" className="space-y-4">
-        <TabsList className="bg-secondary border border-border">
+        <TabsList className="bg-secondary border border-gray-200">
           <TabsTrigger value="facturacion" className="data-[state=active]:bg-[#D1B98D] data-[state=active]:text-[#2d3529]">
             Facturacion
           </TabsTrigger>
@@ -400,7 +400,7 @@ export function ReportsModule() {
         </TabsList>
 
         <TabsContent value="facturacion">
-          <Card className="bg-card border-border">
+          <Card className="bg-card border-gray-200">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-[#D1B98D]" />
@@ -455,7 +455,7 @@ export function ReportsModule() {
 
         <TabsContent value="servicios">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="bg-card border-border">
+            <Card className="bg-card border-gray-200">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
                   <Stethoscope className="h-5 w-5 text-[#D1B98D]" />
@@ -508,7 +508,7 @@ export function ReportsModule() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card border-border">
+            <Card className="bg-card border-gray-200">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
                   <Package className="h-5 w-5 text-[#D1B98D]" />
@@ -545,7 +545,7 @@ export function ReportsModule() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card border-border">
+            <Card className="bg-card border-gray-200">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
                   <Stethoscope className="h-5 w-5 text-[#D1B98D]" />
@@ -585,7 +585,7 @@ export function ReportsModule() {
         </TabsContent>
 
         <TabsContent value="comisiones">
-          <Card className="bg-card border-border">
+          <Card className="bg-card border-gray-200">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
                 <Award className="h-5 w-5 text-[#D1B98D]" />
@@ -622,7 +622,7 @@ export function ReportsModule() {
               <div className="mt-6 overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-border">
+                    <tr className="border-b border-gray-200">
                       <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">Profesional</th>
                       <th className="text-center py-3 px-2 text-sm font-medium text-muted-foreground">Turnos</th>
                       <th className="text-center py-3 px-2 text-sm font-medium text-muted-foreground">%</th>
@@ -632,7 +632,7 @@ export function ReportsModule() {
                   </thead>
                   <tbody>
                     {commissionsData.map((prof, index) => (
-                      <tr key={index} className="border-b border-border/50">
+                      <tr key={index} className="border-b border-gray-200/50">
                         <td className="py-3 px-2 text-foreground">{prof.name}</td>
                         <td className="py-3 px-2 text-center text-foreground">{prof.turnos}</td>
                         <td className="py-3 px-2 text-center text-muted-foreground">{prof.porcentaje}%</td>
@@ -660,7 +660,7 @@ export function ReportsModule() {
           </Card>
         </TabsContent>
         <TabsContent value="egresos">
-          <Card className="bg-card border-border">
+          <Card className="bg-card border-gray-200">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-foreground flex items-center gap-2">
                 <Minus className="h-5 w-5 text-orange-400" />
@@ -695,9 +695,9 @@ export function ReportsModule() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-lg border border-border">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="w-full text-sm text-left">
-                  <thead className="border-b border-border/50 text-muted-foreground bg-secondary/30">
+                  <thead className="border-b border-gray-200/50 text-muted-foreground bg-secondary/10">
                     <tr>
                       <th className="py-3 px-4">FECHA</th>
                       <th className="py-3 px-4">CONCEPTO</th>
@@ -709,7 +709,7 @@ export function ReportsModule() {
                       <tr><td colSpan={3} className="text-center py-6 text-muted-foreground italic">No hay gastos anotados este mes.</td></tr>
                     ) : (
                       currentMonthExpenses.map((e, i) => (
-                        <tr key={i} className="border-b border-border/20 hover:bg-white/5 transition-colors">
+                        <tr key={i} className="border-b border-gray-200/20 hover:bg-white/5 transition-colors">
                           <td className="py-3 px-4">{new Date(e.date).toLocaleDateString()}</td>
                           <td className="py-3 px-4 font-medium text-foreground">{e.description}</td>
                           <td className="py-3 px-4 text-right font-bold text-orange-400">-${e.amount.toLocaleString()}</td>

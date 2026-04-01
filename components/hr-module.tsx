@@ -170,7 +170,7 @@ export function HRModule() {
 
       <div className="grid gap-4">
         {professionals?.map((professional) => (
-          <Card key={professional.id} className={`bg-card border-border ${!professional.isActive ? "opacity-60" : ""}`}>
+          <Card key={professional.id} className={`bg-card border-gray-200 ${!professional.isActive ? "opacity-60" : ""}`}>
             <CardContent className="pt-6">
               <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
@@ -195,7 +195,7 @@ export function HRModule() {
                     </p>
 
                     {/* SECCIÓN VALOR HORA (PEDIDO NICO) */}
-                    <div className="flex items-center gap-2 mt-3 p-2 bg-secondary/30 rounded-lg border border-border/50 w-fit">
+                    <div className="flex items-center gap-2 mt-3 p-2 bg-secondary/10 rounded-lg border border-gray-200/50 w-fit">
                       <DollarSign className="h-4 w-4 text-[#D1B98D]" />
                       <span className="text-sm font-medium">Valor Hora:</span>
                       <Input 
@@ -238,7 +238,7 @@ export function HRModule() {
       </div>
 
       <Dialog open={showLiquidationModal} onOpenChange={setShowLiquidationModal}>
-        <DialogContent className="bg-card border-border sm:max-w-[425px]">
+        <DialogContent className="bg-card border-gray-200 sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#D1B98D] flex items-center gap-2">
               <DollarSign className="h-5 w-5" /> Liquidación Semanal
@@ -247,7 +247,7 @@ export function HRModule() {
           
           {liquidationData && (
             <div className="space-y-6 pt-4">
-              <div className="flex items-center gap-3 pb-4 border-b border-border/50">
+              <div className="flex items-center gap-3 pb-4 border-b border-gray-200/50">
                 <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: liquidationData.prof.color || '#D1B98D' }}>
                   {liquidationData.prof.shortName.charAt(0)}
                 </div>
@@ -258,7 +258,7 @@ export function HRModule() {
               </div>
 
               <div className="space-y-4">
-                <div className="flex justify-between items-center bg-secondary/30 p-3 rounded-lg border border-border/50">
+                <div className="flex justify-between items-center bg-secondary/10 p-3 rounded-lg border border-gray-200/50">
                   <div className="text-sm">
                     <p className="font-medium text-foreground">Sueldo Base (Horas)</p>
                     <p className="text-xs text-muted-foreground">{liquidationData.hoursWorked.toFixed(1)} hs laburadas a ${liquidationData.prof.hourlyRate}/h</p>
@@ -266,7 +266,7 @@ export function HRModule() {
                   <span className="font-bold text-foreground">${liquidationData.hourlyPay.toLocaleString()}</span>
                 </div>
 
-                <div className="flex justify-between items-center bg-secondary/30 p-3 rounded-lg border border-border/50">
+                <div className="flex justify-between items-center bg-secondary/10 p-3 rounded-lg border border-gray-200/50">
                   <div className="text-sm">
                     <p className="font-medium text-foreground">Comisiones Gabi.</p>
                     <p className="text-xs text-muted-foreground">{liquidationData.doneAptsCount} turnos al {calculateCommissionTab(liquidationData.salesCount)}%</p>
@@ -301,7 +301,7 @@ export function HRModule() {
       </Dialog>
 
       <Dialog open={showScheduleModal} onOpenChange={setShowScheduleModal}>
-        <DialogContent className="bg-card border-border sm:max-w-[425px]">
+        <DialogContent className="bg-card border-gray-200 sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#D1B98D] flex items-center gap-2">
               <Clock className="h-5 w-5" /> Horarios de {selectedProfessional?.shortName}
@@ -315,7 +315,7 @@ export function HRModule() {
               const isWorking = intervals.length > 0
               
               return (
-                <div key={day.key} className="flex flex-col p-3 bg-secondary/30 rounded-lg border border-border/50 gap-2">
+                <div key={day.key} className="flex flex-col p-3 bg-secondary/10 rounded-lg border border-gray-200/50 gap-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Switch 
@@ -357,8 +357,8 @@ export function HRModule() {
                           setEditingSchedule({...editingSchedule, [day.key]: newIntervals})
                         }}
                       >
-                       <SelectTrigger className="w-[85px] h-8 text-[11px] bg-input border-border"><SelectValue/></SelectTrigger>
-                       <SelectContent className="bg-card border-border">
+                       <SelectTrigger className="w-[85px] h-8 text-[11px] bg-input border-gray-200"><SelectValue/></SelectTrigger>
+                       <SelectContent className="bg-card border-gray-200">
                          {TIME_OPTIONS.map(t => <SelectItem key={`start-${t}`} value={t}>{t}</SelectItem>)}
                        </SelectContent>
                       </Select>
@@ -371,8 +371,8 @@ export function HRModule() {
                           setEditingSchedule({...editingSchedule, [day.key]: newIntervals})
                         }}
                       >
-                       <SelectTrigger className="w-[85px] h-8 text-[11px] bg-input border-border"><SelectValue/></SelectTrigger>
-                       <SelectContent className="bg-card border-border">
+                       <SelectTrigger className="w-[85px] h-8 text-[11px] bg-input border-gray-200"><SelectValue/></SelectTrigger>
+                       <SelectContent className="bg-card border-gray-200">
                          {TIME_OPTIONS.map(t => <SelectItem key={`end-${t}`} value={t}>{t}</SelectItem>)}
                        </SelectContent>
                       </Select>

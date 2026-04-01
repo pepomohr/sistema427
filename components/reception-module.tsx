@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import {
   Dialog,
   DialogContent,
@@ -38,10 +39,12 @@ import {
   Edit2,
   Gift,
   ShoppingBag,
-  Trash2
+  Trash2,
+  Award,
+  Star
 } from "lucide-react"
 
-export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pacientes" | "agenda" | "caja" }) {
+export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pacientes" | "agenda" | "caja" | "comisiones" }) {
   const {
     sales = [],
     patients = [],
@@ -76,6 +79,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const [schedulingProfessional, setSchedulingProfessional] = useState("")
   const [schedulingTime, setSchedulingTime] = useState("")
   const [schedulingPaidAmount, setSchedulingPaidAmount] = useState<number | "">("")
+  const [schedulingServiceSearch, setSchedulingServiceSearch] = useState("")
+  const [schedulingServiceMenuOpen, setSchedulingServiceMenuOpen] = useState(false)
+  
   const [checkoutAptId, setCheckoutAptId] = useState<string>("")
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
   const [newPatient, setNewPatient] = useState({
@@ -94,6 +100,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const [directSaleProf, setDirectSaleProf] = useState("")
   const [directSalePaymentMethod, setDirectSalePaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
   const [directSaleProdCat, setDirectSaleProdCat] = useState<string>("")
+  const [directSaleProdSearch, setDirectSaleProdSearch] = useState("")
+  const [directSaleProdMenuOpen, setDirectSaleProdMenuOpen] = useState(false)
 
   const [searchResults, setSearchResults] = useState<any[]>([])
 
@@ -336,7 +344,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               Nuevo Paciente
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border text-foreground">
+          <DialogContent className="bg-card border-gray-200 text-foreground">
             <DialogHeader>
               <DialogTitle className="text-[#D1B98D]">Registrar Nuevo Paciente</DialogTitle>
             </DialogHeader>
@@ -344,23 +352,23 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
                   <Label>Apellidos y Nombres</Label>
-                  <Input value={newPatient.name} onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })} className="bg-input border-border" />
+                  <Input value={newPatient.name} onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })} className="bg-input border-gray-200" />
                 </div>
                 <div className="space-y-2">
                   <Label>DNI</Label>
-                  <Input value={newPatient.dni} onChange={(e) => setNewPatient({ ...newPatient, dni: e.target.value })} className="bg-input border-border" />
+                  <Input value={newPatient.dni} onChange={(e) => setNewPatient({ ...newPatient, dni: e.target.value })} className="bg-input border-gray-200" />
                 </div>
                 <div className="space-y-2">
                   <Label>Fecha de Nac.</Label>
-                  <Input type="date" value={newPatient.birthdate} onChange={(e) => setNewPatient({ ...newPatient, birthdate: e.target.value })} className="bg-input border-border text-foreground" />
+                  <Input type="date" value={newPatient.birthdate} onChange={(e) => setNewPatient({ ...newPatient, birthdate: e.target.value })} className="bg-input border-gray-200 text-foreground" />
                 </div>
                 <div className="space-y-2">
                   <Label>Teléfono</Label>
-                  <Input value={newPatient.phone} onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })} className="bg-input border-border" />
+                  <Input value={newPatient.phone} onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })} className="bg-input border-gray-200" />
                 </div>
                 <div className="space-y-2">
                   <Label>Email (Opcional)</Label>
-                  <Input type="email" value={newPatient.email} onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })} className="bg-input border-border" />
+                  <Input type="email" value={newPatient.email} onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })} className="bg-input border-gray-200" />
                 </div>
               </div>
               <Button onClick={handleAddPatient} className="w-full bg-[#D1B98D] text-[#2d3529] font-bold" disabled={!newPatient.name || !newPatient.phone || !newPatient.dni}>
@@ -403,7 +411,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       {/* GIFT CARD LOADER DIALOG */}
       {showGiftCardLoader && selectedPatient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-md bg-background border-[#D1B98D]/30 shadow-2xl">
+          <Card className="w-full max-w-md bg-white border-l-4 border-l-[#D1B98D] shadow-2xl rounded-2xl">
             <CardHeader>
                <CardTitle className="flex items-center gap-2 text-[#D1B98D]">
                   <Gift className="h-5 w-5" /> 
@@ -446,7 +454,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       )}
 
       {/* EDIT PATIENT DIALOG */}
-      <Card className="bg-card border-border border-2 border-[#D1B98D]/30">
+      <Card className="bg-white text-foreground border border-[#D1B98D]/40 shadow-xl rounded-2xl overflow-hidden relative">
         <CardContent className="pt-6">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-[#D1B98D]" />
@@ -457,14 +465,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 setSelectedPatient(null)
               }}
               placeholder="Buscar por nombre o DNI..."
-              className="pl-14 h-14 text-lg bg-input border-border"
+              className="pl-14 h-14 text-lg bg-input border-gray-200"
             />
           </div>
           
           {searchResults.length > 0 && !selectedPatient && (
             <div className="mt-4 space-y-2 max-h-[300px] overflow-y-auto">
               {searchResults.map((patient) => (
-                <div key={patient.id} className="p-4 rounded-lg bg-secondary/50 hover:bg-secondary cursor-pointer flex items-center justify-between" onClick={() => setSelectedPatient(patient)}>
+                <div key={patient.id} className="p-4 rounded-lg bg-secondary/15 hover:bg-secondary cursor-pointer flex items-center justify-between" onClick={() => setSelectedPatient(patient)}>
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-full bg-[#D1B98D]/20 flex items-center justify-center"><User className="h-6 w-6 text-[#D1B98D]" /></div>
                     <div>
@@ -481,7 +489,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       </Card>
 
       {selectedPatient && (
-        <Card className="bg-card border-border">
+        <Card className="bg-secondary text-secondary-foreground border border-gray-800 shadow-2xl rounded-2xl overflow-hidden relative">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -526,22 +534,22 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             </div>
 
             {activePanel === "historial" && (
-              <div className="space-y-4 pt-4 border-t border-border">
+              <div className="space-y-4 pt-4 border-t border-gray-200">
                 {getPatientHistory(selectedPatient.id).length === 0 ? (
-                  <p className="text-sm text-white/50 italic text-center py-4">No hay turnos registrados para este paciente.</p>
+                  <p className="text-sm text-gray-500 italic text-center py-4">No hay turnos registrados para este paciente.</p>
                 ) : (
                   <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                     {getPatientHistory(selectedPatient.id).map(apt => {
                       const prof = professionals.find(p => p.id === apt.professionalId);
                       return (
-                        <Card key={apt.id} className="bg-secondary/30 border-white/5">
+                        <Card key={apt.id} className="bg-secondary/10 border-gray-100">
                           <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                <div className="flex items-center gap-2 mb-1">
                                   <Badge variant="outline" className={`text-[10px] ${apt.status === 'completado' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>{apt.status}</Badge>
-                                  <span className="text-white/50 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
+                                  <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
                                </div>
-                               <p className="font-bold text-white">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
+                               <p className="font-bold text-foreground">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
                                <p className="text-sm text-[#D1B98D]">con {prof?.name || 'Profesional no encontrado'}</p>
                             </div>
                             {['programado', 'confirmado'].includes(apt.status) && (
@@ -560,7 +568,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             )}
 
             {activePanel === "agendar" && (
-              <div className="space-y-4 pt-4 border-t border-border">
+              <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Fecha</Label>
@@ -573,7 +581,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         <Badge 
                           key={cat} 
                           variant={schedulingServiceCat === cat ? "default" : "outline"}
-                          className={`cursor-pointer whitespace-nowrap px-3 py-1.5 ${schedulingServiceCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-white/70 border-white/20 hover:bg-white/5'}`}
+                          className={`cursor-pointer whitespace-nowrap px-3 py-1.5 ${schedulingServiceCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-600 border-gray-300 hover:bg-white/5'}`}
                           onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
                         >
                           {getCategoryDisplayName(cat as any)}
@@ -581,14 +589,39 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       ))}
                     </div>
                     {schedulingServiceCat && (
-                      <Select value={schedulingService} onValueChange={setSchedulingService}>
-                        <SelectTrigger className="bg-input border-white/10"><SelectValue placeholder="Seleccionar servicio específico..." /></SelectTrigger>
-                        <SelectContent className="bg-card border-white/10 max-h-[300px]">
-                          {servicesByCategory[schedulingServiceCat]?.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>{s.name} - ${s.price}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Input 
+                          placeholder="Buscar servicio específico..." 
+                          value={schedulingServiceSearch} 
+                          onChange={(e) => {
+                            setSchedulingServiceSearch(e.target.value)
+                            setSchedulingServiceMenuOpen(true)
+                            if(e.target.value === "") setSchedulingService("")
+                          }}
+                          onFocus={() => setSchedulingServiceMenuOpen(true)}
+                          onBlur={() => setTimeout(() => setSchedulingServiceMenuOpen(false), 200)}
+                          className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 mt-2"
+                        />
+                        {schedulingServiceMenuOpen && (
+                          <div className="absolute top-[45px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[150px] overflow-y-auto z-50">
+                            {servicesByCategory[schedulingServiceCat]
+                              ?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase()))
+                              .map(s => (
+                              <button 
+                                key={s.id}
+                                onClick={() => {
+                                  setSchedulingService(s.id)
+                                  setSchedulingServiceSearch(s.name)
+                                  setSchedulingServiceMenuOpen(false)
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-[#2d3529] font-medium border-b border-black/5"
+                              >
+                                {s.name} <span className="text-[#829177] ml-2 font-bold">${s.price}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -604,7 +637,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         <button
                           key={prof.id}
                           onClick={() => setSchedulingProfessional(prof.id)}
-                          className={`p-3 rounded-xl border text-left transition-all ${schedulingProfessional === prof.id ? "border-[#829177] bg-[#829177]/10" : "border-border"}`}
+                          className={`p-3 rounded-xl border text-left transition-all ${schedulingProfessional === prof.id ? "border-[#829177] bg-[#829177]/10" : "border-gray-200"}`}
                         >
                           <span className="text-sm font-medium">{prof.shortName}</span>
                         </button>
@@ -646,7 +679,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             )}
 
             {activePanel === "cobrar" && (
-              <div className="space-y-6 pt-4 border-t border-border">
+              <div className="space-y-6 pt-4 border-t border-gray-200">
                 {!checkoutAptId ? (
                   <div className="space-y-4">
                     <Label className="text-[#D1B98D] uppercase text-xs font-bold tracking-wider">Punto de Venta Unificado</Label>
@@ -656,20 +689,20 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     </Button>
 
                     {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro'].includes(a.status)).length === 0 ? (
-                       <p className="text-sm text-white/50 italic text-center py-4 rounded bg-black/10 mt-2">No hay turnos pendientes para cobrar.</p>
+                       <p className="text-sm text-gray-500 italic text-center py-4 rounded bg-gray-50 mt-2">No hay turnos pendientes para cobrar.</p>
                     ) : (
                       <div className="space-y-2 mt-4">
-                        <Label className="text-xs text-white/50 uppercase block mb-2">Turnos Pendientes:</Label>
+                        <Label className="text-xs text-gray-500 uppercase block mb-2">Turnos Pendientes:</Label>
                         {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro'].includes(a.status)).map(apt => {
                            const prof = professionals.find(p => p.id === apt.professionalId);
                            return (
-                             <div key={apt.id} className="p-4 bg-secondary/30 rounded-xl border border-white/5 flex justify-between items-center cursor-pointer hover:bg-secondary/50 transition-colors" onClick={() => setCheckoutAptId(apt.id)}>
+                             <div key={apt.id} className="p-4 bg-secondary/10 rounded-xl border border-gray-100 flex justify-between items-center cursor-pointer hover:bg-secondary/15 transition-colors" onClick={() => setCheckoutAptId(apt.id)}>
                                <div>
                                  <div className="flex items-center gap-2 mb-1">
                                     <Badge variant="outline" className="text-[10px]">{apt.status}</Badge>
-                                    <span className="text-white/50 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
+                                    <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
                                  </div>
-                                 <p className="font-bold text-white">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
+                                 <p className="font-bold text-foreground">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
                                  {apt.products && apt.products.length > 0 && <p className="text-xs text-[#D1B98D] mt-1">+ {apt.products.length} productos extras</p>}
                                </div>
                                <div className="text-right">
@@ -716,20 +749,20 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
-                         <div className="flex justify-between items-center bg-black/20 p-3 rounded-lg border border-white/5">
+                         <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg border border-gray-100">
                            <span className="text-sm font-semibold">{apt ? 'Facturación de Turno + Mostrador' : 'Venta Libre'}</span>
-                           <Button variant="ghost" size="sm" onClick={() => {setCheckoutAptId(""); setCheckoutPaymentMethod(""); setDirectSaleCart([]); setDirectSaleProf("");}} className="h-6 px-2 text-xs text-white/50 hover:text-white">Cambiar Selección</Button>
+                           <Button variant="ghost" size="sm" onClick={() => {setCheckoutAptId(""); setCheckoutPaymentMethod(""); setDirectSaleCart([]); setDirectSaleProf("");}} className="h-6 px-2 text-xs text-gray-500 hover:text-white">Cambiar Selección</Button>
                          </div>
                          
-                         <div className="space-y-2 text-sm bg-black/10 p-3 rounded">
+                         <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
                            {apt?.services.map((s:any, i:number) => (
-                             <div key={i} className="flex justify-between text-white/80">
+                             <div key={i} className="flex justify-between text-gray-700">
                                <span>{s.serviceName}</span>
                                <span>${checkoutPaymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price}</span>
                              </div>
                            ))}
                            {apt?.products?.map((p:any, i:number) => (
-                             <div key={i} className="flex justify-between text-white/80 text-xs italic">
+                             <div key={i} className="flex justify-between text-gray-700 text-xs italic">
                                <span>{p.quantity}x {p.productName} (Gabinete)</span>
                                <span>${(checkoutPaymentMethod === 'efectivo' ? (p.priceCashReference || p.price) : p.price) * p.quantity}</span>
                              </div>
@@ -737,7 +770,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                            
                            {/* Carrito Directo Items */}
                            {directSaleCart.map((item, i) => (
-                             <div key={`ds-${i}`} className="flex justify-between items-center text-[#D1B98D] text-xs font-bold leading-none py-1.5 border-t border-white/5 mt-1">
+                             <div key={`ds-${i}`} className="flex justify-between items-center text-[#D1B98D] text-xs font-bold leading-none py-1.5 border-t border-gray-100 mt-1">
                                <div className="flex items-center gap-2">
                                   <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-red-500 hover:bg-transparent hover:scale-125" onClick={() => handleRemoveProductFromDirectSale(item.product.id)}>✕</Button>
                                   <span>{item.quantity}x {item.product.name} (Extra)</span>
@@ -747,7 +780,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                            ))}
 
                            {/* Resumen numérico */}
-                           <div className="border-t border-white/10 pt-2 flex justify-between font-bold text-white mt-2">
+                           <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-foreground mt-2">
                              <span>Subtotal:</span>
                              <span>${chosenTotalOriginal}</span>
                            </div>
@@ -761,33 +794,69 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
                          {/* Agregador de Productos y Vendedor si corresponde */}
                          <div className="space-y-3 pt-2">
-                            <div className="bg-secondary/40 p-3 rounded-lg border border-dashed border-white/10 space-y-2">
-                              <Label className="text-xs font-bold text-white/70 block">+ Agregar Producto Extra</Label>
-                              <Select onValueChange={(val) => { handleAddProductToDirectSale(val); }}>
-                                <SelectTrigger className="w-full text-xs bg-input border-white/10 h-9">
-                                  <SelectValue placeholder="Elegir producto..." />
-                                </SelectTrigger>
-                                <SelectContent className="bg-card border-white/10 text-white max-h-[250px]">
-                                  {Array.from(new Set(useClinicStore.getState().products.map(p => p.category))).map(cat => (
-                                      <div key={cat} className="space-y-1 mt-1">
-                                          <div className="px-2 py-1 text-[10px] font-bold text-[#D1B98D] uppercase tracking-wider bg-white/5">{cat}</div>
-                                          {useClinicStore.getState().products.filter(p => p.category === cat).map(p => (
-                                              <SelectItem key={p.id} value={p.id} className="text-xs pl-4">{p.name}</SelectItem>
-                                          ))}
-                                      </div>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                            <div className="bg-secondary/10 p-3 rounded-lg border border-dashed border-gray-200 space-y-2">
+                              <Label className="text-xs font-bold text-gray-600 block">+ Agregar Producto Extra</Label>
+                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                {Array.from(new Set(useClinicStore.getState().products.map(p => p.category))).map(cat => (
+                                  <Badge 
+                                    key={cat} 
+                                    variant={directSaleProdCat === cat ? "default" : "outline"}
+                                    onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }}
+                                    className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                                  >
+                                    {cat}
+                                  </Badge>
+                                ))}
+                              </div>
+
+                              {directSaleProdCat && (
+                                <div className="relative">
+                                  <Input 
+                                    placeholder={`Buscar producto en ${directSaleProdCat}...`}
+                                    value={directSaleProdSearch}
+                                    onChange={(e) => {
+                                      setDirectSaleProdSearch(e.target.value)
+                                      setDirectSaleProdMenuOpen(true)
+                                    }}
+                                    onFocus={() => setDirectSaleProdMenuOpen(true)}
+                                    onBlur={() => setTimeout(() => setDirectSaleProdMenuOpen(false), 200)}
+                                    className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 h-8 text-xs"
+                                  />
+                                  {directSaleProdMenuOpen && (
+                                    <div className="absolute top-[35px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[150px] overflow-y-auto z-50">
+                                      {useClinicStore.getState().products
+                                        .filter(p => p.category === directSaleProdCat && (!directSaleProdSearch || p.name.toLowerCase().includes(directSaleProdSearch.toLowerCase())))
+                                        .map(p => (
+                                          <button 
+                                            key={p.id}
+                                            onClick={() => {
+                                              handleAddProductToDirectSale(p.id)
+                                              setDirectSaleProdSearch("")
+                                              setDirectSaleProdMenuOpen(false)
+                                            }}
+                                            className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 text-[#2d3529] font-medium border-b border-black/5 flex justify-between"
+                                          >
+                                            <span>{p.name}</span> <span className="text-[#829177] font-bold">${p.priceCash} ef | ${p.priceList} t.</span>
+                                          </button>
+                                        ))
+                                      }
+                                      {useClinicStore.getState().products.filter(p => p.category === directSaleProdCat && (!directSaleProdSearch || p.name.toLowerCase().includes(directSaleProdSearch.toLowerCase()))).length === 0 && (
+                                        <div className="p-2 text-xs text-black/50 text-center italic">Sin coincidencias.</div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             {/* Solo si hay productos extras anexados pedimos el comisionador */}
                             {directSaleCart.length > 0 && (
-                               <div className="bg-secondary/20 p-3 rounded-lg border border-white/5 space-y-2">
-                                  <Label className="text-xs text-white/70">¿Quién vendió el Producto Extra?</Label>
+                               <div className="bg-secondary/5 p-3 rounded-lg border border-gray-100 space-y-2">
+                                  <Label className="text-xs text-gray-600">¿Quién vendió el Producto Extra?</Label>
                                   <Select value={directSaleProf} onValueChange={setDirectSaleProf}>
-                                    <SelectTrigger className="bg-input border-white/10 h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                                    <SelectContent className="bg-card border-white/10">
-                                      <SelectItem value="recepcion">🏦 Recepción (Sin comisión prof.)</SelectItem>
+                                    <SelectTrigger className="bg-input border-gray-200 h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                                    <SelectContent className="bg-card border-gray-200">
+                                      <SelectItem value="recepcion">🏦 Recepción</SelectItem>
                                       {professionals.filter(p => p.isActive).map(p => (
                                         <SelectItem key={p.id} value={p.id}>{p.shortName}</SelectItem>
                                       ))}
@@ -801,7 +870,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                            <Label>Medio de Pago del Saldo Restante</Label>
                            <Select value={checkoutPaymentMethod} onValueChange={(val: any) => setCheckoutPaymentMethod(val)}>
                              <SelectTrigger className="bg-input border-[#D1B98D]/30 h-10"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                             <SelectContent className="bg-card border-white/10 z-[100]">
+                             <SelectContent className="bg-card border-gray-200 z-[100]">
                                <SelectItem value="efectivo">💵 Efectivo (Promo)</SelectItem>
                                <SelectItem value="transferencia">🏦 Transferencia (Lista)</SelectItem>
                                <SelectItem value="tarjeta">💳 Tarjeta (Lista)</SelectItem>
@@ -819,12 +888,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       
                       <div className="bg-[#2d3529] p-6 rounded-xl border border-[#D1B98D]/20 flex flex-col justify-between h-full">
                         <div className="space-y-1 text-right">
-                          <p className="text-sm text-white/50 uppercase tracking-widest">Saldo Restante a Pagar</p>
+                          <p className="text-sm text-gray-500 uppercase tracking-widest">Saldo Restante a Pagar</p>
                           <p className="text-5xl font-extrabold text-[#D1B98D]">${finalToPay.toLocaleString()}</p>
                           {!checkoutPaymentMethod ? (
                              <p className="text-xs text-amber-500/70 mt-2">▲ Faltan datos (Medio de pago o Vendedor)</p>
                           ) : (
-                             <p className="text-[10px] text-white/40 italic mt-2">
+                             <p className="text-[10px] text-gray-400 italic mt-2">
                                {checkoutPaymentMethod === 'efectivo' ? 'Precio promocional efectivo totalizado.' : 'Precio de lista regular totalizado.'}
                              </p>
                           )}
@@ -877,7 +946,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       )}
 
       <Dialog open={showEditPatient} onOpenChange={setShowEditPatient}>
-        <DialogContent className="bg-card border-border text-foreground">
+        <DialogContent className="bg-card border-gray-200 text-foreground">
           <DialogHeader>
             <DialogTitle className="text-[#D1B98D]">Editar Información del Paciente</DialogTitle>
           </DialogHeader>
@@ -885,23 +954,23 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2">
                 <Label>Apellidos y Nombres</Label>
-                <Input value={editPatientData?.name || ""} onChange={(e) => setEditPatientData({ ...editPatientData, name: e.target.value })} className="bg-input border-border" />
+                <Input value={editPatientData?.name || ""} onChange={(e) => setEditPatientData({ ...editPatientData, name: e.target.value })} className="bg-input border-gray-200" />
               </div>
               <div className="space-y-2">
                 <Label>DNI</Label>
-                <Input value={editPatientData?.dni || ""} onChange={(e) => setEditPatientData({ ...editPatientData, dni: e.target.value })} className="bg-input border-border" />
+                <Input value={editPatientData?.dni || ""} onChange={(e) => setEditPatientData({ ...editPatientData, dni: e.target.value })} className="bg-input border-gray-200" />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Nac.</Label>
-                <Input type="date" value={editPatientData?.birthdate || ""} onChange={(e) => setEditPatientData({ ...editPatientData, birthdate: e.target.value })} className="bg-input border-border text-foreground" />
+                <Input type="date" value={editPatientData?.birthdate || ""} onChange={(e) => setEditPatientData({ ...editPatientData, birthdate: e.target.value })} className="bg-input border-gray-200 text-foreground" />
               </div>
               <div className="space-y-2">
                 <Label>Teléfono</Label>
-                <Input value={editPatientData?.phone || ""} onChange={(e) => setEditPatientData({ ...editPatientData, phone: e.target.value })} className="bg-input border-border" />
+                <Input value={editPatientData?.phone || ""} onChange={(e) => setEditPatientData({ ...editPatientData, phone: e.target.value })} className="bg-input border-gray-200" />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input type="email" value={editPatientData?.email || ""} onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })} className="bg-input border-border" />
+                <Input type="email" value={editPatientData?.email || ""} onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })} className="bg-input border-gray-200" />
               </div>
             </div>
             <Button onClick={handleUpdatePatient} className="w-full bg-[#D1B98D] text-[#2d3529] font-bold" disabled={!editPatientData?.name || !editPatientData?.phone || !editPatientData?.dni}>
@@ -916,7 +985,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           {mainTab === "agenda" && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-1">
-            <div className="bg-card rounded-xl p-4 border border-border flex justify-center shadow-lg sticky top-6">
+            <div className="bg-card rounded-xl p-4 border border-gray-200 flex justify-center shadow-lg sticky top-6">
               <Calendar
                 mode="single"
                 selected={agendaDate}
@@ -933,8 +1002,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             </h3>
 
             {agendaAppointments.length === 0 ? (
-              <Card className="bg-transparent border-dashed border-white/10">
-                <CardContent className="py-12 text-center text-white/30 italic text-sm">
+              <Card className="bg-transparent border-dashed border-gray-200">
+                <CardContent className="py-12 text-center text-gray-400 italic text-sm">
                   No hay turnos registrados para este día.
                 </CardContent>
               </Card>
@@ -948,25 +1017,25 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   return (
                     <div 
                       key={apt.id} 
-                      className={`relative bg-secondary/40 border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all ${
-                        isAttended ? 'opacity-50 grayscale border-white/5' : 'border-white/10 hover:border-[#D1B98D]/30'
+                      className={`relative bg-secondary/10 border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all ${
+                        isAttended ? 'opacity-50 grayscale border-gray-100' : 'border-gray-200 hover:border-[#D1B98D]/30'
                       }`}
                     >
                       {/* Tachado Overlay if attended */}
                       {isAttended && <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/20 -translate-y-1/2 rounded-full pointer-events-none z-10"></div>}
                       
                       <div className="flex items-center gap-4 z-0">
-                        <div className="flex flex-col items-center justify-center p-3 bg-black/20 rounded-lg min-w-[70px]">
-                          <span className={`font-bold text-lg ${isAttended ? 'text-white/50' : 'text-[#D1B98D]'}`}>{apt.time}</span>
+                        <div className="flex flex-col items-center justify-center p-3 bg-gray-100 rounded-lg min-w-[70px]">
+                          <span className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-[#D1B98D]'}`}>{apt.time}</span>
                         </div>
                         
                         <div className="space-y-1 z-0">
-                          <p className={`font-bold text-lg ${isAttended ? 'text-white/50' : 'text-white'}`}>
+                          <p className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-foreground'}`}>
                             {pat?.name || 'Desconocido'}
                           </p>
                           <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="text-white/70">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span>
-                            <span className="text-white/30">•</span>
+                            <span className="text-gray-600">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span>
+                            <span className="text-gray-400">•</span>
                             <span className="text-[#D1B98D] max-w-[150px] truncate">{apt.services[0]?.serviceName}</span>
                           </div>
                         </div>
@@ -976,7 +1045,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         <div className="flex flex-col items-end gap-1">
                           {(() => {
                             if (isAttended) {
-                              return <Badge className="bg-secondary text-white/50 border-white/10 text-[10px] uppercase">Ya Asistió</Badge>;
+                              return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase">Ya Asistió</Badge>;
                             }
                             if (apt.status === 'programado') {
                               return <Badge className="bg-orange-600/90 text-white font-bold text-[10px] uppercase">Sin Seña</Badge>;
@@ -1029,7 +1098,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             });
 
             return (
-              <Card className="bg-card border-border">
+              <Card className="bg-white text-foreground border border-gray-200 shadow-xl rounded-2xl mt-4">
                 <CardHeader>
                   <CardTitle className="text-[#D1B98D] flex items-center gap-2 text-2xl">
                     Cierre de Caja Diario
@@ -1037,27 +1106,27 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="bg-[#2d3529] p-6 rounded-xl border border-[#D1B98D]/20 text-center">
-                    <p className="text-sm text-white/50 uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
+                    <p className="text-sm text-gray-500 uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
                     <p className="text-5xl font-extrabold text-[#D1B98D]">${totalIncome.toLocaleString()}</p>
                     <p className="text-xs text-amber-500/70 mt-2">No incluye pagos realizados con Gift Cards (ya se cobraron al ser adquiridas).</p>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-secondary/40 p-4 rounded-xl border border-white/5 text-center">
-                       <p className="text-xs text-white/50 uppercase mb-1">Efectivo</p>
-                       <p className="text-xl font-bold text-white">${byMethod.efectivo.toLocaleString()}</p>
+                    <div className="bg-secondary/10 p-4 rounded-xl border border-gray-100 text-center">
+                       <p className="text-xs text-gray-500 uppercase mb-1">Efectivo</p>
+                       <p className="text-xl font-bold text-foreground">${byMethod.efectivo.toLocaleString()}</p>
                     </div>
-                    <div className="bg-secondary/40 p-4 rounded-xl border border-white/5 text-center">
-                       <p className="text-xs text-white/50 uppercase mb-1">Transferencia</p>
-                       <p className="text-xl font-bold text-white">${byMethod.transferencia.toLocaleString()}</p>
+                    <div className="bg-secondary/10 p-4 rounded-xl border border-gray-100 text-center">
+                       <p className="text-xs text-gray-500 uppercase mb-1">Transferencia</p>
+                       <p className="text-xl font-bold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
                     </div>
-                    <div className="bg-secondary/40 p-4 rounded-xl border border-white/5 text-center">
-                       <p className="text-xs text-white/50 uppercase mb-1">Tarjeta (Déb/Créd)</p>
-                       <p className="text-xl font-bold text-white">${byMethod.tarjeta.toLocaleString()}</p>
+                    <div className="bg-secondary/10 p-4 rounded-xl border border-gray-100 text-center">
+                       <p className="text-xs text-gray-500 uppercase mb-1">Tarjeta (Déb/Créd)</p>
+                       <p className="text-xl font-bold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
                     </div>
-                    <div className="bg-secondary/40 p-4 rounded-xl border border-white/5 text-center">
-                       <p className="text-xs text-white/50 uppercase mb-1">Código QR</p>
-                       <p className="text-xl font-bold text-white">${byMethod.qr.toLocaleString()}</p>
+                    <div className="bg-secondary/10 p-4 rounded-xl border border-gray-100 text-center">
+                       <p className="text-xs text-gray-500 uppercase mb-1">Código QR</p>
+                       <p className="text-xl font-bold text-foreground">${byMethod.qr.toLocaleString()}</p>
                     </div>
                   </div>
 
@@ -1072,6 +1141,90 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 </CardContent>
               </Card>
             );
+          })()}
+          {mainTab === "comisiones" && (() => {
+            const currentMonth = new Date().getMonth()
+            const salesCount = sales.reduce((total, sale) => {
+              const saleDate = new Date(sale.date)
+              if (saleDate.getMonth() !== currentMonth) return total
+              return total + sale.items.filter(item => item.soldBy === "recepcion").reduce((sum, item) => sum + item.quantity, 0)
+            }, 0)
+    
+            let currentCommission = 0
+            let nextTarget = 0
+            let nextCommission = 0
+    
+            if (salesCount >= 21) {
+              currentCommission = 20
+              nextTarget = 999
+              nextCommission = 20
+            } else if (salesCount >= 11) {
+              currentCommission = 15
+              nextTarget = 21
+              nextCommission = 20
+            } else if (salesCount >= 1) {
+              currentCommission = 10
+              nextTarget = 11
+              nextCommission = 15
+            } else {
+              currentCommission = 0
+              nextTarget = 1
+              nextCommission = 10
+            }
+    
+            const tierInfo = {
+              missing: nextTarget === 999 ? 0 : nextTarget - salesCount,
+              label: nextTarget === 999 ? "Nivel Máximo (20%)" : `${nextCommission}% de comisión`,
+              color: salesCount >= 21 ? "bg-amber-400" : (salesCount >= 11 ? "bg-emerald-400" : "bg-blue-400")
+            }
+    
+            const maxProgress = 30
+            const progressValue = Math.min((salesCount / maxProgress) * 100, 100)
+    
+            return (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-[#D1B98D]">Equipo Administrativo</h2>
+                <Card className="bg-secondary text-secondary-foreground border-none overflow-hidden shadow-2xl rounded-2xl">
+                  <CardHeader className="pb-3 border-b border-[#D1B98D]/10 bg-[#252c22]/50">
+                    <CardTitle className="text-xs font-bold text-[#D1B98D] uppercase tracking-wider flex items-center gap-2">
+                      <Award className="h-4 w-4 text-[#D1B98D]" /> Objetivo de Ventas (Recepción)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-5 space-y-5">
+                    <div className="flex justify-between items-center bg-gray-100 p-4 rounded-xl border border-gray-100">
+                      <div className="space-y-1">
+                        <p className="text-[10px] text-gray-500 uppercase font-medium">Unidades Vendidas</p>
+                        <p className="text-4xl font-extrabold text-foreground tracking-tighter">{salesCount}</p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión Actual</p>
+                        <Badge className="bg-[#D1B98D] text-[#2d3529] text-lg font-bold px-4 py-1.5 border-none">
+                          {currentCommission}%
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-600 font-medium">Progreso al siguiente nivel</span>
+                        {tierInfo.missing > 0 && (
+                          <span className="text-foreground font-bold flex items-center gap-1.5">
+                            <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                            ¡Faltan {tierInfo.missing} para el {tierInfo.label}!
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Progress value={progressValue} className={`h-3 bg-white/10 ${tierInfo.color}`} />
+                        <div className="absolute top-0 left-[32%] h-3 w-0.5 bg-black/40"></div>
+                        <div className="absolute top-0 left-[67%] h-3 w-0.5 bg-black/40"></div>
+                      </div>
+                      <p className="text-[10px] text-gray-400 italic">Las comisiones representan las ventas de insumos de toda el área de Caja y Mostrador agrupadas bajo este mes.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )
           })()}
         </div>
       </div>

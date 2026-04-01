@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -50,6 +51,12 @@ export function ChargeModule() {
   
   const [directSalePatient, setDirectSalePatient] = useState("")
   const [directSaleItems, setDirectSaleItems] = useState<any[]>([])
+  
+  const [directSaleProductSearch, setDirectSaleProductSearch] = useState("")
+  const [directSaleProductMenuOpen, setDirectSaleProductMenuOpen] = useState(false)
+  
+  const [profSearch, setProfSearch] = useState<Record<number, string>>({})
+  const [profMenuOpen, setProfMenuOpen] = useState<Record<number, boolean>>({})
 
   const pendingCharges = (appointments || []).filter(
     (a) => a.status === "pendiente_cobro"
@@ -130,7 +137,7 @@ export function ChargeModule() {
       </div>
 
       {/* Pendientes de Cobro */}
-      <Card className="bg-card border-border">
+      <Card className="bg-card border-gray-200">
         <CardHeader>
           <CardTitle className="text-foreground flex items-center gap-2">
             <Clock className="h-5 w-5 text-[#D1B98D]" />
@@ -161,23 +168,51 @@ export function ChargeModule() {
 
       {/* Modal Venta Directa */}
       <Dialog open={showDirectSaleModal} onOpenChange={setShowDirectSaleModal}>
-        <DialogContent className="bg-card border-border text-foreground max-w-lg">
+        <DialogContent className="bg-card border-gray-200 text-foreground max-w-lg">
           <DialogHeader><DialogTitle className="text-[#D1B98D]">Venta Directa de Productos</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-4">
             <Label>Seleccionar Producto</Label>
-            <Select onValueChange={handleAddProductToDirectSale}>
-              <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Buscar producto..." /></SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {products?.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name} (${p.priceCash.toLocaleString()})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <Input
+                placeholder="Escribir nombre o marca del producto..."
+                value={directSaleProductSearch}
+                onChange={(e) => {
+                  setDirectSaleProductSearch(e.target.value)
+                  setDirectSaleProductMenuOpen(true)
+                }}
+                onFocus={() => setDirectSaleProductMenuOpen(true)}
+                onBlur={() => setTimeout(() => setDirectSaleProductMenuOpen(false), 200)}
+                className="bg-input border-gray-200 text-foreground placeholder:text-gray-400"
+              />
+              {directSaleProductMenuOpen && (
+                <div className="absolute top-[45px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[200px] overflow-y-auto z-[60]">
+                  {products
+                    .filter(p => !directSaleProductSearch || p.name.toLowerCase().includes(directSaleProductSearch.toLowerCase()) || p.category.toLowerCase().includes(directSaleProductSearch.toLowerCase()))
+                    .map(p => (
+                      <button
+                        key={`charge-prod-${p.id}`}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100 flex justify-between items-center"
+                        onClick={() => {
+                          handleAddProductToDirectSale(p.id)
+                          setDirectSaleProductSearch("")
+                          setDirectSaleProductMenuOpen(false)
+                        }}
+                      >
+                        <span className="font-semibold">{p.name} <span className="text-gray-400 font-normal text-xs ml-2">({p.category})</span></span>
+                        <span className="text-[#D1B98D] ml-2 font-bold">${p.priceCash.toLocaleString()}</span>
+                      </button>
+                    ))}
+                  {products.filter(p => !directSaleProductSearch || p.name.toLowerCase().includes(directSaleProductSearch.toLowerCase()) || p.category.toLowerCase().includes(directSaleProductSearch.toLowerCase())).length === 0 && (
+                     <div className="p-3 text-sm text-gray-500 text-center italic">No se encontraron productos.</div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Lista de productos en el carrito */}
             <div className="space-y-3">
               {directSaleItems.map((item, idx) => (
-                <div key={idx} className="p-3 bg-secondary/50 rounded-lg space-y-3">
+                <div key={idx} className="p-3 bg-secondary/15 rounded-lg space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">{item.itemName}</span>
                     <Button variant="ghost" size="sm" onClick={() => setDirectSaleItems(directSaleItems.filter((_, i) => i !== idx))}><X className="h-4 w-4"/></Button>
@@ -186,27 +221,66 @@ export function ChargeModule() {
                   {/* Selector de quién vendió para la COMISIÓN DE NICO */}
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase font-bold text-[#D1B98D]">¿Quién lo vendió?</p>
-                    <Select value={item.soldBy} onValueChange={(val) => {
-                      const newItems = [...directSaleItems];
-                      newItems[idx].soldBy = val;
-                      setDirectSaleItems(newItems);
-                    }}>
-                      <SelectTrigger className="h-8 text-xs bg-input border-border">
-                        <SelectValue placeholder="Seleccionar profesional..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-border">
-                        {professionals.map(p => (
-                          <SelectItem key={p.id} value={p.id}>{p.shortName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="relative">
+                      <Input
+                        placeholder="Buscar profesional o Recepción..."
+                        value={profSearch[idx] || item.soldBy}
+                        onChange={(e) => {
+                          setProfSearch({...profSearch, [idx]: e.target.value})
+                          setProfMenuOpen({...profMenuOpen, [idx]: true})
+                          
+                          // Reset the actual assigned value if typing again
+                          if (item.soldBy) {
+                            const newItems = [...directSaleItems]
+                            newItems[idx].soldBy = ""
+                            setDirectSaleItems(newItems)
+                          }
+                        }}
+                        onFocus={() => setProfMenuOpen({...profMenuOpen, [idx]: true})}
+                        onBlur={() => setTimeout(() => setProfMenuOpen({...profMenuOpen, [idx]: false}), 200)}
+                        className="h-8 text-xs bg-input border-gray-200 text-foreground placeholder:text-gray-400 focus-visible:ring-1"
+                      />
+                      {profMenuOpen[idx] && (
+                        <div className="absolute top-[35px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[150px] overflow-y-auto z-[70]">
+                           <button
+                             className="w-full text-left px-3 py-2 text-xs hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100 flex items-center font-bold"
+                             onClick={() => {
+                               const newItems = [...directSaleItems];
+                               newItems[idx].soldBy = "recepcion";
+                               setDirectSaleItems(newItems);
+                               setProfSearch({...profSearch, [idx]: "Recepción"})
+                               setProfMenuOpen({...profMenuOpen, [idx]: false})
+                             }}
+                           >
+                             🏦 Recepción
+                           </button>
+                          {professionals
+                            .filter(p => !(profSearch[idx] && profSearch[idx] !== "Recepción" && profSearch[idx] !== "recepcion") || p.shortName.toLowerCase().includes(profSearch[idx].toLowerCase()))
+                            .map(p => (
+                              <button
+                                key={`prof-${p.id}`}
+                                className="w-full text-left px-3 py-2 text-xs hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100"
+                                onClick={() => {
+                                  const newItems = [...directSaleItems];
+                                  newItems[idx].soldBy = p.id;
+                                  setDirectSaleItems(newItems);
+                                  setProfSearch({...profSearch, [idx]: p.shortName})
+                                  setProfMenuOpen({...profMenuOpen, [idx]: false})
+                                }}
+                              >
+                                {p.shortName}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
             {directSaleItems.length > 0 && (
-              <div className="pt-4 border-t border-border space-y-3">
+              <div className="pt-4 border-t border-gray-200 space-y-3">
                 <div className="flex justify-between text-xl font-bold">
                   <span>Total:</span>
                   <span className="text-[#D1B98D]">${directSaleItems.reduce((s, i) => s + (i.priceCashReference * i.quantity), 0).toLocaleString()}</span>
@@ -224,7 +298,7 @@ export function ChargeModule() {
 
       {/* Modal Método de Pago (Turnos) */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="bg-card border-border text-foreground">
+        <DialogContent className="bg-card border-gray-200 text-foreground">
           <DialogHeader><DialogTitle className="text-[#D1B98D]">Seleccionar Pago</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 gap-3 pt-4">
             <Button onClick={() => handleProcessPayment("efectivo")} variant="outline" className="h-16 justify-start gap-4 border-green-500/30 hover:bg-green-500/10">

@@ -48,6 +48,11 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const [aptProducts, setAptProducts] = useState<Record<string, any[]>>({})
   const [activeSvcCat, setActiveSvcCat] = useState<Record<string, string>>({})
   const [activeProdCat, setActiveProdCat] = useState<Record<string, string>>({})
+  
+  const [svcSearch, setSvcSearch] = useState<Record<string, string>>({})
+  const [svcMenuOpen, setSvcMenuOpen] = useState<Record<string, boolean>>({})
+  const [prodSearch, setProdSearch] = useState<Record<string, string>>({})
+  const [prodMenuOpen, setProdMenuOpen] = useState<Record<string, boolean>>({})
 
   // Scheduling local state
   const [showScheduleDialog, setShowScheduleDialog] = useState(false)
@@ -57,6 +62,10 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const [schedulingTime, setSchedulingTime] = useState("")
   const [schedulingPatientId, setSchedulingPatientId] = useState("")
   const [schedulingPaidAmount, setSchedulingPaidAmount] = useState<number | "">("")
+  const [schedulingPatientSearch, setSchedulingPatientSearch] = useState("")
+  const [schedulingPatientMenuOpen, setSchedulingPatientMenuOpen] = useState(false)
+  const [schedulingServiceSearch, setSchedulingServiceSearch] = useState("")
+  const [schedulingServiceMenuOpen, setSchedulingServiceMenuOpen] = useState(false)
 
   useEffect(() => {
     if (typeof fetchServices === 'function') fetchServices()
@@ -217,6 +226,8 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     setSchedulingTime("")
     setSchedulingPaidAmount("")
     setSchedulingPatientId("")
+    setSchedulingPatientSearch("")
+    setSchedulingServiceSearch("")
     setShowScheduleDialog(false)
   }
 
@@ -232,20 +243,20 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
       {/* SECCIÓN DE COMISIONES */}
       {activeTab === "comisiones" && (
-        <Card className="bg-[#2d3529] border-[#D1B98D]/30 border-2 overflow-hidden shadow-2xl">
-          <CardHeader className="pb-3 border-b border-[#D1B98D]/10 bg-[#252c22]">
+        <Card className="bg-secondary text-secondary-foreground border-none overflow-hidden shadow-2xl rounded-2xl">
+          <CardHeader className="pb-3 border-b border-[#D1B98D]/10 bg-[#252c22]/50">
             <CardTitle className="text-xs font-bold text-[#D1B98D] uppercase tracking-wider flex items-center gap-2">
               <Award className="h-4 w-4 text-[#D1B98D]" /> Mi Objetivo de Ventas (Mensual)
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-5 space-y-5">
-            <div className="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5">
+            <div className="flex justify-between items-center bg-gray-100 p-4 rounded-xl border border-gray-100">
               <div className="space-y-1">
-                <p className="text-[10px] text-white/50 uppercase font-medium">Unidades Vendidas</p>
-                <p className="text-4xl font-extrabold text-white tracking-tighter">{salesCount}</p>
+                <p className="text-[10px] text-gray-500 uppercase font-medium">Unidades Vendidas</p>
+                <p className="text-4xl font-extrabold text-foreground tracking-tighter">{salesCount}</p>
               </div>
               <div className="text-right space-y-1">
-                <p className="text-[10px] text-white/50 uppercase font-medium">Comisión Actual</p>
+                <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión Actual</p>
                 <Badge className="bg-[#D1B98D] text-[#2d3529] text-lg font-bold px-4 py-1.5 border-none">
                   {currentCommission}%
                 </Badge>
@@ -254,9 +265,9 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
             
             <div className="space-y-3">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-white/70 font-medium">Progreso al siguiente nivel</span>
+                <span className="text-gray-600 font-medium">Progreso al siguiente nivel</span>
                 {tierInfo.missing > 0 && (
-                  <span className="text-white font-bold flex items-center gap-1.5">
+                  <span className="text-foreground font-bold flex items-center gap-1.5">
                     <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
                     ¡Faltan {tierInfo.missing} para el {tierInfo.label}!
                   </span>
@@ -275,19 +286,19 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       {/* CONTENIDO DE LOS TABS */}
       {activeTab === "atencion" && (
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
             <Clock className="h-5 w-5 text-[#D1B98D]" /> Pacientes en Sala
           </h3>
 
           {cabinetQueue.length === 0 ? (
-            <Card className="bg-transparent border-dashed border-white/10">
-              <CardContent className="py-10 text-center text-white/30 italic text-sm">
+            <Card className="bg-transparent border-dashed border-gray-200">
+              <CardContent className="py-10 text-center text-gray-400 italic text-sm">
                 No tienes pacientes en espera por el momento.
               </CardContent>
             </Card>
           ) : (
             cabinetQueue.map(apt => (
-              <Card key={apt.id} className={`bg-card border-border ${apt.status === 'en_atencion' ? 'ring-2 ring-emerald-500 shadow-xl shadow-emerald-500/10' : ''}`}>
+              <Card key={apt.id} className={`bg-white text-foreground border border-gray-200 shadow-lg rounded-2xl transition-all ${apt.status === 'en_atencion' ? 'ring-2 ring-emerald-500 shadow-xl shadow-emerald-500/10' : ''}`}>
                 <CardContent className="pt-6 space-y-4">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
@@ -295,7 +306,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         {apt.time}
                       </div>
                       <div>
-                        <p className="font-bold text-white text-lg">{getPatientName(apt.patientId)}</p>
+                        <p className="font-bold text-foreground text-lg">{getPatientName(apt.patientId)}</p>
                         <p className="text-xs text-[#D1B98D]">Recepción agendó: {apt.services[0]?.serviceName}</p>
                       </div>
                     </div>
@@ -312,9 +323,9 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                   </div>
 
                   {apt.status === 'en_atencion' && (
-                    <div className="pt-4 border-t border-white/10 space-y-4">
+                    <div className="pt-4 border-t border-gray-200 space-y-4">
                       
-                      <div className="space-y-4 bg-black/20 p-4 rounded-lg border border-white/5">
+                      <div className="space-y-4 bg-gray-100 p-4 rounded-lg border border-gray-100">
                         
                         {/* SERVICIOS */}
                         <div>
@@ -322,11 +333,11 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                           <div className="space-y-2 mb-3">
                             {getCurrentServices(apt.id).map((svc, i) => (
                               <div key={i} className="flex justify-between items-center bg-white/5 p-2 rounded text-sm">
-                                <span className="text-white text-xs">{svc.serviceName}</span>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-white/50 hover:text-red-400" onClick={() => removeService(apt.id, i)}><X className="h-4 w-4"/></Button>
+                                <span className="text-foreground text-xs">{svc.serviceName}</span>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-500 hover:text-red-400" onClick={() => removeService(apt.id, i)}><X className="h-4 w-4"/></Button>
                               </div>
                             ))}
-                            {getCurrentServices(apt.id).length === 0 && <p className="text-[10px] text-white/30 italic">Sin servicios asignados.</p>}
+                            {getCurrentServices(apt.id).length === 0 && <p className="text-[10px] text-gray-400 italic">Sin servicios asignados.</p>}
                           </div>
                           <div className="flex flex-col gap-2 mt-4">
                             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -334,37 +345,60 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                 <Badge
                                   key={cat}
                                   variant={activeSvcCat[apt.id] === cat ? "default" : "outline"}
-                                  className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-[10px] ${activeSvcCat[apt.id] === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-white/50 border-white/10 hover:bg-white/5'}`}
+                                  className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-[10px] ${activeSvcCat[apt.id] === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                                   onClick={() => setActiveSvcCat({...activeSvcCat, [apt.id]: cat})}
                                 >
-                                  {getCategoryDisplayName(cat as any)}
                                 </Badge>
                               ))}
                             </div>
-                            {activeSvcCat[apt.id] && (
-                              <Select onValueChange={(val) => { addService(apt.id, val); setActiveSvcCat({...activeSvcCat, [apt.id]: ""}); }} value="">
-                                <SelectTrigger className="bg-input border-white/10 text-[#D1B98D] h-8 text-xs font-bold w-full">
-                                  <SelectValue placeholder={`+ Seleccionar Servicio Especializado`} />
-                                </SelectTrigger>
-                                <SelectContent className="bg-card border-white/10 text-white max-h-[250px]">
-                                  {servicesByCategory[activeSvcCat[apt.id]]?.map((s: any) => <SelectItem key={`svc-${s.id}`} value={s.id}>{s.name}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            )}
+                            <div className="relative mt-2">
+                              <Input
+                                placeholder="+ Escribir servicio o especialidad..."
+                                value={svcSearch[apt.id] || ""}
+                                onChange={(e) => {
+                                  setSvcSearch({...svcSearch, [apt.id]: e.target.value})
+                                  setSvcMenuOpen({...svcMenuOpen, [apt.id]: true})
+                                }}
+                                onFocus={() => setSvcMenuOpen({...svcMenuOpen, [apt.id]: true})}
+                                onBlur={() => setTimeout(() => setSvcMenuOpen({...svcMenuOpen, [apt.id]: false}), 200)}
+                                className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 h-8 text-xs"
+                              />
+                              {svcMenuOpen[apt.id] && (
+                                <div className="absolute top-[35px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[250px] overflow-y-auto z-[60]">
+                                  {(activeSvcCat[apt.id] ? servicesByCategory[activeSvcCat[apt.id]] : services.filter(s => currentProfessional?.specialties.includes(s.category)))
+                                    ?.filter((s:any) => !(svcSearch[apt.id]) || s.name.toLowerCase().includes(svcSearch[apt.id].toLowerCase()) || s.category.toLowerCase().includes(svcSearch[apt.id].toLowerCase()))
+                                    .map((s: any) => (
+                                      <button
+                                        key={`svc-${s.id}`}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100 flex justify-between"
+                                        onClick={() => {
+                                          addService(apt.id, s.id)
+                                          setActiveSvcCat({...activeSvcCat, [apt.id]: ""})
+                                          setSvcSearch({...svcSearch, [apt.id]: ""})
+                                          setSvcMenuOpen({...svcMenuOpen, [apt.id]: false})
+                                        }}
+                                      >
+                                        <span>{s.name} <span className="text-gray-400 text-[10px] ml-1">({s.category})</span></span>
+                                        <span className="font-bold text-[#D1B98D]">${s.price}</span>
+                                      </button>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                         
                         {/* PRODUCTOS */}
-                        <div className="border-t border-white/10 pt-3">
+                        <div className="border-t border-gray-200 pt-3">
                           <Label className="text-[10px] font-bold text-[#D1B98D] uppercase tracking-wider mb-2 block">Productos Entregados</Label>
                           <div className="space-y-2 mb-3">
                             {getCurrentProducts(apt.id).map((prod, i) => (
                               <div key={i} className="flex justify-between items-center bg-white/5 p-2 rounded text-sm">
-                                <span className="text-white text-xs">{prod.quantity}x {prod.productName}</span>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-white/50 hover:text-red-400" onClick={() => removeProduct(apt.id, prod.productId)}><X className="h-4 w-4"/></Button>
+                                <span className="text-foreground text-xs">{prod.quantity}x {prod.productName}</span>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-500 hover:text-red-400" onClick={() => removeProduct(apt.id, prod.productId)}><X className="h-4 w-4"/></Button>
                               </div>
                             ))}
-                            {getCurrentProducts(apt.id).length === 0 && <p className="text-[10px] text-white/30 italic">No llevó productos extras.</p>}
+                            {getCurrentProducts(apt.id).length === 0 && <p className="text-[10px] text-gray-400 italic">No llevó productos extras.</p>}
                           </div>
                           <div className="flex flex-col gap-2 mt-4">
                             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -372,29 +406,58 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                 <Badge
                                   key={cat}
                                   variant={activeProdCat[apt.id] === cat ? "default" : "outline"}
-                                  className={`cursor-pointer uppercase tracking-wider whitespace-nowrap px-2 py-0.5 text-[10px] ${activeProdCat[apt.id] === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-white/50 border-white/10 hover:bg-white/5'}`}
+                                  className={`cursor-pointer uppercase tracking-wider whitespace-nowrap px-2 py-0.5 text-[10px] ${activeProdCat[apt.id] === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                                   onClick={() => setActiveProdCat({...activeProdCat, [apt.id]: cat})}
                                 >
                                   {cat}
                                 </Badge>
                               ))}
                             </div>
-                            {activeProdCat[apt.id] && (
-                              <Select onValueChange={(val) => { addProduct(apt.id, val); setActiveProdCat({...activeProdCat, [apt.id]: ""}); }} value="">
-                                <SelectTrigger className="bg-input border-white/10 text-[#D1B98D] h-8 text-xs font-bold w-full">
-                                  <SelectValue placeholder={`+ Seleccionar Producto`} />
-                                </SelectTrigger>
-                                <SelectContent className="bg-card border-white/10 text-white max-h-[250px]">
-                                  {productsByCategory[activeProdCat[apt.id]]?.map((p: any) => <SelectItem key={`prod-${p.id}`} value={p.id}>{p.name}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            )}
+                            <div className="relative mt-2">
+                              <Input
+                                placeholder="+ Escribir marca o producto..."
+                                value={prodSearch[apt.id] || ""}
+                                onChange={(e) => {
+                                  setProdSearch({...prodSearch, [apt.id]: e.target.value})
+                                  setProdMenuOpen({...prodMenuOpen, [apt.id]: true})
+                                  
+                                  // Clear active badge filter if typing to search globally
+                                  if (activeProdCat[apt.id]) {
+                                    setActiveProdCat({...activeProdCat, [apt.id]: ""})
+                                  }
+                                }}
+                                onFocus={() => setProdMenuOpen({...prodMenuOpen, [apt.id]: true})}
+                                onBlur={() => setTimeout(() => setProdMenuOpen({...prodMenuOpen, [apt.id]: false}), 200)}
+                                className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 h-8 text-xs"
+                              />
+                              {prodMenuOpen[apt.id] && (
+                                <div className="absolute top-[35px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[250px] overflow-y-auto z-[60]">
+                                  {(activeProdCat[apt.id] ? productsByCategory[activeProdCat[apt.id]] : products)
+                                    ?.filter((p:any) => !(prodSearch[apt.id]) || p.name.toLowerCase().includes(prodSearch[apt.id].toLowerCase()) || p.category.toLowerCase().includes(prodSearch[apt.id].toLowerCase()))
+                                    .map((p: any) => (
+                                      <button
+                                        key={`prod-${p.id}`}
+                                        className="w-full text-left px-3 py-2 text-xs hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100 flex justify-between"
+                                        onClick={() => {
+                                          addProduct(apt.id, p.id)
+                                          setActiveProdCat({...activeProdCat, [apt.id]: ""})
+                                          setProdSearch({...prodSearch, [apt.id]: ""})
+                                          setProdMenuOpen({...prodMenuOpen, [apt.id]: false})
+                                        }}
+                                      >
+                                        <span>{p.name} <span className="text-gray-400 text-[10px] ml-1">({p.category})</span></span>
+                                        <span className="font-bold text-[#D1B98D]">${p.priceCash}</span>
+                                      </button>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
                       </div>
 
-                      <Button onClick={() => handleFinishAttention(apt.id)} className="w-full bg-[#829177] hover:bg-[#6b7a62] text-white font-bold h-12 shadow-lg">
+                      <Button onClick={() => handleFinishAttention(apt.id)} className="w-full bg-[#829177] hover:bg-[#6b7a62] text-white font-bold h-12 shadow-lg mt-4">
                         <ArrowRightCircle className="h-5 w-5 mr-2" /> TERMINAR Y ENVIAR A COBRAR
                       </Button>
                     </div>
@@ -408,7 +471,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
       {activeTab === "agenda" && (
         <div className="space-y-6">
-          <div className="bg-card rounded-xl p-4 border border-border flex justify-center shadow-lg">
+          <div className="bg-card rounded-xl p-4 border border-gray-200 flex justify-center shadow-lg">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -419,7 +482,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-[#D1B98D]" /> 
                 Turnos para {selectedDate?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
               </h3>
@@ -430,30 +493,57 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                     <Plus className="h-4 w-4 mr-2" /> Agendar Turno
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-card border-border text-foreground sm:max-w-[450px]">
+                <DialogContent className="bg-card border-gray-200 text-foreground sm:max-w-[450px]">
                   <DialogHeader>
                     <DialogTitle className="text-[#D1B98D]">Agendar Turno Personal</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
                       <Label>Paciente</Label>
-                      <Select value={schedulingPatientId} onValueChange={setSchedulingPatientId}>
-                        <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Seleccionar Paciente..." /></SelectTrigger>
-                        <SelectContent className="bg-card border-border max-h-[200px]">
-                          {patients.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <Input 
+                        placeholder="Buscar paciente por nombre o DNI..." 
+                        value={schedulingPatientSearch} 
+                        onChange={(e) => {
+                          setSchedulingPatientSearch(e.target.value)
+                          setSchedulingPatientMenuOpen(true)
+                          if(e.target.value === "") setSchedulingPatientId("")
+                        }}
+                        onFocus={() => setSchedulingPatientMenuOpen(true)}
+                        onBlur={() => setTimeout(() => setSchedulingPatientMenuOpen(false), 200)}
+                        className="bg-input border-gray-200 text-foreground placeholder:text-gray-400"
+                      />
+                      {schedulingPatientMenuOpen && (
+                        <div className="absolute top-[68px] left-0 w-full bg-card border border-gray-200 shadow-xl rounded-md max-h-[220px] overflow-y-auto z-50">
+                          {patients.filter(p => !schedulingPatientSearch || p.name.toLowerCase().includes(schedulingPatientSearch.toLowerCase()) || p.dni?.includes(schedulingPatientSearch)).map(p => (
+                            <button 
+                              key={p.id}
+                              onClick={() => {
+                                setSchedulingPatientId(p.id)
+                                setSchedulingPatientSearch(p.name)
+                                setSchedulingPatientMenuOpen(false)
+                              }}
+                              className="w-full text-left px-3 py-2.5 text-sm hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100"
+                            >
+                              <span className="font-semibold">{p.name}</span>
+                              {p.dni && <span className="text-gray-400 text-xs ml-2">DNI: {p.dni}</span>}
+                            </button>
+                          ))}
+                          {patients.filter(p => !schedulingPatientSearch || p.name.toLowerCase().includes(schedulingPatientSearch.toLowerCase()) || p.dni?.includes(schedulingPatientSearch)).length === 0 && (
+                            <div className="p-3 text-sm text-gray-500 text-center italic">No se encontraron pacientes.</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Fecha</Label>
-                        <Input type="date" value={schedulingDate} onChange={(e) => setSchedulingDate(e.target.value)} className="bg-input border-border" />
+                        <Input type="date" value={schedulingDate} onChange={(e) => setSchedulingDate(e.target.value)} className="bg-input border-gray-200" />
                       </div>
                       <div className="space-y-2">
                         <Label>Horario</Label>
                         <Select value={schedulingTime} onValueChange={setSchedulingTime}>
-                          <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Hora..." /></SelectTrigger>
-                          <SelectContent className="bg-card border-border max-h-[150px]">
+                          <SelectTrigger className="bg-input border-gray-200"><SelectValue placeholder="Hora..." /></SelectTrigger>
+                          <SelectContent className="bg-card border-gray-200 max-h-[150px]">
                             {availableSlots.length > 0 ? availableSlots.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>) : <SelectItem value="none" disabled>Sin Turnos Disponibles</SelectItem>}
                           </SelectContent>
                         </Select>
@@ -466,7 +556,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                           <Badge 
                             key={cat} 
                             variant={schedulingServiceCat === cat ? "default" : "outline"}
-                            className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${schedulingServiceCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-white/50 border-white/10 hover:bg-white/5'}`}
+                            className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${schedulingServiceCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                             onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
                           >
                             {cat}
@@ -474,12 +564,42 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         ))}
                       </div>
                       {schedulingServiceCat && (
-                        <Select value={schedulingService} onValueChange={setSchedulingService}>
-                          <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Servicio..." /></SelectTrigger>
-                          <SelectContent className="bg-card border-border max-h-[150px]">
-                            {servicesByCategory[schedulingServiceCat]?.map(s => <SelectItem key={s.id} value={s.id}>{s.name} - ${s.price}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <div className="relative">
+                          <Input 
+                            placeholder="Buscar servicio específico..." 
+                            value={schedulingServiceSearch} 
+                            onChange={(e) => {
+                              setSchedulingServiceSearch(e.target.value)
+                              setSchedulingServiceMenuOpen(true)
+                              if(e.target.value === "") setSchedulingService("")
+                            }}
+                            onFocus={() => setSchedulingServiceMenuOpen(true)}
+                            onBlur={() => setTimeout(() => setSchedulingServiceMenuOpen(false), 200)}
+                            className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 mt-2"
+                          />
+                          {schedulingServiceMenuOpen && (
+                            <div className="absolute top-[48px] left-0 w-full bg-card border border-gray-200 shadow-xl rounded-md max-h-[150px] overflow-y-auto z-50">
+                              {servicesByCategory[schedulingServiceCat]
+                                ?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase()))
+                                .map(s => (
+                                <button 
+                                  key={s.id}
+                                  onClick={() => {
+                                    setSchedulingService(s.id)
+                                    setSchedulingServiceSearch(s.name)
+                                    setSchedulingServiceMenuOpen(false)
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100"
+                                >
+                                  {s.name} <span className="text-[#D1B98D] ml-2 font-bold">${s.price}</span>
+                                </button>
+                              ))}
+                              {servicesByCategory[schedulingServiceCat]?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase())).length === 0 && (
+                                <div className="p-3 text-sm text-gray-500 text-center italic">No hay servicios coincidentes.</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                     <Button onClick={handleScheduleAppointment} disabled={!schedulingPatientId || !schedulingService || !schedulingTime || !schedulingDate} className="w-full bg-[#D1B98D] text-[#2d3529] font-bold">
@@ -491,19 +611,19 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
             </div>
 
             {agendaAppointments.length === 0 ? (
-               <Card className="bg-transparent border-dashed border-white/10">
-                <CardContent className="py-8 text-center text-white/30 italic text-sm">
+               <Card className="bg-transparent border-dashed border-gray-200">
+                <CardContent className="py-8 text-center text-gray-400 italic text-sm">
                   No hay turnos registrados para esta fecha.
                 </CardContent>
               </Card>
             ) : (
               agendaAppointments.map(apt => (
-                <div key={apt.id} className="bg-secondary/40 border border-white/10 rounded-lg p-3 flex justify-between items-center">
+                <div key={apt.id} className="bg-secondary/10 border border-gray-200 rounded-lg p-3 flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-[#D1B98D] w-12">{apt.time}</span>
-                    <div className="border-l border-white/10 pl-3">
-                      <p className="font-bold text-white text-sm">{getPatientName(apt.patientId)}</p>
-                      <p className="text-xs text-white/50">{apt.services[0]?.serviceName}</p>
+                    <div className="border-l border-gray-200 pl-3">
+                      <p className="font-bold text-foreground text-sm">{getPatientName(apt.patientId)}</p>
+                      <p className="text-xs text-gray-500">{apt.services[0]?.serviceName}</p>
                     </div>
                   </div>
                   {(() => {
@@ -517,10 +637,10 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                       badgeColor = "bg-emerald-500 text-white font-bold border-emerald-500 hover:bg-emerald-600 shadow-sm";
                       badgeLabel = "CONFIRMADO (Seña OK)";
                     } else if (apt.status === 'en_atencion' || apt.status === 'completado' || apt.status === 'pendiente_cobro') {
-                      badgeColor = "bg-secondary text-white/50 border-white/10";
+                      badgeColor = "bg-secondary text-gray-500 border-gray-200";
                       badgeLabel = "ATENDIDO";
                     } else if (apt.status === 'cancelado') {
-                      badgeColor = "bg-black/40 text-white/30 border-white/5 line-through";
+                      badgeColor = "bg-black/40 text-gray-400 border-gray-100 line-through";
                       badgeLabel = "CANCELADO";
                     }
 

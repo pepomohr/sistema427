@@ -90,29 +90,29 @@ export function SystemConfigModule() {
       </div>
 
       {activeTab === "servicios" && (
-        <Card className="bg-card border-border">
+        <Card className="bg-card border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xl text-white">Listado de Servicios</CardTitle>
+            <CardTitle className="text-xl text-foreground">Listado de Servicios</CardTitle>
             <Button onClick={() => handleOpenService()} className="bg-[#829177] hover:bg-[#6b7a62] text-white">
               <Plus className="h-4 w-4 mr-2" /> Añadir
             </Button>
           </CardHeader>
           <CardContent className="space-y-4 max-h-[600px] overflow-y-auto mt-4">
             {services.map(s => (
-              <div key={s.id} className="flex justify-between items-center p-3 bg-secondary/30 rounded-lg border border-border/50">
+              <div key={s.id} className="flex justify-between items-center p-3 bg-secondary/10 rounded-lg border border-gray-200/50">
                 <div>
-                  <h4 className="font-bold text-white">{s.name}</h4>
+                  <h4 className="font-bold text-foreground">{s.name}</h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs px-2 py-0.5 bg-black/30 rounded text-[#D1B98D] uppercase tracking-wide">{getCategoryDisplayName(s.category as any)}</span>
-                    <span className="text-xs text-white/50">{s.duration} mins</span>
+                    <span className="text-xs px-2 py-0.5 bg-gray-200 rounded text-[#D1B98D] uppercase tracking-wide">{getCategoryDisplayName(s.category as any)}</span>
+                    <span className="text-xs text-gray-500">{s.duration} mins</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="text-sm font-semibold text-emerald-400">Cash: ${s.priceCash}</p>
-                    <p className="text-xs text-white/50">Lista: ${s.price}</p>
+                    <p className="text-xs text-gray-500">Lista: ${s.price}</p>
                   </div>
-                  <div className="flex gap-2 border-l border-white/10 pl-4">
+                  <div className="flex gap-2 border-l border-gray-200 pl-4">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenService(s)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
                     <Button variant="ghost" size="sm" onClick={() => { if(window.confirm("¿Seguro que deseas eliminarlo?")) deleteService(s.id); }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
                   </div>
@@ -124,29 +124,29 @@ export function SystemConfigModule() {
       )}
 
       {activeTab === "productos" && (
-        <Card className="bg-card border-border">
+        <Card className="bg-card border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xl text-white">Listado de Productos</CardTitle>
+            <CardTitle className="text-xl text-foreground">Listado de Productos</CardTitle>
             <Button onClick={() => handleOpenProduct()} className="bg-[#829177] hover:bg-[#6b7a62] text-white">
               <Plus className="h-4 w-4 mr-2" /> Añadir
             </Button>
           </CardHeader>
           <CardContent className="space-y-4 max-h-[600px] overflow-y-auto mt-4">
             {products.map(p => (
-              <div key={p.id} className="flex justify-between items-center p-3 bg-secondary/30 rounded-lg border border-border/50">
+              <div key={p.id} className="flex justify-between items-center p-3 bg-secondary/10 rounded-lg border border-gray-200/50">
                 <div>
-                  <h4 className="font-bold text-white">{p.name}</h4>
+                  <h4 className="font-bold text-foreground">{p.name}</h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs px-2 py-0.5 bg-black/30 rounded text-[#D1B98D] uppercase tracking-wide">{p.category}</span>
+                    <span className="text-xs px-2 py-0.5 bg-gray-200 rounded text-[#D1B98D] uppercase tracking-wide">{p.category}</span>
                     <span className={`text-xs ${p.stock > 5 ? 'text-blue-400' : 'text-red-400'}`}>Stock: {p.stock}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="text-sm font-semibold text-emerald-400">Cash: ${p.priceCash}</p>
-                    <p className="text-xs text-white/50">Lista: ${p.priceList}</p>
+                    <p className="text-xs text-gray-500">Lista: ${p.priceList}</p>
                   </div>
-                  <div className="flex gap-2 border-l border-white/10 pl-4">
+                  <div className="flex gap-2 border-l border-gray-200 pl-4">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenProduct(p)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
                     <Button variant="ghost" size="sm" onClick={() => { if(window.confirm("¿Seguro que deseas eliminarlo?")) deleteProduct(p.id); }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
                   </div>
@@ -158,8 +158,8 @@ export function SystemConfigModule() {
       )}
 
       {activeTab === "ofertas" && (
-        <Card className="bg-card border-border">
-          <CardContent className="pt-6 text-center text-white/50 italic py-12">
+        <Card className="bg-card border-gray-200">
+          <CardContent className="pt-6 text-center text-gray-500 italic py-12">
             <Percent className="h-12 w-12 mx-auto opacity-20 mb-4" />
             <p>Sección de Ofertas y Porcentajes de Descuento</p>
             <p className="text-xs mt-2">Próximamente se conectará a la Base de Datos para definir descuentos aplicables al carrito.</p>
@@ -168,13 +168,13 @@ export function SystemConfigModule() {
       )}
 
       <Dialog open={showServiceDialog} onOpenChange={setShowServiceDialog}>
-        <DialogContent className="bg-card border-border text-foreground">
+        <DialogContent className="bg-card border-gray-200 text-foreground">
           <DialogHeader><DialogTitle className="text-[#D1B98D]">{editingServiceId ? 'Editar Servicio' : 'Nuevo Servicio'}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-3">
-            <Label>Nombre</Label><Input value={svcForm.name} onChange={e=>setSvcForm({...svcForm, name: e.target.value})} className="bg-input border-border" />
+            <Label>Nombre</Label><Input value={svcForm.name} onChange={e=>setSvcForm({...svcForm, name: e.target.value})} className="bg-input border-gray-200" />
             <Label>Cat/Especialidad</Label>
             <Select value={svcForm.category} onValueChange={(val: any)=>setSvcForm({...svcForm, category: val})}>
-              <SelectTrigger className="bg-input border-border"><SelectValue/></SelectTrigger>
+              <SelectTrigger className="bg-input border-gray-200"><SelectValue/></SelectTrigger>
               <SelectContent className="bg-card">
                  <SelectItem value="Facial">Facial/Escote</SelectItem>
                  <SelectItem value="Corporales">Corporales</SelectItem>
@@ -187,26 +187,26 @@ export function SystemConfigModule() {
               </SelectContent>
             </Select>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Precio Efvo ($)</Label><Input type="number" value={svcForm.priceCash || ""} onChange={e=>setSvcForm({...svcForm, priceCash: Number(e.target.value)})} className="bg-input border-border" /></div>
-              <div><Label>Precio Tarjeta ($)</Label><Input type="number" value={svcForm.price || ""} onChange={e=>setSvcForm({...svcForm, price: Number(e.target.value)})} className="bg-input border-border" /></div>
+              <div><Label>Precio Efvo ($)</Label><Input type="number" value={svcForm.priceCash || ""} onChange={e=>setSvcForm({...svcForm, priceCash: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
+              <div><Label>Precio Tarjeta ($)</Label><Input type="number" value={svcForm.price || ""} onChange={e=>setSvcForm({...svcForm, price: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
             </div>
-            <Label>Duración (mins)</Label><Input type="number" value={svcForm.duration || ""} onChange={e=>setSvcForm({...svcForm, duration: Number(e.target.value)})} className="bg-input border-border" />
+            <Label>Duración (mins)</Label><Input type="number" value={svcForm.duration || ""} onChange={e=>setSvcForm({...svcForm, duration: Number(e.target.value)})} className="bg-input border-gray-200" />
             <Button onClick={handleSaveService} className="w-full mt-4 bg-[#D1B98D] text-[#2d3529]">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
-        <DialogContent className="bg-card border-border text-foreground">
+        <DialogContent className="bg-card border-gray-200 text-foreground">
           <DialogHeader><DialogTitle className="text-[#D1B98D]">{editingProductId ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-3">
-            <Label>Nombre del Insumo/Producto</Label><Input value={prodForm.name} onChange={e=>setProdForm({...prodForm, name: e.target.value})} className="bg-input border-border" />
-            <Label>Marca/Categoría Lógica</Label><Input value={prodForm.category} onChange={e=>setProdForm({...prodForm, category: e.target.value})} className="bg-input border-border" placeholder="Ej: Lidherma, AP, etc." />
+            <Label>Nombre del Insumo/Producto</Label><Input value={prodForm.name} onChange={e=>setProdForm({...prodForm, name: e.target.value})} className="bg-input border-gray-200" />
+            <Label>Marca/Categoría Lógica</Label><Input value={prodForm.category} onChange={e=>setProdForm({...prodForm, category: e.target.value})} className="bg-input border-gray-200" placeholder="Ej: Lidherma, AP, etc." />
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Precio Efvo ($)</Label><Input type="number" value={prodForm.priceCash || ""} onChange={e=>setProdForm({...prodForm, priceCash: Number(e.target.value)})} className="bg-input border-border" /></div>
-              <div><Label>Precio Lista ($)</Label><Input type="number" value={prodForm.priceList || ""} onChange={e=>setProdForm({...prodForm, priceList: Number(e.target.value)})} className="bg-input border-border" /></div>
+              <div><Label>Precio Efvo ($)</Label><Input type="number" value={prodForm.priceCash || ""} onChange={e=>setProdForm({...prodForm, priceCash: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
+              <div><Label>Precio Lista ($)</Label><Input type="number" value={prodForm.priceList || ""} onChange={e=>setProdForm({...prodForm, priceList: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
             </div>
-            <Label>Stock Actual</Label><Input type="number" value={prodForm.stock || 0} onChange={e=>setProdForm({...prodForm, stock: Number(e.target.value)})} className="bg-input border-border" />
+            <Label>Stock Actual</Label><Input type="number" value={prodForm.stock || 0} onChange={e=>setProdForm({...prodForm, stock: Number(e.target.value)})} className="bg-input border-gray-200" />
             <Button onClick={handleSaveProduct} className="w-full mt-4 bg-[#D1B98D] text-[#2d3529]">Guardar</Button>
           </div>
         </DialogContent>

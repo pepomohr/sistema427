@@ -30,7 +30,7 @@ interface MainLayoutProps {
   onLogout: () => void
 }
 
-type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "agenda" | "atencion" | "comisiones" | "cobrar" | "reportes" | "rrhh" | "config"
+type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "reportes" | "rrhh" | "config"
 
 interface Tab {
   id: TabId
@@ -43,6 +43,7 @@ const allTabs: Tab[] = [
   { id: "recepcion-busqueda", label: "Búsqueda Pacientes", icon: Users, roles: ["recepción", "admin"] },
   { id: "recepcion-agenda", label: "Agenda General", icon: Calendar, roles: ["recepción", "admin"] },
   { id: "recepcion-caja", label: "Cierre de Caja", icon: Wallet, roles: ["recepción", "admin"] },
+  { id: "recepcion-comisiones", label: "Objetivos y Ventas", icon: Award, roles: ["recepción", "admin"] },
   { id: "agenda", label: "Mi Agenda", icon: Calendar, roles: ["profesional", "admin"] },
   { id: "atencion", label: "Atención", icon: Stethoscope, roles: ["profesional", "admin"] },
   { id: "comisiones", label: "Comisiones", icon: Award, roles: ["profesional", "admin"] },
@@ -65,6 +66,8 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
         return <ReceptionModule activeView="agenda" />
       case "recepcion-caja":
         return <ReceptionModule activeView="caja" />
+      case "recepcion-comisiones":
+        return <ReceptionModule activeView="comisiones" />
       case "agenda":
         return <ProfessionalsModule view="agenda" professionalId={user.professionalId} />
       case "atencion":
@@ -98,7 +101,7 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="bg-[#5a6852] border-b border-border px-4 py-3">
+      <header className="bg-[#5a6852] border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             <Image 
@@ -123,7 +126,7 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
               variant="outline"
               size="sm"
               onClick={onLogout}
-              className="border-border text-foreground hover:bg-secondary"
+              className="border-gray-200 text-foreground hover:bg-secondary"
             >
               <LogOut className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Salir</span>
