@@ -130,8 +130,8 @@ export function ChargeModule() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#D1B98D]">Cobrar</h2>
-        <Button onClick={() => setShowDirectSaleModal(true)} className="bg-[#D1B98D] text-[#2d3529]">
+        <h2 className="text-2xl font-bold text-[#FFD700]">Cobrar</h2>
+        <Button onClick={() => setShowDirectSaleModal(true)} className="bg-[#FFD700] text-[#2d3529] hover:bg-[#E6C200]">
           <ShoppingCart className="h-4 w-4 mr-2" /> Venta Directa
         </Button>
       </div>
@@ -140,7 +140,7 @@ export function ChargeModule() {
       <Card className="bg-card border-gray-200">
         <CardHeader>
           <CardTitle className="text-foreground flex items-center gap-2">
-            <Clock className="h-5 w-5 text-[#D1B98D]" />
+            <Clock className="h-5 w-5 text-[#FFD700]" />
             Pendientes de Cobro
             <Badge className="ml-2 bg-orange-500/20 text-orange-200">
               {pendingCharges.length}
@@ -156,7 +156,7 @@ export function ChargeModule() {
                 <div key={apt.id} className="p-4 rounded-lg border border-orange-500/30 bg-orange-500/10 flex justify-between items-center">
                   <div>
                     <p className="font-medium text-lg">{(patients.find(p => p.id === apt.patientId))?.name || "Paciente"}</p>
-                    <p className="text-sm text-muted-foreground">Monto total: <span className="text-[#D1B98D] font-bold">${apt.totalAmount.toLocaleString()}</span></p>
+                    <p className="text-sm text-muted-foreground">Monto total: <span className="text-[#FFD700] font-bold">${apt.totalAmount.toLocaleString()}</span></p>
                   </div>
                   <Button onClick={() => handleOpenPayment(apt.id)} className="bg-green-600 hover:bg-green-700">Cobrar</Button>
                 </div>
@@ -169,7 +169,7 @@ export function ChargeModule() {
       {/* Modal Venta Directa */}
       <Dialog open={showDirectSaleModal} onOpenChange={setShowDirectSaleModal}>
         <DialogContent className="bg-card border-gray-200 text-foreground max-w-lg">
-          <DialogHeader><DialogTitle className="text-[#D1B98D]">Venta Directa de Productos</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-[#FFD700]">Venta Directa de Productos</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-4">
             <Label>Seleccionar Producto</Label>
             <div className="relative">
@@ -199,7 +199,7 @@ export function ChargeModule() {
                         }}
                       >
                         <span className="font-semibold">{p.name} <span className="text-gray-400 font-normal text-xs ml-2">({p.category})</span></span>
-                        <span className="text-[#D1B98D] ml-2 font-bold">${p.priceCash.toLocaleString()}</span>
+                        <span className="text-[#FFD700] ml-2 font-bold">${p.priceCash.toLocaleString()}</span>
                       </button>
                     ))}
                   {products.filter(p => !directSaleProductSearch || p.name.toLowerCase().includes(directSaleProductSearch.toLowerCase()) || p.category.toLowerCase().includes(directSaleProductSearch.toLowerCase())).length === 0 && (
@@ -220,7 +220,7 @@ export function ChargeModule() {
                   
                   {/* Selector de quién vendió para la COMISIÓN DE NICO */}
                   <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold text-[#D1B98D]">¿Quién lo vendió?</p>
+                    <p className="text-[10px] uppercase font-bold text-[#FFD700]">¿Quién lo vendió?</p>
                     <div className="relative">
                       <Input
                         placeholder="Buscar profesional o Recepción..."
@@ -283,7 +283,7 @@ export function ChargeModule() {
               <div className="pt-4 border-t border-gray-200 space-y-3">
                 <div className="flex justify-between text-xl font-bold">
                   <span>Total:</span>
-                  <span className="text-[#D1B98D]">${directSaleItems.reduce((s, i) => s + (i.priceCashReference * i.quantity), 0).toLocaleString()}</span>
+                  <span className="text-[#FFD700]">${directSaleItems.reduce((s, i) => s + (i.priceCashReference * i.quantity), 0).toLocaleString()}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <Button onClick={() => handleProcessDirectSale("efectivo")} className="bg-green-600 text-[10px]">EFECTIVO</Button>
@@ -299,7 +299,7 @@ export function ChargeModule() {
       {/* Modal Método de Pago (Turnos) */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
         <DialogContent className="bg-card border-gray-200 text-foreground">
-          <DialogHeader><DialogTitle className="text-[#D1B98D]">Seleccionar Pago</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-[#FFD700]">Seleccionar Pago</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 gap-3 pt-4">
             <Button onClick={() => handleProcessPayment("efectivo")} variant="outline" className="h-16 justify-start gap-4 border-green-500/30 hover:bg-green-500/10">
               <Banknote className="h-6 w-6 text-green-500" /> Efectivo

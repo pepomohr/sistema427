@@ -59,7 +59,7 @@ export default function Home() {
     setShowProfessionalSelect(false)
   }
   
-  if (isLoading) return <div className="min-h-screen bg-[#829177] flex items-center justify-center text-white">Cargando...</div>
+  if (isLoading) return <div className="min-h-screen bg-white flex items-center justify-center text-primary font-semibold">Cargando...</div>
   
   if (!currentUser && !showProfessionalSelect) {
     return <LoginScreen onLogin={handleLogin} />

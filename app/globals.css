@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* C427 Clinic Theme - Olive Green with Gold Accents */
+/* C427 Clinic Theme - Clean white + green */
 :root {
   --background: #FFFFFF;
   --foreground: #111827;
@@ -11,39 +11,39 @@
   --card-foreground: #111827;
   --popover: #FFFFFF;
   --popover-foreground: #111827;
-  --primary: #D1B98D;
-  --primary-foreground: #111827;
-  --secondary: #354231;
-  --secondary-foreground: #FFFFFF;
-  --muted: #F3F4F6;
+  --primary: #FFD700;
+  --primary-foreground: #1F2937;
+  --secondary: #F0FDF4;
+  --secondary-foreground: #14532D;
+  --muted: #F8FAFC;
   --muted-foreground: #6B7280;
-  --accent: #F3F4F6;
-  --accent-foreground: #111827;
+  --accent: #DCFCE7;
+  --accent-foreground: #14532D;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #354231;
-  --chart-1: #D1B98D;
-  --chart-2: #a8c99b;
-  --chart-3: #8fb87f;
-  --chart-4: #FFFFFF;
-  --chart-5: #5a6852;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #FFD700;
+  --chart-1: #16A34A;
+  --chart-2: #22C55E;
+  --chart-3: #4ADE80;
+  --chart-4: #86EFAC;
+  --chart-5: #15803D;
   --radius: 0.625rem;
-  --sidebar: #5a6852;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #D1B98D;
-  --sidebar-primary-foreground: #2d3529;
-  --sidebar-accent: #6b7a62;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: rgba(255, 255, 255, 0.15);
-  --sidebar-ring: #D1B98D;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #14532D;
+  --sidebar-primary: #16A34A;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F0FDF4;
+  --sidebar-accent-foreground: #14532D;
+  --sidebar-border: #E2E8F0;
+  --sidebar-ring: #16A34A;
   
   /* Custom C427 tokens */
-  --gold: #D1B98D;
-  --olive: #829177;
-  --olive-dark: #5a6852;
-  --olive-light: #9aab8f;
+  --gold: #FFD700;
+  --olive: #16A34A;
+  --olive-dark: #14532D;
+  --olive-light: #86EFAC;
   --success: #22c55e;
   --warning: #f59e0b;
 }

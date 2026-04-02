@@ -421,18 +421,15 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     
     const { patients } = get();
 
-    // 1. Prioritize local state search (ultra fast)
+    // 1. Local state search (ultra fast)
     const localResults = patients.filter(p => 
       (p.name && p.name.toLowerCase().includes(cleanQuery)) || 
       (p.dni && p.dni.includes(cleanQuery)) || 
       (p.phone && p.phone.includes(cleanQuery))
     );
 
-    if (localResults.length > 0) {
-      return localResults;
-    }
-
-    // 2. Fallback to Supabase if not found locally
+    // 2. Also query Supabase and merge, so local partial matches
+    // never hide valid records that are not loaded in-memory yet.
     try {
       const { data, error } = await supabase
         .from('patients')
@@ -446,7 +443,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       }
 
       if (data) {
-         return data.map((p: any) => ({
+         const remoteResults = data.map((p: any) => ({
           id: p.id,
           name: p.name,
           phone: p.phone,
@@ -457,12 +454,22 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           notes: p.notes,
           giftCardBalance: p.gift_card_balance || 0
          }));
+
+         const merged = [...localResults];
+         const seen = new Set(localResults.map((p) => p.id));
+         for (const patient of remoteResults) {
+           if (!seen.has(patient.id)) {
+             merged.push(patient);
+             seen.add(patient.id);
+           }
+         }
+         return merged;
       }
     } catch (err) {
       console.error('Network error searching Supabase:', err);
     }
     
-    return [];
+    return localResults;
   },
 
   fetchServices: async () => {

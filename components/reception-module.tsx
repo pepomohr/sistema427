@@ -336,17 +336,17 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#D1B98D]">Recepción</h2>
+        <h2 className="text-2xl font-bold text-[#FFD700]">Recepción</h2>
         <Dialog open={showNewPatient} onOpenChange={setShowNewPatient}>
           <DialogTrigger asChild>
-            <Button className="bg-[#D1B98D] text-[#2d3529] hover:bg-[#c4a975]">
+            <Button className="bg-[#FFD700] text-[#2d3529] hover:bg-[#E6C200]">
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Paciente
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-card border-gray-200 text-foreground">
             <DialogHeader>
-              <DialogTitle className="text-[#D1B98D]">Registrar Nuevo Paciente</DialogTitle>
+              <DialogTitle className="text-[#FFD700]">Registrar Nuevo Paciente</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
@@ -371,7 +371,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   <Input type="email" value={newPatient.email} onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })} className="bg-input border-gray-200" />
                 </div>
               </div>
-              <Button onClick={handleAddPatient} className="w-full bg-[#D1B98D] text-[#2d3529] font-bold" disabled={!newPatient.name || !newPatient.phone || !newPatient.dni}>
+              <Button onClick={handleAddPatient} className="w-full bg-[#FFD700] text-[#2d3529] font-bold hover:bg-[#E6C200]" disabled={!newPatient.name || !newPatient.phone || !newPatient.dni}>
                 Registrar Paciente
               </Button>
             </div>
@@ -411,9 +411,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       {/* GIFT CARD LOADER DIALOG */}
       {showGiftCardLoader && selectedPatient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-md bg-white border-l-4 border-l-[#D1B98D] shadow-2xl rounded-2xl">
+          <Card className="w-full max-w-md bg-white border-l-4 border-l-[#FFD700] shadow-2xl rounded-2xl">
             <CardHeader>
-               <CardTitle className="flex items-center gap-2 text-[#D1B98D]">
+               <CardTitle className="flex items-center gap-2 text-[#FFD700]">
                   <Gift className="h-5 w-5" /> 
                   Acreditar Saldo a Favor (Gift Card)
                </CardTitle>
@@ -454,10 +454,10 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       )}
 
       {/* EDIT PATIENT DIALOG */}
-      <Card className="bg-white text-foreground border border-[#D1B98D]/40 shadow-xl rounded-2xl overflow-hidden relative">
+      <Card className="bg-white text-foreground border border-[#FFD700]/40 shadow-xl rounded-2xl overflow-hidden relative">
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-[#D1B98D]" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-[#FFD700]" />
             <Input
               value={searchQuery}
               onChange={(e) => {
@@ -474,7 +474,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               {searchResults.map((patient) => (
                 <div key={patient.id} className="p-4 rounded-lg bg-secondary/15 hover:bg-secondary cursor-pointer flex items-center justify-between" onClick={() => setSelectedPatient(patient)}>
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-[#D1B98D]/20 flex items-center justify-center"><User className="h-6 w-6 text-[#D1B98D]" /></div>
+                    <div className="h-12 w-12 rounded-full bg-[#FFD700]/20 flex items-center justify-center"><User className="h-6 w-6 text-[#FFD700]" /></div>
                     <div>
                       <p className="font-medium text-lg">{patient.name}</p>
                       <p className="text-sm text-muted-foreground">DNI: {patient.dni}</p>
@@ -493,7 +493,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-full bg-[#D1B98D]/20 flex items-center justify-center"><User className="h-7 w-7 text-[#D1B98D]" /></div>
+                <div className="h-14 w-14 rounded-full bg-[#FFD700]/20 flex items-center justify-center"><User className="h-7 w-7 text-[#FFD700]" /></div>
                 <div>
                   <CardTitle className="text-xl flex items-center gap-2">
                     {selectedPatient.name}
@@ -510,7 +510,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <Button variant="outline" size="sm" onClick={() => setShowGiftCardLoader(true)} className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10">
                   <Gift className="h-4 w-4 mr-2" /> Cargar Saldo a Favor
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleEditPatientClick} className="border-[#D1B98D]/30 text-[#D1B98D] hover:bg-[#D1B98D]/10">
+                <Button variant="outline" size="sm" onClick={handleEditPatientClick} className="border-[#FFD700]/30 text-[#FFD700] hover:bg-[#FFD700]/10">
                   <Edit2 className="h-4 w-4 mr-2" /> Editar Info
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}><X className="h-5 w-5" /></Button>
@@ -550,7 +550,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                   <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
                                </div>
                                <p className="font-bold text-foreground">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
-                               <p className="text-sm text-[#D1B98D]">con {prof?.name || 'Profesional no encontrado'}</p>
+                               <p className="text-sm text-[#FFD700]">con {prof?.name || 'Profesional no encontrado'}</p>
                             </div>
                             {['programado', 'confirmado'].includes(apt.status) && (
                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
@@ -581,7 +581,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         <Badge 
                           key={cat} 
                           variant={schedulingServiceCat === cat ? "default" : "outline"}
-                          className={`cursor-pointer whitespace-nowrap px-3 py-1.5 ${schedulingServiceCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-600 border-gray-300 hover:bg-white/5'}`}
+                          className={`cursor-pointer whitespace-nowrap px-3 py-1.5 ${schedulingServiceCat === cat ? 'bg-[#FFD700] text-[#2d3529]' : 'text-gray-600 border-gray-300 hover:bg-white/5'}`}
                           onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
                         >
                           {getCategoryDisplayName(cat as any)}
@@ -671,7 +671,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 )}
 
                 {schedulingTime && (
-                  <Button onClick={handleScheduleAppointment} className="w-full bg-[#D1B98D] text-[#2d3529]">
+                  <Button onClick={handleScheduleAppointment} className="w-full bg-[#FFD700] text-[#2d3529] hover:bg-[#E6C200]">
                     Confirmar Turno
                   </Button>
                 )}
@@ -682,254 +682,106 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               <div className="space-y-6 pt-4 border-t border-gray-200">
                 {!checkoutAptId ? (
                   <div className="space-y-4">
-                    <Label className="text-[#D1B98D] uppercase text-xs font-bold tracking-wider">Punto de Venta Unificado</Label>
-                    
-                    <Button onClick={() => setCheckoutAptId("direct")} className="w-full bg-[#D1B98D]/10 hover:bg-[#D1B98D]/20 text-[#D1B98D] font-bold h-12 shadow-md">
-                      + Venta Libre / Standalone
-                    </Button>
-
+                    <Label className="text-[#FFD700] uppercase text-xs font-bold tracking-wider">Cobro de Turnos</Label>
                     {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro'].includes(a.status)).length === 0 ? (
-                       <p className="text-sm text-gray-500 italic text-center py-4 rounded bg-gray-50 mt-2">No hay turnos pendientes para cobrar.</p>
+                      <p className="text-sm text-gray-500 italic text-center py-4 rounded bg-gray-50 mt-2">No hay turnos pendientes para cobrar.</p>
                     ) : (
                       <div className="space-y-2 mt-4">
                         <Label className="text-xs text-gray-500 uppercase block mb-2">Turnos Pendientes:</Label>
-                        {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro'].includes(a.status)).map(apt => {
-                           const prof = professionals.find(p => p.id === apt.professionalId);
-                           return (
-                             <div key={apt.id} className="p-4 bg-secondary/10 rounded-xl border border-gray-100 flex justify-between items-center cursor-pointer hover:bg-secondary/15 transition-colors" onClick={() => setCheckoutAptId(apt.id)}>
-                               <div>
-                                 <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="outline" className="text-[10px]">{apt.status}</Badge>
-                                    <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
-                                 </div>
-                                 <p className="font-bold text-foreground">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
-                                 {apt.products && apt.products.length > 0 && <p className="text-xs text-[#D1B98D] mt-1">+ {apt.products.length} productos extras</p>}
-                               </div>
-                               <div className="text-right">
-                                  {apt.paidAmount > 0 ? <Badge className="bg-emerald-500/20 text-emerald-400 border-none mb-1 text-[9px]">Seña: ${apt.paidAmount}</Badge> : null}
-                                  <Button variant="ghost" size="sm" className="bg-[#D1B98D]/10 text-[#D1B98D] hover:bg-[#D1B98D]/20">Abrir Cuenta</Button>
-                               </div>
-                             </div>
-                           )
-                        })}
+                        {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro'].includes(a.status)).map(apt => (
+                          <div key={apt.id} className="p-4 bg-secondary/10 rounded-xl border border-gray-100 flex justify-between items-center cursor-pointer hover:bg-secondary/15 transition-colors" onClick={() => setCheckoutAptId(apt.id)}>
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="text-[10px]">{apt.status}</Badge>
+                                <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
+                              </div>
+                              <p className="font-bold text-foreground">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
+                              {apt.products && apt.products.length > 0 && <p className="text-xs text-[#FFD700] mt-1">+ {apt.products.length} productos extras</p>}
+                            </div>
+                            <Button variant="ghost" size="sm" className="bg-[#FFD700]/10 text-[#FFD700] hover:bg-[#FFD700]/20">Abrir Cuenta</Button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
                 ) : (() => {
-                  const apt = checkoutAptId !== "direct" ? appointments.find(a => a.id === checkoutAptId) : null;
-                  
-                  // Calculamos los totales según medio de pago
+                  const apt = appointments.find(a => a.id === checkoutAptId);
+                  if (!apt) return null;
+
                   let subtotalList = 0;
                   let subtotalCash = 0;
-                  
-                  if (apt) {
-                    apt.services.forEach((s: any) => {
-                      subtotalList += s.price;
-                      subtotalCash += (s.priceCash || s.price);
-                    });
-                    
-                    apt.products?.forEach((p: any) => {
-                      subtotalList += (p.price * p.quantity);
-                      subtotalCash += ((p.priceCashReference || p.price) * p.quantity);
-                    });
-                  }
-                  
-                  // Productos anexados al carrito en mostrador
-                  directSaleCart.forEach((item) => {
-                    subtotalList += (item.product.priceList * item.quantity);
-                    subtotalCash += (item.product.priceCash * item.quantity);
+                  apt.services.forEach((s: any) => {
+                    subtotalList += s.price;
+                    subtotalCash += (s.priceCash || s.price);
                   });
-                  
+                  apt.products?.forEach((p: any) => {
+                    subtotalList += (p.price * p.quantity);
+                    subtotalCash += ((p.priceCashReference || p.price) * p.quantity);
+                  });
                   const chosenTotalOriginal = checkoutPaymentMethod === 'efectivo' ? subtotalCash : subtotalList;
-                  const finalToPay = Math.max(0, chosenTotalOriginal - (apt?.paidAmount || 0));
-                  
-                  const canConfirm = checkoutPaymentMethod && 
-                                     ((apt !== null) || (apt === null && directSaleCart.length > 0 && directSaleProf));
+                  const finalToPay = Math.max(0, chosenTotalOriginal - (apt.paidAmount || 0));
 
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
-                         <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg border border-gray-100">
-                           <span className="text-sm font-semibold">{apt ? 'Facturación de Turno + Mostrador' : 'Venta Libre'}</span>
-                           <Button variant="ghost" size="sm" onClick={() => {setCheckoutAptId(""); setCheckoutPaymentMethod(""); setDirectSaleCart([]); setDirectSaleProf("");}} className="h-6 px-2 text-xs text-gray-500 hover:text-white">Cambiar Selección</Button>
-                         </div>
-                         
-                         <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
-                           {apt?.services.map((s:any, i:number) => (
-                             <div key={i} className="flex justify-between text-gray-700">
-                               <span>{s.serviceName}</span>
-                               <span>${checkoutPaymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price}</span>
-                             </div>
-                           ))}
-                           {apt?.products?.map((p:any, i:number) => (
-                             <div key={i} className="flex justify-between text-gray-700 text-xs italic">
-                               <span>{p.quantity}x {p.productName} (Gabinete)</span>
-                               <span>${(checkoutPaymentMethod === 'efectivo' ? (p.priceCashReference || p.price) : p.price) * p.quantity}</span>
-                             </div>
-                           ))}
-                           
-                           {/* Carrito Directo Items */}
-                           {directSaleCart.map((item, i) => (
-                             <div key={`ds-${i}`} className="flex justify-between items-center text-[#D1B98D] text-xs font-bold leading-none py-1.5 border-t border-gray-100 mt-1">
-                               <div className="flex items-center gap-2">
-                                  <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-red-500 hover:bg-transparent hover:scale-125" onClick={() => handleRemoveProductFromDirectSale(item.product.id)}>✕</Button>
-                                  <span>{item.quantity}x {item.product.name} (Extra)</span>
-                               </div>
-                               <span>${(checkoutPaymentMethod === 'efectivo' ? item.product.priceCash : item.product.priceList) * item.quantity}</span>
-                             </div>
-                           ))}
-
-                           {/* Resumen numérico */}
-                           <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-foreground mt-2">
-                             <span>Subtotal:</span>
-                             <span>${chosenTotalOriginal}</span>
-                           </div>
-                           {(apt?.paidAmount || 0) > 0 && (
-                             <div className="flex justify-between font-bold text-emerald-400">
-                               <span>Seña ya abonada:</span>
-                               <span>- ${apt?.paidAmount}</span>
-                             </div>
-                           )}
-                         </div>
-
-                         {/* Agregador de Productos y Vendedor si corresponde */}
-                         <div className="space-y-3 pt-2">
-                            <div className="bg-secondary/10 p-3 rounded-lg border border-dashed border-gray-200 space-y-2">
-                              <Label className="text-xs font-bold text-gray-600 block">+ Agregar Producto Extra</Label>
-                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                                {Array.from(new Set(useClinicStore.getState().products.map(p => p.category))).map(cat => (
-                                  <Badge 
-                                    key={cat} 
-                                    variant={directSaleProdCat === cat ? "default" : "outline"}
-                                    onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }}
-                                    className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
-                                  >
-                                    {cat}
-                                  </Badge>
-                                ))}
-                              </div>
-
-                              {directSaleProdCat && (
-                                <div className="relative">
-                                  <Input 
-                                    placeholder={`Buscar producto en ${directSaleProdCat}...`}
-                                    value={directSaleProdSearch}
-                                    onChange={(e) => {
-                                      setDirectSaleProdSearch(e.target.value)
-                                      setDirectSaleProdMenuOpen(true)
-                                    }}
-                                    onFocus={() => setDirectSaleProdMenuOpen(true)}
-                                    onBlur={() => setTimeout(() => setDirectSaleProdMenuOpen(false), 200)}
-                                    className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 h-8 text-xs"
-                                  />
-                                  {directSaleProdMenuOpen && (
-                                    <div className="absolute top-[35px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[150px] overflow-y-auto z-50">
-                                      {useClinicStore.getState().products
-                                        .filter(p => p.category === directSaleProdCat && (!directSaleProdSearch || p.name.toLowerCase().includes(directSaleProdSearch.toLowerCase())))
-                                        .map(p => (
-                                          <button 
-                                            key={p.id}
-                                            onClick={() => {
-                                              handleAddProductToDirectSale(p.id)
-                                              setDirectSaleProdSearch("")
-                                              setDirectSaleProdMenuOpen(false)
-                                            }}
-                                            className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 text-[#2d3529] font-medium border-b border-black/5 flex justify-between"
-                                          >
-                                            <span>{p.name}</span> <span className="text-[#829177] font-bold">${p.priceCash} ef | ${p.priceList} t.</span>
-                                          </button>
-                                        ))
-                                      }
-                                      {useClinicStore.getState().products.filter(p => p.category === directSaleProdCat && (!directSaleProdSearch || p.name.toLowerCase().includes(directSaleProdSearch.toLowerCase()))).length === 0 && (
-                                        <div className="p-2 text-xs text-black/50 text-center italic">Sin coincidencias.</div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                        <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg border border-gray-100">
+                          <span className="text-sm font-semibold">Facturación de Turno</span>
+                          <Button variant="ghost" size="sm" onClick={() => {setCheckoutAptId(""); setCheckoutPaymentMethod("");}} className="h-6 px-2 text-xs text-gray-500 hover:text-white">Cambiar Selección</Button>
+                        </div>
+                        <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
+                          {apt.services.map((s:any, i:number) => (
+                            <div key={i} className="flex justify-between text-gray-700">
+                              <span>{s.serviceName}</span>
+                              <span>${checkoutPaymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price}</span>
                             </div>
-
-                            {/* Solo si hay productos extras anexados pedimos el comisionador */}
-                            {directSaleCart.length > 0 && (
-                               <div className="bg-secondary/5 p-3 rounded-lg border border-gray-100 space-y-2">
-                                  <Label className="text-xs text-gray-600">¿Quién vendió el Producto Extra?</Label>
-                                  <Select value={directSaleProf} onValueChange={setDirectSaleProf}>
-                                    <SelectTrigger className="bg-input border-gray-200 h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                                    <SelectContent className="bg-card border-gray-200">
-                                      <SelectItem value="recepcion">🏦 Recepción</SelectItem>
-                                      {professionals.filter(p => p.isActive).map(p => (
-                                        <SelectItem key={p.id} value={p.id}>{p.shortName}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                               </div>
-                            )}
-                         </div>
-                         
-                         <div className="pt-2 flex flex-col gap-2 relative z-10">
-                           <Label>Medio de Pago del Saldo Restante</Label>
-                           <Select value={checkoutPaymentMethod} onValueChange={(val: any) => setCheckoutPaymentMethod(val)}>
-                             <SelectTrigger className="bg-input border-[#D1B98D]/30 h-10"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                             <SelectContent className="bg-card border-gray-200 z-[100]">
-                               <SelectItem value="efectivo">💵 Efectivo (Promo)</SelectItem>
-                               <SelectItem value="transferencia">🏦 Transferencia (Lista)</SelectItem>
-                               <SelectItem value="tarjeta">💳 Tarjeta (Lista)</SelectItem>
-                               <SelectItem value="qr">📱 Código QR (Lista)</SelectItem>
-                               <SelectItem 
-                                 value="gift_card"
-                                 disabled={!selectedPatient?.giftCardBalance || selectedPatient.giftCardBalance < finalToPay}
-                               >
-                                 🎁 Gift Card (Saldo Disp: ${(selectedPatient?.giftCardBalance || 0).toLocaleString()})
-                               </SelectItem>
-                             </SelectContent>
-                           </Select>
-                         </div>
-                      </div>
-                      
-                      <div className="bg-[#2d3529] p-6 rounded-xl border border-[#D1B98D]/20 flex flex-col justify-between h-full">
-                        <div className="space-y-1 text-right">
-                          <p className="text-sm text-gray-500 uppercase tracking-widest">Saldo Restante a Pagar</p>
-                          <p className="text-5xl font-extrabold text-[#D1B98D]">${finalToPay.toLocaleString()}</p>
-                          {!checkoutPaymentMethod ? (
-                             <p className="text-xs text-amber-500/70 mt-2">▲ Faltan datos (Medio de pago o Vendedor)</p>
-                          ) : (
-                             <p className="text-[10px] text-gray-400 italic mt-2">
-                               {checkoutPaymentMethod === 'efectivo' ? 'Precio promocional efectivo totalizado.' : 'Precio de lista regular totalizado.'}
-                             </p>
+                          ))}
+                          {apt.products?.map((p:any, i:number) => (
+                            <div key={i} className="flex justify-between text-gray-700 text-xs italic">
+                              <span>{p.quantity}x {p.productName} (Gabinete)</span>
+                              <span>${(checkoutPaymentMethod === 'efectivo' ? (p.priceCashReference || p.price) : p.price) * p.quantity}</span>
+                            </div>
+                          ))}
+                          <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-foreground mt-2">
+                            <span>Subtotal:</span>
+                            <span>${chosenTotalOriginal}</span>
+                          </div>
+                          {(apt.paidAmount || 0) > 0 && (
+                            <div className="flex justify-between font-bold text-emerald-400">
+                              <span>Seña ya abonada:</span>
+                              <span>- ${apt.paidAmount}</span>
+                            </div>
                           )}
                         </div>
-                        <Button 
-                          className="w-full bg-[#829177] hover:bg-[#6b7a62] h-14 text-white font-bold mt-6 shadow-lg text-lg" 
-                          disabled={!canConfirm}
+                        <div className="pt-2 flex flex-col gap-2 relative z-10">
+                          <Label>Medio de Pago del Saldo Restante</Label>
+                          <Select value={checkoutPaymentMethod} onValueChange={(val: any) => setCheckoutPaymentMethod(val)}>
+                            <SelectTrigger className="bg-input border-[#FFD700]/40 h-10"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                            <SelectContent className="bg-card border-gray-200 z-[100]">
+                              <SelectItem value="efectivo">💵 Efectivo (Promo)</SelectItem>
+                              <SelectItem value="transferencia">🏦 Transferencia (Lista)</SelectItem>
+                              <SelectItem value="tarjeta">💳 Tarjeta (Lista)</SelectItem>
+                              <SelectItem value="qr">📱 Código QR (Lista)</SelectItem>
+                              <SelectItem value="gift_card" disabled={!selectedPatient?.giftCardBalance || selectedPatient.giftCardBalance < finalToPay}>
+                                🎁 Gift Card (Saldo Disp: ${(selectedPatient?.giftCardBalance || 0).toLocaleString()})
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col justify-between h-full">
+                        <div className="space-y-1 text-right">
+                          <p className="text-sm text-gray-100 uppercase tracking-widest">Saldo Restante a Pagar</p>
+                          <p className="text-5xl font-extrabold text-white">${finalToPay.toLocaleString()}</p>
+                        </div>
+                        <Button
+                          className="w-full bg-[#FFD700] hover:bg-[#E6C200] h-14 text-[#2d3529] font-bold mt-6 shadow-lg text-lg"
+                          disabled={!checkoutPaymentMethod}
                           onClick={() => {
-                            if (apt) {
-                               if (typeof useClinicStore.getState().completeAppointment === 'function') {
-                                  (useClinicStore.getState() as any).completeAppointment(checkoutAptId, checkoutPaymentMethod as any, finalToPay, directSaleCart, directSaleProf || "recepcion");
-                               }
-                            } else {
-                               // Sale stand-alone creation
-                               addSale({
-                                 type: 'direct',
-                                 items: directSaleCart.map(i => ({
-                                   type: 'product',
-                                   itemId: i.product.id,
-                                   itemName: i.product.name,
-                                   price: checkoutPaymentMethod === 'efectivo' ? i.product.priceCash : i.product.priceList,
-                                   priceCashReference: i.product.priceCash,
-                                   quantity: i.quantity,
-                                   soldBy: directSaleProf || "recepcion"
-                                 })),
-                                 total: finalToPay,
-                                 paymentMethod: checkoutPaymentMethod as any,
-                                 processedBy: "Recepción"
-                               })
+                            if (typeof useClinicStore.getState().completeAppointment === 'function') {
+                              (useClinicStore.getState() as any).completeAppointment(checkoutAptId, checkoutPaymentMethod as any, finalToPay);
                             }
-
-                            // Limpiar y resetear vista
                             setCheckoutAptId("");
                             setCheckoutPaymentMethod("");
-                            setDirectSaleCart([]);
-                            setDirectSaleProf("");
                             setActivePanel("historial");
                           }}
                         >
@@ -941,6 +793,114 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 })()}
               </div>
             )}
+
+            {activePanel === "venta_directa" && (
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                <Label className="text-[#FFD700] uppercase text-xs font-bold tracking-wider">Vender Producto</Label>
+                <div className="bg-secondary/10 p-3 rounded-lg border border-dashed border-gray-200 space-y-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {Array.from(new Set(useClinicStore.getState().products.map(p => p.category))).map(cat => (
+                      <Badge key={cat} variant={directSaleProdCat === cat ? "default" : "outline"} onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === cat ? 'bg-[#FFD700] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
+                        {cat}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <Input
+                      placeholder={directSaleProdCat ? `Buscar producto en ${directSaleProdCat}...` : "Buscar producto..."}
+                      value={directSaleProdSearch}
+                      onChange={(e) => { setDirectSaleProdSearch(e.target.value); setDirectSaleProdMenuOpen(true) }}
+                      onFocus={() => setDirectSaleProdMenuOpen(true)}
+                      onBlur={() => setTimeout(() => setDirectSaleProdMenuOpen(false), 200)}
+                      className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 h-10 text-sm"
+                    />
+                    {directSaleProdMenuOpen && (
+                      <div className="absolute top-[44px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[170px] overflow-y-auto z-50">
+                        {useClinicStore.getState().products
+                          .filter(p => (!directSaleProdCat || p.category === directSaleProdCat) && (!directSaleProdSearch || p.name.toLowerCase().includes(directSaleProdSearch.toLowerCase())))
+                          .map(p => (
+                            <button key={p.id} onClick={() => { handleAddProductToDirectSale(p.id); setDirectSaleProdSearch(""); setDirectSaleProdMenuOpen(false) }} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 text-[#2d3529] font-medium border-b border-black/5 flex justify-between">
+                              <span>{p.name}</span> <span className="text-emerald-700 font-bold">${p.priceCash} ef | ${p.priceList} t.</span>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm bg-gray-50 p-3 rounded border border-gray-200">
+                  {directSaleCart.length === 0 ? (
+                    <p className="text-gray-500 italic text-center py-3">No hay productos agregados.</p>
+                  ) : (
+                    directSaleCart.map((item, i) => (
+                      <div key={`vdp-${i}`} className="flex justify-between items-center text-xs font-bold leading-none py-1.5 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-red-500 hover:bg-transparent hover:scale-125" onClick={() => handleRemoveProductFromDirectSale(item.product.id)}>✕</Button>
+                          <span>{item.quantity}x {item.product.name}</span>
+                        </div>
+                        <span>${(directSalePaymentMethod === 'efectivo' ? item.product.priceCash : item.product.priceList) * item.quantity}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {directSaleCart.length > 0 && (
+                  <>
+                    <div className="bg-secondary/5 p-3 rounded-lg border border-gray-100 space-y-2">
+                      <Label className="text-xs text-gray-600">¿Quién vendió el producto?</Label>
+                      <Select value={directSaleProf} onValueChange={setDirectSaleProf}>
+                        <SelectTrigger className="bg-input border-gray-200 h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectContent className="bg-card border-gray-200">
+                          <SelectItem value="recepcion">🏦 Recepción</SelectItem>
+                          {professionals.filter(p => p.isActive).map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.shortName}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="pt-2 flex flex-col gap-2">
+                      <Label>Medio de Pago</Label>
+                      <Select value={directSalePaymentMethod} onValueChange={(val: any) => setDirectSalePaymentMethod(val)}>
+                        <SelectTrigger className="bg-input border-[#FFD700]/40 h-10"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectContent className="bg-card border-gray-200">
+                          <SelectItem value="efectivo">💵 Efectivo</SelectItem>
+                          <SelectItem value="transferencia">🏦 Transferencia</SelectItem>
+                          <SelectItem value="tarjeta">💳 Tarjeta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col gap-4">
+                      <p className="text-sm text-emerald-100 uppercase tracking-widest">Total a cobrar</p>
+                      <p className="text-4xl font-extrabold text-white">${directSaleTotal.toLocaleString()}</p>
+                      <Button className="w-full bg-[#FFD700] hover:bg-[#E6C200] text-[#2d3529] font-bold" disabled={!directSalePaymentMethod || !directSaleProf} onClick={() => {
+                        addSale({
+                          type: 'direct',
+                          items: directSaleCart.map(i => ({
+                            type: 'product',
+                            itemId: i.product.id,
+                            itemName: i.product.name,
+                            price: directSalePaymentMethod === 'efectivo' ? i.product.priceCash : i.product.priceList,
+                            priceCashReference: i.product.priceCash,
+                            quantity: i.quantity,
+                            soldBy: directSaleProf || "recepcion"
+                          })),
+                          total: directSaleTotal,
+                          paymentMethod: directSalePaymentMethod as any,
+                          processedBy: "Recepción"
+                        })
+                        setDirectSaleCart([])
+                        setDirectSaleProf("")
+                        setDirectSalePaymentMethod("")
+                        setDirectSaleProdCat("")
+                        setDirectSaleProdSearch("")
+                      }}>
+                        Confirmar Venta de Producto
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -948,7 +908,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       <Dialog open={showEditPatient} onOpenChange={setShowEditPatient}>
         <DialogContent className="bg-card border-gray-200 text-foreground">
           <DialogHeader>
-            <DialogTitle className="text-[#D1B98D]">Editar Información del Paciente</DialogTitle>
+            <DialogTitle className="text-[#FFD700]">Editar Información del Paciente</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
@@ -973,7 +933,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <Input type="email" value={editPatientData?.email || ""} onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })} className="bg-input border-gray-200" />
               </div>
             </div>
-            <Button onClick={handleUpdatePatient} className="w-full bg-[#D1B98D] text-[#2d3529] font-bold" disabled={!editPatientData?.name || !editPatientData?.phone || !editPatientData?.dni}>
+            <Button onClick={handleUpdatePatient} className="w-full bg-[#FFD700] text-[#2d3529] font-bold hover:bg-[#E6C200]" disabled={!editPatientData?.name || !editPatientData?.phone || !editPatientData?.dni}>
               Guardar Cambios
             </Button>
           </div>
@@ -996,7 +956,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           </div>
           
           <div className="col-span-2 space-y-4">
-            <h3 className="text-xl font-bold text-[#D1B98D] flex items-center gap-2">
+            <h3 className="text-xl font-bold text-[#FFD700] flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" /> 
               Agenda del {agendaDate?.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
             </h3>
@@ -1018,7 +978,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     <div 
                       key={apt.id} 
                       className={`relative bg-secondary/10 border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all ${
-                        isAttended ? 'opacity-50 grayscale border-gray-100' : 'border-gray-200 hover:border-[#D1B98D]/30'
+                        isAttended ? 'opacity-50 grayscale border-gray-100' : 'border-gray-200 hover:border-[#FFD700]/30'
                       }`}
                     >
                       {/* Tachado Overlay if attended */}
@@ -1026,7 +986,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       
                       <div className="flex items-center gap-4 z-0">
                         <div className="flex flex-col items-center justify-center p-3 bg-gray-100 rounded-lg min-w-[70px]">
-                          <span className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-[#D1B98D]'}`}>{apt.time}</span>
+                          <span className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-[#FFD700]'}`}>{apt.time}</span>
                         </div>
                         
                         <div className="space-y-1 z-0">
@@ -1036,7 +996,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="text-gray-600">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span>
                             <span className="text-gray-400">•</span>
-                            <span className="text-[#D1B98D] max-w-[150px] truncate">{apt.services[0]?.serviceName}</span>
+                            <span className="text-[#FFD700] max-w-[150px] truncate">{apt.services[0]?.serviceName}</span>
                           </div>
                         </div>
                       </div>
@@ -1063,7 +1023,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         {!isAttended && apt.status !== 'cancelado' && (
                           <Button 
                             onClick={() => startAttention(apt.id)}
-                            className="bg-[#D1B98D] hover:bg-[#c4a975] text-[#2d3529] font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"
+                            className="bg-[#FFD700] hover:bg-[#E6C200] text-[#2d3529] font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"
                             title="Marcar como Atendido / Llegó"
                           >
                             ✓
@@ -1100,14 +1060,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             return (
               <Card className="bg-white text-foreground border border-gray-200 shadow-xl rounded-2xl mt-4">
                 <CardHeader>
-                  <CardTitle className="text-[#D1B98D] flex items-center gap-2 text-2xl">
+                  <CardTitle className="text-[#FFD700] flex items-center gap-2 text-2xl">
                     Cierre de Caja Diario
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="bg-[#2d3529] p-6 rounded-xl border border-[#D1B98D]/20 text-center">
+                  <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 text-center">
                     <p className="text-sm text-gray-500 uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
-                    <p className="text-5xl font-extrabold text-[#D1B98D]">${totalIncome.toLocaleString()}</p>
+                    <p className="text-5xl font-extrabold text-white">${totalIncome.toLocaleString()}</p>
                     <p className="text-xs text-amber-500/70 mt-2">No incluye pagos realizados con Gift Cards (ya se cobraron al ser adquiridas).</p>
                   </div>
 
@@ -1183,22 +1143,22 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     
             return (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-[#D1B98D]">Equipo Administrativo</h2>
-                <Card className="bg-secondary text-secondary-foreground border-none overflow-hidden shadow-2xl rounded-2xl">
-                  <CardHeader className="pb-3 border-b border-[#D1B98D]/10 bg-[#252c22]/50">
-                    <CardTitle className="text-xs font-bold text-[#D1B98D] uppercase tracking-wider flex items-center gap-2">
-                      <Award className="h-4 w-4 text-[#D1B98D]" /> Objetivo de Ventas (Recepción)
+                <h2 className="text-2xl font-bold text-[#FFD700]">Equipo Administrativo</h2>
+                <Card className="bg-white text-foreground border border-[#FFD700]/30 overflow-hidden shadow-xl rounded-2xl">
+                  <CardHeader className="pb-3 border-b border-[#FFD700]/30 bg-[#FFF9DB]">
+                    <CardTitle className="text-xs font-bold text-[#7A5C00] uppercase tracking-wider flex items-center gap-2">
+                      <Award className="h-4 w-4 text-[#FFD700]" /> Objetivo de Ventas (Recepción)
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-5 space-y-5">
-                    <div className="flex justify-between items-center bg-gray-100 p-4 rounded-xl border border-gray-100">
+                    <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#FFD700]/20">
                       <div className="space-y-1">
                         <p className="text-[10px] text-gray-500 uppercase font-medium">Unidades Vendidas</p>
                         <p className="text-4xl font-extrabold text-foreground tracking-tighter">{salesCount}</p>
                       </div>
                       <div className="text-right space-y-1">
                         <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión Actual</p>
-                        <Badge className="bg-[#D1B98D] text-[#2d3529] text-lg font-bold px-4 py-1.5 border-none">
+                        <Badge className="bg-[#FFD700] text-[#2d3529] text-lg font-bold px-4 py-1.5 border-none">
                           {currentCommission}%
                         </Badge>
                       </div>
@@ -1215,7 +1175,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         )}
                       </div>
                       <div className="relative">
-                        <Progress value={progressValue} className={`h-3 bg-white/10 ${tierInfo.color}`} />
+                        <Progress value={progressValue} className="h-3 bg-[#FFF3BF]" />
                         <div className="absolute top-0 left-[32%] h-3 w-0.5 bg-black/40"></div>
                         <div className="absolute top-0 left-[67%] h-3 w-0.5 bg-black/40"></div>
                       </div>

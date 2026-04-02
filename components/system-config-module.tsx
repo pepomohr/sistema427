@@ -74,17 +74,17 @@ export function SystemConfigModule() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#D1B98D]">Configuración de Catálogo</h2>
+        <h2 className="text-2xl font-bold text-[#FFD700]">Configuración de Catálogo</h2>
       </div>
 
       <div className="flex gap-4 mb-4">
-        <Button variant={activeTab === "servicios" ? "default" : "outline"} onClick={() => setActiveTab("servicios")} className={activeTab === "servicios" ? "bg-[#D1B98D] text-[#2d3529]" : "border-[#D1B98D] text-[#D1B98D]"}>
+        <Button variant={activeTab === "servicios" ? "default" : "outline"} onClick={() => setActiveTab("servicios")} className={activeTab === "servicios" ? "bg-[#FFD700] text-[#2d3529]" : "border-[#FFD700] text-[#FFD700]"}>
           <Sparkles className="h-4 w-4 mr-2"/> Servicios
         </Button>
-        <Button variant={activeTab === "productos" ? "default" : "outline"} onClick={() => setActiveTab("productos")} className={activeTab === "productos" ? "bg-[#D1B98D] text-[#2d3529]" : "border-[#D1B98D] text-[#D1B98D]"}>
+        <Button variant={activeTab === "productos" ? "default" : "outline"} onClick={() => setActiveTab("productos")} className={activeTab === "productos" ? "bg-[#FFD700] text-[#2d3529]" : "border-[#FFD700] text-[#FFD700]"}>
           <Package className="h-4 w-4 mr-2"/> Productos
         </Button>
-        <Button variant={activeTab === "ofertas" ? "default" : "outline"} onClick={() => setActiveTab("ofertas")} className={activeTab === "ofertas" ? "bg-[#D1B98D] text-[#2d3529]" : "border-[#D1B98D] text-[#D1B98D]"}>
+        <Button variant={activeTab === "ofertas" ? "default" : "outline"} onClick={() => setActiveTab("ofertas")} className={activeTab === "ofertas" ? "bg-[#FFD700] text-[#2d3529]" : "border-[#FFD700] text-[#FFD700]"}>
           <Percent className="h-4 w-4 mr-2"/> Ofertas
         </Button>
       </div>
@@ -103,7 +103,7 @@ export function SystemConfigModule() {
                 <div>
                   <h4 className="font-bold text-foreground">{s.name}</h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs px-2 py-0.5 bg-gray-200 rounded text-[#D1B98D] uppercase tracking-wide">{getCategoryDisplayName(s.category as any)}</span>
+                    <span className="text-xs px-2 py-0.5 bg-gray-200 rounded text-[#FFD700] uppercase tracking-wide">{getCategoryDisplayName(s.category as any)}</span>
                     <span className="text-xs text-gray-500">{s.duration} mins</span>
                   </div>
                 </div>
@@ -137,7 +137,7 @@ export function SystemConfigModule() {
                 <div>
                   <h4 className="font-bold text-foreground">{p.name}</h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs px-2 py-0.5 bg-gray-200 rounded text-[#D1B98D] uppercase tracking-wide">{p.category}</span>
+                    <span className="text-xs px-2 py-0.5 bg-gray-200 rounded text-[#FFD700] uppercase tracking-wide">{p.category}</span>
                     <span className={`text-xs ${p.stock > 5 ? 'text-blue-400' : 'text-red-400'}`}>Stock: {p.stock}</span>
                   </div>
                 </div>
@@ -169,7 +169,7 @@ export function SystemConfigModule() {
 
       <Dialog open={showServiceDialog} onOpenChange={setShowServiceDialog}>
         <DialogContent className="bg-card border-gray-200 text-foreground">
-          <DialogHeader><DialogTitle className="text-[#D1B98D]">{editingServiceId ? 'Editar Servicio' : 'Nuevo Servicio'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-[#FFD700]">{editingServiceId ? 'Editar Servicio' : 'Nuevo Servicio'}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-3">
             <Label>Nombre</Label><Input value={svcForm.name} onChange={e=>setSvcForm({...svcForm, name: e.target.value})} className="bg-input border-gray-200" />
             <Label>Cat/Especialidad</Label>
@@ -191,14 +191,14 @@ export function SystemConfigModule() {
               <div><Label>Precio Tarjeta ($)</Label><Input type="number" value={svcForm.price || ""} onChange={e=>setSvcForm({...svcForm, price: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
             </div>
             <Label>Duración (mins)</Label><Input type="number" value={svcForm.duration || ""} onChange={e=>setSvcForm({...svcForm, duration: Number(e.target.value)})} className="bg-input border-gray-200" />
-            <Button onClick={handleSaveService} className="w-full mt-4 bg-[#D1B98D] text-[#2d3529]">Guardar</Button>
+            <Button onClick={handleSaveService} className="w-full mt-4 bg-[#FFD700] text-[#2d3529] hover:bg-[#E6C200]">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
         <DialogContent className="bg-card border-gray-200 text-foreground">
-          <DialogHeader><DialogTitle className="text-[#D1B98D]">{editingProductId ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-[#FFD700]">{editingProductId ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-3">
             <Label>Nombre del Insumo/Producto</Label><Input value={prodForm.name} onChange={e=>setProdForm({...prodForm, name: e.target.value})} className="bg-input border-gray-200" />
             <Label>Marca/Categoría Lógica</Label><Input value={prodForm.category} onChange={e=>setProdForm({...prodForm, category: e.target.value})} className="bg-input border-gray-200" placeholder="Ej: Lidherma, AP, etc." />
@@ -207,7 +207,7 @@ export function SystemConfigModule() {
               <div><Label>Precio Lista ($)</Label><Input type="number" value={prodForm.priceList || ""} onChange={e=>setProdForm({...prodForm, priceList: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
             </div>
             <Label>Stock Actual</Label><Input type="number" value={prodForm.stock || 0} onChange={e=>setProdForm({...prodForm, stock: Number(e.target.value)})} className="bg-input border-gray-200" />
-            <Button onClick={handleSaveProduct} className="w-full mt-4 bg-[#D1B98D] text-[#2d3529]">Guardar</Button>
+            <Button onClick={handleSaveProduct} className="w-full mt-4 bg-[#FFD700] text-[#2d3529] hover:bg-[#E6C200]">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>

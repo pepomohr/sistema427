@@ -235,7 +235,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     <div className="space-y-6">
       {/* HEADER */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#D1B98D]">Hola, {currentProfessional?.shortName}!</h2>
+        <h2 className="text-2xl font-bold text-[#FFD700]">Hola, {currentProfessional?.shortName}!</h2>
         <Badge className="bg-[#829177] text-white border-none text-[10px] font-bold px-3">
           {currentProfessional?.isActive ? "EN GABINETE" : "FUERA DE SERVICIO"}
         </Badge>
@@ -243,21 +243,21 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
       {/* SECCIÓN DE COMISIONES */}
       {activeTab === "comisiones" && (
-        <Card className="bg-secondary text-secondary-foreground border-none overflow-hidden shadow-2xl rounded-2xl">
-          <CardHeader className="pb-3 border-b border-[#D1B98D]/10 bg-[#252c22]/50">
-            <CardTitle className="text-xs font-bold text-[#D1B98D] uppercase tracking-wider flex items-center gap-2">
-              <Award className="h-4 w-4 text-[#D1B98D]" /> Mi Objetivo de Ventas (Mensual)
+        <Card className="bg-white text-foreground border border-[#FFD700]/30 overflow-hidden shadow-xl rounded-2xl">
+          <CardHeader className="pb-3 border-b border-[#FFD700]/30 bg-[#FFF9DB]">
+            <CardTitle className="text-xs font-bold text-[#7A5C00] uppercase tracking-wider flex items-center gap-2">
+              <Award className="h-4 w-4 text-[#FFD700]" /> Mi Objetivo de Ventas (Mensual)
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-5 space-y-5">
-            <div className="flex justify-between items-center bg-gray-100 p-4 rounded-xl border border-gray-100">
+            <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#FFD700]/20">
               <div className="space-y-1">
                 <p className="text-[10px] text-gray-500 uppercase font-medium">Unidades Vendidas</p>
                 <p className="text-4xl font-extrabold text-foreground tracking-tighter">{salesCount}</p>
               </div>
               <div className="text-right space-y-1">
                 <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión Actual</p>
-                <Badge className="bg-[#D1B98D] text-[#2d3529] text-lg font-bold px-4 py-1.5 border-none">
+                <Badge className="bg-[#FFD700] text-[#2d3529] text-lg font-bold px-4 py-1.5 border-none">
                   {currentCommission}%
                 </Badge>
               </div>
@@ -274,7 +274,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                 )}
               </div>
               <div className="relative">
-                <Progress value={progressValue} className={`h-3 bg-white/10 ${tierInfo.color}`} />
+                <Progress value={progressValue} className="h-3 bg-[#FFF3BF]" />
                 <div className="absolute top-0 left-[32%] h-3 w-0.5 bg-black/40"></div>
                 <div className="absolute top-0 left-[67%] h-3 w-0.5 bg-black/40"></div>
               </div>
@@ -287,7 +287,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       {activeTab === "atencion" && (
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-            <Clock className="h-5 w-5 text-[#D1B98D]" /> Pacientes en Sala
+            <Clock className="h-5 w-5 text-[#FFD700]" /> Pacientes en Sala
           </h3>
 
           {cabinetQueue.length === 0 ? (
@@ -302,17 +302,17 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                 <CardContent className="pt-6 space-y-4">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-[#D1B98D] font-bold text-xl border border-[#D1B98D]/20">
+                      <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-[#FFD700] font-bold text-xl border border-[#FFD700]/20">
                         {apt.time}
                       </div>
                       <div>
                         <p className="font-bold text-foreground text-lg">{getPatientName(apt.patientId)}</p>
-                        <p className="text-xs text-[#D1B98D]">Recepción agendó: {apt.services[0]?.serviceName}</p>
+                        <p className="text-xs text-[#FFD700]">Recepción agendó: {apt.services[0]?.serviceName}</p>
                       </div>
                     </div>
                     
                     {apt.status === 'confirmado' ? (
-                      <Button onClick={() => startAttention(apt.id)} className="bg-[#D1B98D] text-[#2d3529] font-bold">
+                      <Button onClick={() => startAttention(apt.id)} className="bg-[#FFD700] text-[#2d3529] font-bold hover:bg-[#E6C200]">
                         <Play className="h-4 w-4 mr-2" /> LLAMAR
                       </Button>
                     ) : (
@@ -329,7 +329,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         
                         {/* SERVICIOS */}
                         <div>
-                          <Label className="text-[10px] font-bold text-[#D1B98D] uppercase tracking-wider mb-2 block">Servicios Realizados</Label>
+                          <Label className="text-[10px] font-bold text-[#FFD700] uppercase tracking-wider mb-2 block">Servicios Realizados</Label>
                           <div className="space-y-2 mb-3">
                             {getCurrentServices(apt.id).map((svc, i) => (
                               <div key={i} className="flex justify-between items-center bg-white/5 p-2 rounded text-sm">
@@ -345,9 +345,10 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                 <Badge
                                   key={cat}
                                   variant={activeSvcCat[apt.id] === cat ? "default" : "outline"}
-                                  className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-[10px] ${activeSvcCat[apt.id] === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                                  className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-[10px] ${activeSvcCat[apt.id] === cat ? 'bg-[#FFD700] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                                   onClick={() => setActiveSvcCat({...activeSvcCat, [apt.id]: cat})}
                                 >
+                                  {cat === "Corporales" ? "Corporal" : cat === "Facial" ? "Facial" : getCategoryDisplayName(cat)}
                                 </Badge>
                               ))}
                             </div>
@@ -379,7 +380,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                         }}
                                       >
                                         <span>{s.name} <span className="text-gray-400 text-[10px] ml-1">({s.category})</span></span>
-                                        <span className="font-bold text-[#D1B98D]">${s.price}</span>
+                                        <span className="font-bold text-[#FFD700]">${s.price}</span>
                                       </button>
                                     ))}
                                 </div>
@@ -390,7 +391,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         
                         {/* PRODUCTOS */}
                         <div className="border-t border-gray-200 pt-3">
-                          <Label className="text-[10px] font-bold text-[#D1B98D] uppercase tracking-wider mb-2 block">Productos Entregados</Label>
+                          <Label className="text-[10px] font-bold text-[#FFD700] uppercase tracking-wider mb-2 block">Productos Entregados</Label>
                           <div className="space-y-2 mb-3">
                             {getCurrentProducts(apt.id).map((prod, i) => (
                               <div key={i} className="flex justify-between items-center bg-white/5 p-2 rounded text-sm">
@@ -406,7 +407,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                 <Badge
                                   key={cat}
                                   variant={activeProdCat[apt.id] === cat ? "default" : "outline"}
-                                  className={`cursor-pointer uppercase tracking-wider whitespace-nowrap px-2 py-0.5 text-[10px] ${activeProdCat[apt.id] === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                                  className={`cursor-pointer uppercase tracking-wider whitespace-nowrap px-2 py-0.5 text-[10px] ${activeProdCat[apt.id] === cat ? 'bg-[#FFD700] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                                   onClick={() => setActiveProdCat({...activeProdCat, [apt.id]: cat})}
                                 >
                                   {cat}
@@ -446,7 +447,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                         }}
                                       >
                                         <span>{p.name} <span className="text-gray-400 text-[10px] ml-1">({p.category})</span></span>
-                                        <span className="font-bold text-[#D1B98D]">${p.priceCash}</span>
+                                        <span className="font-bold text-[#FFD700]">${p.priceCash}</span>
                                       </button>
                                     ))}
                                 </div>
@@ -483,19 +484,19 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-[#D1B98D]" /> 
+                <CalendarDays className="h-5 w-5 text-[#FFD700]" /> 
                 Turnos para {selectedDate?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}
               </h3>
               
               <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#D1B98D] hover:bg-[#b59e74] text-[#2d3529] font-bold">
+                  <Button className="bg-[#FFD700] hover:bg-[#E6C200] text-[#2d3529] font-bold">
                     <Plus className="h-4 w-4 mr-2" /> Agendar Turno
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="bg-card border-gray-200 text-foreground sm:max-w-[450px]">
                   <DialogHeader>
-                    <DialogTitle className="text-[#D1B98D]">Agendar Turno Personal</DialogTitle>
+                    <DialogTitle className="text-[#FFD700]">Agendar Turno Personal</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-4">
                     <div className="space-y-2 relative">
@@ -556,7 +557,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                           <Badge 
                             key={cat} 
                             variant={schedulingServiceCat === cat ? "default" : "outline"}
-                            className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${schedulingServiceCat === cat ? 'bg-[#D1B98D] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                            className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${schedulingServiceCat === cat ? 'bg-[#FFD700] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                             onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
                           >
                             {cat}
@@ -591,7 +592,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                   }}
                                   className="w-full text-left px-3 py-2 text-sm hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100"
                                 >
-                                  {s.name} <span className="text-[#D1B98D] ml-2 font-bold">${s.price}</span>
+                                  {s.name} <span className="text-[#FFD700] ml-2 font-bold">${s.price}</span>
                                 </button>
                               ))}
                               {servicesByCategory[schedulingServiceCat]?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase())).length === 0 && (
@@ -602,7 +603,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         </div>
                       )}
                     </div>
-                    <Button onClick={handleScheduleAppointment} disabled={!schedulingPatientId || !schedulingService || !schedulingTime || !schedulingDate} className="w-full bg-[#D1B98D] text-[#2d3529] font-bold">
+                    <Button onClick={handleScheduleAppointment} disabled={!schedulingPatientId || !schedulingService || !schedulingTime || !schedulingDate} className="w-full bg-[#FFD700] text-[#2d3529] font-bold hover:bg-[#E6C200]">
                       Confirmar Turno
                     </Button>
                   </div>
@@ -620,7 +621,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
               agendaAppointments.map(apt => (
                 <div key={apt.id} className="bg-secondary/10 border border-gray-200 rounded-lg p-3 flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <span className="font-bold text-[#D1B98D] w-12">{apt.time}</span>
+                    <span className="font-bold text-[#FFD700] w-12">{apt.time}</span>
                     <div className="border-l border-gray-200 pl-3">
                       <p className="font-bold text-foreground text-sm">{getPatientName(apt.patientId)}</p>
                       <p className="text-xs text-gray-500">{apt.services[0]?.serviceName}</p>

@@ -162,8 +162,8 @@ export function HRModule() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[#D1B98D]">Gestión de Personal</h2>
-        <Badge className="bg-[#D1B98D] text-[#2d3529]">
+        <h2 className="text-2xl font-bold text-[#FFD700]">Gestión de Personal</h2>
+        <Badge className="bg-[#FFD700] text-[#2d3529]">
           {(professionals || []).filter((p) => p.isActive).length} Activos
         </Badge>
       </div>
@@ -176,7 +176,7 @@ export function HRModule() {
                 <div className="flex items-start gap-4">
                   <div 
                     className="h-14 w-14 rounded-full flex items-center justify-center text-white font-bold"
-                    style={{ backgroundColor: professional.color || '#D1B98D' }}
+                    style={{ backgroundColor: professional.color || '#FFD700' }}
                   >
                     {professional.avatar || <User className="h-7 w-7" />}
                   </div>
@@ -196,11 +196,11 @@ export function HRModule() {
 
                     {/* SECCIÓN VALOR HORA (PEDIDO NICO) */}
                     <div className="flex items-center gap-2 mt-3 p-2 bg-secondary/10 rounded-lg border border-gray-200/50 w-fit">
-                      <DollarSign className="h-4 w-4 text-[#D1B98D]" />
+                      <DollarSign className="h-4 w-4 text-[#FFD700]" />
                       <span className="text-sm font-medium">Valor Hora:</span>
                       <Input 
                         type="number"
-                        className="w-20 h-7 bg-input border-none text-sm text-[#D1B98D]"
+                        className="w-20 h-7 bg-input border-none text-sm text-[#FFD700]"
                         value={professional.hourlyRate || 0}
                         onChange={(e) => updateHourlyRate(professional.id, parseInt(e.target.value))}
                       />
@@ -240,7 +240,7 @@ export function HRModule() {
       <Dialog open={showLiquidationModal} onOpenChange={setShowLiquidationModal}>
         <DialogContent className="bg-card border-gray-200 sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#D1B98D] flex items-center gap-2">
+            <DialogTitle className="text-xl font-bold text-[#FFD700] flex items-center gap-2">
               <DollarSign className="h-5 w-5" /> Liquidación Semanal
             </DialogTitle>
           </DialogHeader>
@@ -248,7 +248,7 @@ export function HRModule() {
           {liquidationData && (
             <div className="space-y-6 pt-4">
               <div className="flex items-center gap-3 pb-4 border-b border-gray-200/50">
-                <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: liquidationData.prof.color || '#D1B98D' }}>
+                <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: liquidationData.prof.color || '#FFD700' }}>
                   {liquidationData.prof.shortName.charAt(0)}
                 </div>
                 <div>
@@ -278,19 +278,19 @@ export function HRModule() {
                   <div className="text-sm">
                     <p className="font-medium text-muted-foreground">Productos Vendidos</p>
                   </div>
-                  <Badge className="bg-[#D1B98D]/20 text-[#D1B98D]">{liquidationData.salesCount} unidades</Badge>
+                  <Badge className="bg-[#FFD700]/20 text-[#FFD700]">{liquidationData.salesCount} unidades</Badge>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#D1B98D]/30 flex justify-between items-end">
+              <div className="pt-4 border-t border-[#FFD700]/30 flex justify-between items-end">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Total a Pagar</p>
-                  <p className="text-3xl font-black text-[#D1B98D]">${liquidationData.payTotal.toLocaleString()}</p>
+                  <p className="text-3xl font-black text-[#FFD700]">${liquidationData.payTotal.toLocaleString()}</p>
                 </div>
               </div>
 
               <div className="pt-4">
-                <Button onClick={handlePayLiquidation} className="w-full bg-[#D1B98D] hover:bg-[#b59e74] text-[#2d3529] font-bold h-12 text-lg">
+                <Button onClick={handlePayLiquidation} className="w-full bg-[#FFD700] hover:bg-[#E6C200] text-[#2d3529] font-bold h-12 text-lg">
                   Registrar Pago de ${liquidationData.payTotal.toLocaleString()}
                 </Button>
                 <p className="text-[10px] text-center mt-2 text-muted-foreground italic">Al registrarlo, impactará automáticamente en Gastos y el Neto del mes.</p>
@@ -303,7 +303,7 @@ export function HRModule() {
       <Dialog open={showScheduleModal} onOpenChange={setShowScheduleModal}>
         <DialogContent className="bg-card border-gray-200 sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#D1B98D] flex items-center gap-2">
+            <DialogTitle className="text-xl font-bold text-[#FFD700] flex items-center gap-2">
               <Clock className="h-5 w-5" /> Horarios de {selectedProfessional?.shortName}
             </DialogTitle>
           </DialogHeader>
@@ -341,7 +341,7 @@ export function HRModule() {
                       <Button variant="ghost" size="sm" onClick={() => {
                         const newIntervals = [...intervals, { start: "15:00", end: "19:00" }]
                         setEditingSchedule({...editingSchedule, [day.key]: newIntervals})
-                      }} className="h-6 w-6 p-0 text-[#D1B98D]">
+                      }} className="h-6 w-6 p-0 text-[#FFD700]">
                         <Plus className="h-4 w-4" />
                       </Button>
                     )}
@@ -397,7 +397,7 @@ export function HRModule() {
           
           <div className="pt-4 flex justify-end gap-3">
             <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancelar</Button>
-            <Button className="bg-[#D1B98D] text-[#2d3529] hover:bg-[#b59e74] font-bold" onClick={handleSaveSchedule}>
+            <Button className="bg-[#FFD700] text-[#2d3529] hover:bg-[#E6C200] font-bold" onClick={handleSaveSchedule}>
               Guardar Horarios
             </Button>
           </div>
