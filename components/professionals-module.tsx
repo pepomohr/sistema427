@@ -320,11 +320,11 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-[#16A34A] font-bold text-xl border border-[#16A34A]/20">
-                        {apt.time}
+                        {apt.time ? apt.time.substring(0, 5) : apt.time}
                       </div>
                       <div>
                         <p className="font-bold text-foreground text-lg">{apt.patientName || getPatientName(apt.patientId)}</p>
-                        <p className="text-xs text-[#16A34A]">Recepción agendó: {apt.services[0]?.serviceName}</p>
+                        <p className="text-xs text-[#16A34A]">Recepción agendó: {typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</p>
                       </div>
                     </div>
                     
@@ -350,7 +350,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                           <div className="space-y-2 mb-3">
                             {getCurrentServices(apt.id).map((svc, i) => (
                               <div key={i} className="flex justify-between items-center bg-white/5 p-2 rounded text-sm">
-                                <span className="text-foreground text-xs">{svc.serviceName}</span>
+                                <span className="text-foreground text-xs">{typeof svc === 'string' ? svc : svc.serviceName}</span>
                                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-500 hover:text-red-400" onClick={() => removeService(apt.id, i)}><X className="h-4 w-4"/></Button>
                               </div>
                             ))}
@@ -647,33 +647,33 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
               agendaAppointments.map(apt => (
                 <div key={apt.id} className="bg-secondary/10 border border-gray-200 rounded-lg p-3 flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <span className="font-bold text-[#16A34A] w-12">{apt.time}</span>
+                    <span className="font-bold text-[#16A34A] w-12">{apt.time ? apt.time.substring(0, 5) : apt.time}</span>
                     <div className="border-l border-gray-200 pl-3">
                       <p className="font-bold text-foreground text-sm">{apt.patientName || getPatientName(apt.patientId)}</p>
-                      <p className="text-xs text-gray-500">{apt.services[0]?.serviceName}</p>
+                      <p className="text-xs text-gray-500">{typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</p>
                     </div>
                   </div>
                   {(() => {
                     let badgeColor = "bg-gray-500 hover:bg-gray-600 border-none text-white";
                     let badgeLabel = apt.status.replace('_', ' ').toUpperCase();
                     
-                    if (apt.status === 'programado') {
-                      badgeColor = "bg-orange-600/90 text-white font-bold border-orange-600 hover:bg-orange-700 shadow-sm animate-pulse";
-                      badgeLabel = "SIN SEÑA (Programado)";
+                    if (apt.status === 'programado' || (apt.status as string) === 'scheduled') {
+                      badgeColor = "bg-sky-100 text-sky-600 font-bold border border-sky-200 hover:bg-sky-200 shadow-sm";
+                      badgeLabel = "PROGRAMADO";
                     } else if (apt.status === 'confirmado') {
                       badgeColor = "bg-emerald-500 text-white font-bold border-emerald-500 hover:bg-emerald-600 shadow-sm";
-                      badgeLabel = "CONFIRMADO (Seña OK)";
-                    } else if (apt.status === 'en_atencion' || apt.status === 'completado' || apt.status === 'pendiente_cobro') {
+                      badgeLabel = "CONFIRMADO";
+                    } else if (apt.status === 'en_atencion' || apt.status === 'completado' || apt.status === 'pendiente_cobro' || (apt.status as string) === 'completed') {
                       badgeColor = "bg-secondary text-gray-500 border-gray-200";
                       badgeLabel = "ATENDIDO";
-                    } else if (apt.status === 'cancelado') {
-                      badgeColor = "bg-black/40 text-gray-400 border-gray-100 line-through";
+                    } else if (apt.status === 'cancelado' || (apt.status as string) === 'cancelled') {
+                      badgeColor = "bg-red-100 text-red-600 font-bold border-red-200 line-through";
                       badgeLabel = "CANCELADO";
                     }
 
                     return (
                       <div className="flex items-center gap-2">
-                        <Badge variant={apt.status === 'programado' || apt.status === 'confirmado' ? 'default' : 'outline'} className={`text-[9px] uppercase tracking-wider ${badgeColor}`}>
+                        <Badge className={`text-[9px] uppercase tracking-wider ${badgeColor}`}>
                           {badgeLabel}
                         </Badge>
                         {currentUser?.role === 'admin' && (apt.status === 'programado' || apt.status === 'confirmado') && (

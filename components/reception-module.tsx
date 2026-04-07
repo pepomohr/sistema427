@@ -23,6 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import { useConfirm } from "@/hooks/use-confirm"
@@ -236,7 +242,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     }).sort((a, b) => a.time.localeCompare(b.time))
   }, [appointments, agendaDate])
 
-  const generatePDF = async () => {
+  const generatePDF = async (sortBy: 'time' | 'professional' = 'time') => {
     if (typeof window === 'undefined') return;
 
     try {
@@ -256,7 +262,18 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       const tableColumn = ["Hora", "Paciente", "Servicio/s", "Profesional"]
       const tableRows: any[] = []
 
-      agendaAppointments.forEach((apt: any) => {
+      let sortedAppointments = [...agendaAppointments];
+      if (sortBy === 'professional') {
+        sortedAppointments.sort((a, b) => {
+          const profA = professionals.find(p => p.id === a.professionalId)?.name || '';
+          const profB = professionals.find(p => p.id === b.professionalId)?.name || '';
+          const profCompare = profA.localeCompare(profB);
+          if (profCompare !== 0) return profCompare;
+          return a.time.localeCompare(b.time);
+        });
+      }
+
+      sortedAppointments.forEach((apt: any) => {
         const pat = patients.find(p => p.id === apt.patientId)
         const prof = professionals.find(p => p.id === apt.professionalId)
         
@@ -266,13 +283,13 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         // Default fallbacks with null safety for service
         let serviceNames = 'Desconocido'
         if (Array.isArray(apt.services)) {
-          serviceNames = apt.services.map((s: any) => s.serviceName || s.name).filter(Boolean).join(', ')
+          serviceNames = apt.services.map((s: any) => typeof s === 'string' ? s : (s.serviceName || s.name)).filter(Boolean).join(', ')
         } else if (apt.serviceName) {
           serviceNames = apt.serviceName
         }
 
         const aptData = [
-          apt.time,
+          apt.time ? apt.time.substring(0, 5) : apt.time,
           patientName,
           serviceNames,
           prof ? prof.name : 'Desconocido'
@@ -664,20 +681,26 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                <div className="flex items-center gap-2 mb-1">
-                                  <Badge variant="outline" className={`text-[10px] ${apt.status === 'completado' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>{apt.status}</Badge>
-                                  <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
+                                  <Badge className={`text-[10px] border ${
+                                    apt.status === 'completado' || (apt.status as string) === 'completed' ? 'bg-emerald-100/50 text-emerald-600 border-emerald-200' : 
+                                    apt.status === 'cancelado' || (apt.status as string) === 'cancelled' ? 'bg-red-100/50 text-red-600 border-red-200' : 
+                                    'bg-sky-100/50 text-sky-600 border-sky-200'
+                                  }`}>
+                                    {{ scheduled: "Programado", programado: "Programado", completed: "Completado", completado: "Completado", cancelled: "Cancelado", cancelado: "Cancelado", confirmado: "Confirmado", en_atencion: "En Atención", pendiente_cobro: "A Cobrar" }[apt.status as string] || apt.status}
+                                  </Badge>
+                                  <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time ? apt.time.substring(0, 5) : apt.time}</span>
                                </div>
-                               <p className="font-bold text-foreground">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
+                               <p className="font-bold text-foreground">{apt.services.map((s:any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
                                <p className="text-sm text-[#16A34A]">con {prof?.name || 'Profesional no encontrado'}</p>
                             </div>
-                            {['programado', 'confirmado'].includes(apt.status) && (
+                            {['programado', 'confirmado', 'scheduled'].includes(apt.status as string) && (
                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                                  <Button variant="outline" size="sm" onClick={() => {
                                     setSchedulingDate(new Date(apt.date).toISOString().split('T')[0])
                                     setSchedulingTime(apt.time)
                                     setSchedulingProfessional(apt.professionalId)
                                     setSchedulingService(apt.services[0]?.serviceId || "")
-                                    setSchedulingServiceSearch(apt.services[0]?.serviceName || "")
+                                    setSchedulingServiceSearch((typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName) || "")
                                     setSchedulingPaidAmount(apt.paidAmount || "")
                                     setActivePanel("agendar")
                                     setEditAppointmentData(apt.id)
@@ -839,10 +862,16 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           <div key={apt.id} className="p-4 bg-secondary/10 rounded-xl border border-gray-100 flex justify-between items-center cursor-pointer hover:bg-secondary/15 transition-colors" onClick={() => setCheckoutAptId(apt.id)}>
                             <div>
                               <div className="flex items-center gap-2 mb-1">
-                                <Badge variant="outline" className="text-[10px]">{apt.status}</Badge>
-                                <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time}</span>
+                                <Badge className={`text-[10px] border ${
+                                  apt.status === 'completado' || (apt.status as string) === 'completed' ? 'bg-emerald-100/50 text-emerald-600 border-emerald-200' : 
+                                  apt.status === 'cancelado' || (apt.status as string) === 'cancelled' ? 'bg-red-100/50 text-red-600 border-red-200' : 
+                                  'bg-sky-100/50 text-sky-600 border-sky-200'
+                                }`}>
+                                  {{ scheduled: "Programado", programado: "Programado", completed: "Completado", completado: "Completado", cancelled: "Cancelado", cancelado: "Cancelado", confirmado: "Confirmado", en_atencion: "En Atención", pendiente_cobro: "A Cobrar" }[apt.status as string] || apt.status}
+                                </Badge>
+                                <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time ? apt.time.substring(0,5) : apt.time}</span>
                               </div>
-                              <p className="font-bold text-foreground">{apt.services.map((s:any) => s.serviceName).join(', ')}</p>
+                              <p className="font-bold text-foreground">{apt.services.map((s:any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
                               {apt.products && apt.products.length > 0 && <p className="text-xs text-[#16A34A] mt-1">+ {apt.products.length} productos extras</p>}
                             </div>
                             <Button variant="ghost" size="sm" className="bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20">Abrir Cuenta</Button>
@@ -887,8 +916,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
                           {apt.services.map((s:any, i:number) => (
                             <div key={i} className="flex justify-between text-gray-700">
-                              <span>{s.serviceName}</span>
-                              <span>${checkoutPaymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price}</span>
+                              <span>{typeof s === 'string' ? s : s.serviceName}</span>
+                              <span>${typeof s === 'string' ? 0 : (checkoutPaymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price)}</span>
                             </div>
                           ))}
                           {apt.products?.map((p:any, i:number) => (
@@ -1156,13 +1185,24 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <CalendarIcon className="h-5 w-5" /> 
                 Agenda del {agendaDate?.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
               </h3>
-              <Button 
-                onClick={generatePDF}
-                className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold w-full sm:w-auto"
-                disabled={agendaAppointments.length === 0}
-              >
-                Descargar Turnos (PDF)
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold w-full sm:w-auto"
+                    disabled={agendaAppointments.length === 0}
+                  >
+                    Descargar Turnos (PDF)
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => generatePDF('time')} className="cursor-pointer">
+                    Ordenados solo por Hora
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => generatePDF('professional')} className="cursor-pointer">
+                    Ordenados agrupados por Profesional
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {agendaAppointments.length === 0 ? (
@@ -1190,7 +1230,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       
                       <div className="flex items-center gap-4 z-0">
                         <div className="flex flex-col items-center justify-center p-3 bg-gray-100 rounded-lg min-w-[70px]">
-                          <span className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-[#16A34A]'}`}>{apt.time}</span>
+                          <span className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-[#16A34A]'}`}>{apt.time ? apt.time.substring(0, 5) : apt.time}</span>
                         </div>
                         
                         <div className="space-y-1 z-0">
@@ -1200,7 +1240,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="text-gray-600">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span>
                             <span className="text-gray-400">•</span>
-                            <span className="text-[#16A34A] max-w-[150px] truncate">{apt.services[0]?.serviceName}</span>
+                            <span className="text-[#16A34A] max-w-[150px] truncate">{typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</span>
                           </div>
                         </div>
                       </div>
@@ -1211,14 +1251,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                             if (isAttended) {
                               return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase">Ya Asistió</Badge>;
                             }
-                            if (apt.status === 'programado') {
-                              return <Badge className="bg-orange-600/90 text-white font-bold text-[10px] uppercase">Sin Seña</Badge>;
+                            if (apt.status === 'programado' || (apt.status as string) === 'scheduled') {
+                              return <Badge className="bg-sky-100/80 text-sky-600 border-sky-200 font-bold text-[10px] uppercase">Programado</Badge>;
                             }
                             if (apt.status === 'confirmado') {
-                              return <Badge className="bg-emerald-500 text-white font-bold text-[10px] uppercase">Seña OK</Badge>;
+                              return <Badge className="bg-emerald-500 text-white font-bold text-[10px] uppercase">Confirmado</Badge>;
                             }
-                            if (apt.status === 'cancelado') {
-                              return <Badge className="bg-red-500/50 text-white text-[10px] uppercase">Cancelado</Badge>;
+                            if (apt.status === 'cancelado' || (apt.status as string) === 'cancelled') {
+                              return <Badge className="bg-red-100/80 text-red-600 border-red-200 font-bold text-[10px] uppercase">Cancelado</Badge>;
                             }
                             return <Badge variant="outline">{apt.status}</Badge>;
                           })()}
@@ -1269,28 +1309,31 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 text-center">
-                    <p className="text-sm text-gray-500 uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
-                    <p className="text-5xl font-extrabold text-white">${totalIncome.toLocaleString()}</p>
-                    <p className="text-xs text-amber-500/70 mt-2">No incluye pagos realizados con Gift Cards (ya se cobraron al ser adquiridas).</p>
+                  <div className="bg-gradient-to-br from-[#16A34A] to-[#14532D] p-8 rounded-2xl border border-emerald-500/30 text-center shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400 rounded-full mix-blend-overlay filter blur-2xl opacity-40"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500 rounded-full mix-blend-overlay filter blur-xl opacity-40"></div>
+                    
+                    <p className="relative z-10 text-xs sm:text-sm text-emerald-100/90 font-bold uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
+                    <p className="relative z-10 text-5xl sm:text-6xl font-black text-white drop-shadow-md">${totalIncome.toLocaleString()}</p>
+                    <p className="relative z-10 text-xs text-yellow-300/90 mt-4 mx-auto font-medium max-w-md">No incluye pagos realizados con Gift Cards (ya se cobraron al ser adquiridas).</p>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-secondary/10 p-4 rounded-xl border border-gray-100 text-center">
-                       <p className="text-xs text-gray-500 uppercase mb-1">Efectivo</p>
-                       <p className="text-xl font-bold text-foreground">${byMethod.efectivo.toLocaleString()}</p>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-shadow group">
+                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2 group-hover:text-[#16A34A] transition-colors">Efectivo</p>
+                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.efectivo.toLocaleString()}</p>
                     </div>
-                    <div className="bg-secondary/10 p-4 rounded-xl border border-gray-100 text-center">
-                       <p className="text-xs text-gray-500 uppercase mb-1">Transferencia</p>
-                       <p className="text-xl font-bold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-shadow group">
+                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2 group-hover:text-[#16A34A] transition-colors">Transferencia</p>
+                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
                     </div>
-                    <div className="bg-secondary/10 p-4 rounded-xl border border-gray-100 text-center">
-                       <p className="text-xs text-gray-500 uppercase mb-1">Tarjeta (Déb/Créd)</p>
-                       <p className="text-xl font-bold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-shadow group">
+                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2 group-hover:text-[#16A34A] transition-colors">Tarjeta (Déb/Créd)</p>
+                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
                     </div>
-                    <div className="bg-secondary/10 p-4 rounded-xl border border-gray-100 text-center">
-                       <p className="text-xs text-gray-500 uppercase mb-1">Código QR</p>
-                       <p className="text-xl font-bold text-foreground">${byMethod.qr.toLocaleString()}</p>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-shadow group">
+                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2 group-hover:text-[#16A34A] transition-colors">Código QR</p>
+                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.qr.toLocaleString()}</p>
                     </div>
                   </div>
 

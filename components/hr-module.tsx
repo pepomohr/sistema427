@@ -308,7 +308,7 @@ export function HRModule() {
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 pt-4 max-h-[60vh] overflow-y-auto pr-2">
             {DAYS_OF_WEEK.map((day) => {
               const schedule = editingSchedule?.[day.key]
               const intervals = Array.isArray(schedule) ? schedule : (schedule ? [schedule] : [])
