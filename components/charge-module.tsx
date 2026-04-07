@@ -131,7 +131,7 @@ export function ChargeModule() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-[#16A34A]">Cobrar</h2>
-        <Button onClick={() => setShowDirectSaleModal(true)} className="bg-[#16A34A] text-[#2d3529] hover:bg-[#15803D]">
+        <Button onClick={() => setShowDirectSaleModal(true)} className="bg-[#16A34A] text-white hover:bg-[#15803D]">
           <ShoppingCart className="h-4 w-4 mr-2" /> Venta Directa
         </Button>
       </div>

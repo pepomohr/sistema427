@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { format } from "date-fns"
 import { useClinicStore, getCategoryDisplayName } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
+import { useConfirm } from "@/hooks/use-confirm"
 import { 
   Search, 
   Plus, 
@@ -62,6 +65,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     fetchPatients,
     fetchServices,
     fetchProducts,
+    fetchAppointments,
     getProfessionalsForService,
     startAttention,
     cancelAppointment,
@@ -85,6 +89,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const [schedulingServiceSearch, setSchedulingServiceSearch] = useState("")
   const [schedulingServiceMenuOpen, setSchedulingServiceMenuOpen] = useState(false)
   
+  const { confirm, ConfirmDialog } = useConfirm()
+
   const [checkoutAptId, setCheckoutAptId] = useState<string>("")
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
   const [newPatient, setNewPatient] = useState({
@@ -122,7 +128,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     if (typeof fetchPatients === 'function') fetchPatients()
     if (typeof fetchServices === 'function') fetchServices()
     if (typeof fetchProducts === 'function') fetchProducts()
-  }, [fetchPatients, fetchServices, fetchProducts])
+    if (typeof fetchAppointments === 'function') fetchAppointments()
+  }, [fetchPatients, fetchServices, fetchProducts, fetchAppointments])
 
   useEffect(() => {
     let active = true;
@@ -340,7 +347,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     
     const defaultSchedule = { start: "09:00", end: "20:00" }
     
-    const date = new Date(schedulingDate)
+    const date = new Date(schedulingDate + 'T12:00:00')
     const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
     
     const daySchedules = (professional.schedule as any)?.[dayName]
@@ -375,25 +382,60 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     if (!selectedPatient || !schedulingProfessional || !schedulingService || !schedulingTime) return
     const service = services.find((s) => s.id === schedulingService)
     if (!service) return
+    const profName = professionals.find((p) => p.id === schedulingProfessional)?.shortName
     
-    addAppointment({
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.name,
-      professionalId: schedulingProfessional,
-      date: new Date(schedulingDate),
-      time: schedulingTime,
-      services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
-      products: [],
-      status: Number(schedulingPaidAmount) > 0 ? "confirmado" : "programado",
-      totalAmount: service.price,
-      paidAmount: Number(schedulingPaidAmount) || 0,
+    // Si estamos editando un turno existente
+    if (editAppointmentData) {
+      confirm({
+        title: "Reprogramar Turno",
+        description: `Vas a reprogramar el turno de ${selectedPatient.name} para un ${service.name} el ${schedulingDate} a las ${schedulingTime}hs.`,
+        actionType: "success",
+        onConfirm: () => {
+          updateAppointment(editAppointmentData, {
+            professionalId: schedulingProfessional,
+            date: new Date(schedulingDate + 'T12:00:00'),
+            time: schedulingTime,
+            services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
+            paidAmount: Number(schedulingPaidAmount) || 0,
+            totalAmount: service.price,
+          })
+          
+          setSchedulingService("")
+          setSchedulingProfessional("")
+          setSchedulingTime("")
+          setSchedulingPaidAmount("")
+          setActivePanel(null)
+          setEditAppointmentData(null)
+        }
+      })
+      return
+    }
+
+    confirm({
+      title: "Confirmar Turno",
+      description: `Estás por agendar a ${selectedPatient.name} con ${profName} para un ${service.name} a las ${schedulingTime}hs.`,
+      actionType: "success",
+      onConfirm: () => {
+        addAppointment({
+          patientId: selectedPatient.id,
+          patientName: selectedPatient.name,
+          professionalId: schedulingProfessional,
+          date: new Date(schedulingDate + 'T12:00:00'),
+          time: schedulingTime,
+          services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
+          products: [],
+          status: Number(schedulingPaidAmount) > 0 ? "confirmado" : "programado",
+          totalAmount: service.price,
+          paidAmount: Number(schedulingPaidAmount) || 0,
+        })
+        
+        setSchedulingService("")
+        setSchedulingProfessional("")
+        setSchedulingTime("")
+        setSchedulingPaidAmount("")
+        setActivePanel(null)
+      }
     })
-    
-    setSchedulingService("")
-    setSchedulingProfessional("")
-    setSchedulingTime("")
-    setSchedulingPaidAmount("")
-    setActivePanel(null)
   }
 
   const servicesByCategory = useMemo(() => {
@@ -415,7 +457,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         <h2 className="text-2xl font-bold text-[#16A34A]">Recepción</h2>
         <Dialog open={showNewPatient} onOpenChange={setShowNewPatient}>
           <DialogTrigger asChild>
-            <Button className="bg-[#16A34A] text-[#2d3529] hover:bg-[#15803D]">
+            <Button className="bg-[#16A34A] text-white hover:bg-[#15803D]">
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Paciente
             </Button>
@@ -447,7 +489,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   <Input type="email" value={newPatient.email} onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })} className="bg-input border-gray-200" />
                 </div>
               </div>
-              <Button onClick={handleAddPatient} className="w-full bg-[#16A34A] text-[#2d3529] font-bold hover:bg-[#15803D]" disabled={!newPatient.name || !newPatient.phone || !newPatient.dni}>
+              <Button onClick={handleAddPatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!newPatient.name || !newPatient.phone || !newPatient.dni}>
                 Registrar Paciente
               </Button>
             </div>
@@ -630,8 +672,25 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                             </div>
                             {['programado', 'confirmado'].includes(apt.status) && (
                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                                 <Button variant="outline" size="sm" onClick={() => setEditAppointmentData(apt)} className="flex-1 sm:flex-none border-blue-500/50 text-blue-400 hover:bg-blue-500/10">Reprogramar</Button>
-                                 <Button variant="outline" size="sm" onClick={() => { if(window.confirm('¿Seguro que querés cancelar este turno?')) cancelAppointment(apt.id); }} className="flex-1 sm:flex-none border-red-500/50 text-red-400 hover:bg-red-500/10">Cancelar</Button>
+                                 <Button variant="outline" size="sm" onClick={() => {
+                                    setSchedulingDate(new Date(apt.date).toISOString().split('T')[0])
+                                    setSchedulingTime(apt.time)
+                                    setSchedulingProfessional(apt.professionalId)
+                                    setSchedulingService(apt.services[0]?.serviceId || "")
+                                    setSchedulingServiceSearch(apt.services[0]?.serviceName || "")
+                                    setSchedulingPaidAmount(apt.paidAmount || "")
+                                    setActivePanel("agendar")
+                                    setEditAppointmentData(apt.id)
+                                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                                 }} className="flex-1 sm:flex-none border-blue-500/50 text-blue-400 hover:bg-blue-500/10">Reprogramar</Button>
+                                 <Button variant="outline" size="sm" onClick={() => {
+                                   confirm({
+                                     title: "Cancelar Turno",
+                                     description: "¿Seguro que querés cancelar este turno? Esta acción no se puede deshacer.",
+                                     actionType: "danger",
+                                     onConfirm: () => cancelAppointment(apt.id)
+                                   })
+                                 }} className="flex-1 sm:flex-none border-red-500/50 text-red-400 hover:bg-red-500/10">Cancelar</Button>
                                </div>
                             )}
                           </CardContent>
@@ -657,7 +716,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         <Badge 
                           key={cat} 
                           variant={schedulingServiceCat === cat ? "default" : "outline"}
-                          className={`cursor-pointer whitespace-nowrap px-3 py-1.5 ${schedulingServiceCat === cat ? 'bg-[#16A34A] text-[#2d3529]' : 'text-gray-600 border-gray-300 hover:bg-white/5'}`}
+                          className={`cursor-pointer whitespace-nowrap px-3 py-1.5 ${schedulingServiceCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-600 border-gray-300 hover:bg-white/5'}`}
                           onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
                         >
                           {getCategoryDisplayName(cat as any)}
@@ -665,39 +724,51 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       ))}
                     </div>
                     {schedulingServiceCat && (
-                      <div className="relative">
-                        <Input 
-                          placeholder="Buscar servicio específico..." 
-                          value={schedulingServiceSearch} 
-                          onChange={(e) => {
-                            setSchedulingServiceSearch(e.target.value)
-                            setSchedulingServiceMenuOpen(true)
-                            if(e.target.value === "") setSchedulingService("")
-                          }}
-                          onFocus={() => setSchedulingServiceMenuOpen(true)}
-                          onBlur={() => setTimeout(() => setSchedulingServiceMenuOpen(false), 200)}
-                          className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 mt-2"
-                        />
-                        {schedulingServiceMenuOpen && (
-                          <div className="absolute top-[45px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[150px] overflow-y-auto z-50">
-                            {servicesByCategory[schedulingServiceCat]
-                              ?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase()))
-                              .map(s => (
-                              <button 
-                                key={s.id}
-                                onClick={() => {
-                                  setSchedulingService(s.id)
-                                  setSchedulingServiceSearch(s.name)
-                                  setSchedulingServiceMenuOpen(false)
-                                }}
-                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-[#2d3529] font-medium border-b border-black/5"
-                              >
-                                {s.name} <span className="text-[#829177] ml-2 font-bold">${s.price}</span>
-                              </button>
-                            ))}
+                      <Popover open={schedulingServiceMenuOpen} onOpenChange={setSchedulingServiceMenuOpen}>
+                        <PopoverAnchor asChild>
+                          <div className="relative w-full">
+                            <Input 
+                              placeholder="Buscar servicio específico..." 
+                              value={schedulingServiceSearch} 
+                              onChange={(e) => {
+                                setSchedulingServiceSearch(e.target.value)
+                                setSchedulingServiceMenuOpen(true)
+                                if(e.target.value === "") setSchedulingService("")
+                              }}
+                              onFocus={() => setSchedulingServiceMenuOpen(true)}
+                              className="bg-input border-emerald-500/50 focus-visible:ring-emerald-500 text-foreground placeholder:text-gray-400 mt-2 service-search-input"
+                            />
                           </div>
-                        )}
-                      </div>
+                        </PopoverAnchor>
+                        <PopoverContent
+                          onOpenAutoFocus={(e) => e.preventDefault()}
+                          onInteractOutside={(e) => {
+                            if ((e.target as Element)?.closest('.service-search-input')) {
+                              e.preventDefault()
+                            }
+                          }}
+                          className="w-[var(--radix-popover-trigger-width)] max-h-60 overflow-y-auto p-0 z-[100] border-emerald-500/30 shadow-xl"
+                        >
+                          {servicesByCategory[schedulingServiceCat]
+                            ?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase()))
+                            .map(s => (
+                            <button 
+                              key={s.id}
+                              onClick={() => {
+                                setSchedulingService(s.id)
+                                setSchedulingServiceSearch(s.name)
+                                setSchedulingServiceMenuOpen(false)
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 text-[#2d3529] font-medium border-b border-black/5 transition-colors"
+                            >
+                              {s.name} <span className="text-[#829177] ml-2 font-bold">${s.price}</span>
+                            </button>
+                          ))}
+                          {servicesByCategory[schedulingServiceCat]?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase())).length === 0 && (
+                            <div className="p-3 text-sm text-gray-500 text-center italic">No hay servicios coincidentes.</div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
                     )}
                   </div>
                 </div>
@@ -747,7 +818,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 )}
 
                 {schedulingTime && (
-                  <Button onClick={handleScheduleAppointment} className="w-full bg-[#16A34A] text-[#2d3529] hover:bg-[#15803D]">
+                  <Button onClick={handleScheduleAppointment} className="w-full bg-[#16A34A] text-white hover:bg-[#15803D]">
                     Confirmar Turno
                   </Button>
                 )}
@@ -811,7 +882,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       <div className="space-y-4">
                         <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg border border-gray-100">
                           <span className="text-sm font-semibold">Facturación de Turno</span>
-                          <Button variant="ghost" size="sm" onClick={() => {setCheckoutAptId(""); setCheckoutPaymentMethod("");}} className="h-6 px-2 text-xs text-gray-500 hover:text-white">Cambiar Selección</Button>
+                          <Button variant="outline" size="sm" onClick={() => {setCheckoutAptId(""); setCheckoutPaymentMethod(""); setCheckoutOfferId("");}} className="border-red-500/30 text-red-500 hover:bg-red-50 h-7 text-xs px-3">Cerrar Cuenta</Button>
                         </div>
                         <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
                           {apt.services.map((s:any, i:number) => (
@@ -871,7 +942,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           <p className="text-5xl font-extrabold text-white">${finalToPay.toLocaleString()}</p>
                         </div>
                         <Button
-                          className="w-full bg-[#16A34A] hover:bg-[#15803D] h-14 text-[#2d3529] font-bold mt-6 shadow-lg text-lg"
+                          className="w-full bg-[#16A34A] hover:bg-[#15803D] h-14 text-white font-bold mt-6 shadow-lg text-lg"
                           disabled={!checkoutPaymentMethod}
                           onClick={() => {
                             if (typeof useClinicStore.getState().completeAppointment === 'function') {
@@ -897,11 +968,11 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <Label className="text-[#16A34A] uppercase text-xs font-bold tracking-wider">Vender Producto</Label>
                 <div className="bg-secondary/10 p-3 rounded-lg border border-dashed border-gray-200 space-y-2">
                   <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                    <Badge variant={directSaleProdCat === 'COMBOS' ? "default" : "outline"} onClick={() => { setDirectSaleProdCat('COMBOS'); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === 'COMBOS' ? 'bg-[#16A34A] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
+                    <Badge variant={directSaleProdCat === 'COMBOS' ? "default" : "outline"} onClick={() => { setDirectSaleProdCat('COMBOS'); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === 'COMBOS' ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
                       COMBOS 🔥
                     </Badge>
                     {Array.from(new Set(useClinicStore.getState().products.map(p => p.category))).map(cat => (
-                      <Badge key={cat} variant={directSaleProdCat === cat ? "default" : "outline"} onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === cat ? 'bg-[#16A34A] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
+                      <Badge key={cat} variant={directSaleProdCat === cat ? "default" : "outline"} onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
                         {cat}
                       </Badge>
                     ))}
@@ -995,7 +1066,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col gap-4">
                       <p className="text-sm text-emerald-100 uppercase tracking-widest">Total a cobrar</p>
                       <p className="text-4xl font-extrabold text-white">${Math.round(directSaleTotal).toLocaleString()}</p>
-                      <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-[#2d3529] font-bold" disabled={!directSalePaymentMethod || !directSaleProf} onClick={() => {
+                      <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold" disabled={!directSalePaymentMethod || !directSaleProf} onClick={() => {
                         addSale({
                           type: 'direct',
                           items: directSaleCart.map(i => ({
@@ -1057,7 +1128,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <Input type="email" value={editPatientData?.email || ""} onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })} className="bg-input border-gray-200" />
               </div>
             </div>
-            <Button onClick={handleUpdatePatient} className="w-full bg-[#16A34A] text-[#2d3529] font-bold hover:bg-[#15803D]" disabled={!editPatientData?.name || !editPatientData?.phone || !editPatientData?.dni}>
+            <Button onClick={handleUpdatePatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!editPatientData?.name || !editPatientData?.phone || !editPatientData?.dni}>
               Guardar Cambios
             </Button>
           </div>
@@ -1156,7 +1227,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         {!isAttended && apt.status !== 'cancelado' && (
                           <Button 
                             onClick={() => startAttention(apt.id)}
-                            className="bg-[#16A34A] hover:bg-[#15803D] text-[#2d3529] font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"
+                            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"
                             title="Marcar como Atendido / Llegó"
                           >
                             ✓
@@ -1291,7 +1362,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       </div>
                       <div className="text-right space-y-1">
                         <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión Actual</p>
-                        <Badge className="bg-[#16A34A] text-[#2d3529] text-lg font-bold px-4 py-1.5 border-none">
+                        <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5 border-none">
                           {currentCommission}%
                         </Badge>
                       </div>
@@ -1321,6 +1392,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           })()}
         </div>
       </div>
+      <ConfirmDialog />
     </div>
   )
 }

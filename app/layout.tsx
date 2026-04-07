@@ -10,8 +10,8 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: 'C427 CLINIC - Sistema de Gestión',
-  description: 'Sistema de gestión clínica avanzada para C427 CLINIC',
+  title: 'Consultorio C427 - Sistema de Gestión',
+  description: 'Sistema de gestión avanzada para Consultorio C427',
   generator: 'v0.app'
 }
 

@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import { supabase } from '@/lib/supabase'
+import { format } from 'date-fns'
 
 // ============================================
 // TYPES & INTERFACES
@@ -242,7 +243,8 @@ interface ClinicStore {
   // Reception actions
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => Promise<void>
   updatePatient: (id: string, updates: Partial<Patient>) => Promise<void>
-  addAppointment: (appointment: Omit<Appointment, 'id'>) => void
+  addAppointment: (appointment: Omit<Appointment, 'id'>) => Promise<void>
+  fetchAppointments: () => Promise<void>
   getProfessionalsForService: (serviceId: string) => Professional[]
 
   // Supabase Products & Services Admin
@@ -269,36 +271,14 @@ const mockPatients: Patient[] = [
   { id: 'pat3', name: 'Sofía Martínez', phone: '1176543210', dni: '32000111', createdAt: new Date() },
 ]
 
-const mockAppointments: Appointment[] = [
-  { 
-    id: 'a1', patientId: 'pat1', patientName: 'Laura Gómez', professionalId: 'ceci', 
-    date: new Date(), time: '09:00', 
-    services: [{ serviceId: 's1', serviceName: 'Limpieza Facial Profunda', price: 5000, priceCash: 4500 }],
-    products: [],
-    status: 'confirmado', totalAmount: 5000, paidAmount: 0 
-  },
-  { 
-    id: 'a2', patientId: 'pat2', patientName: 'Mariana Pérez', professionalId: 'ceci', 
-    date: new Date(), time: '10:30', 
-    services: [{ serviceId: 's3', serviceName: 'Masaje Reductor', price: 6000, priceCash: 5000 }],
-    products: [],
-    status: 'en_atencion', totalAmount: 6000, paidAmount: 0 
-  },
-  { 
-    id: 'a3', patientId: 'pat3', patientName: 'Sofía Martínez', professionalId: 'ceci', 
-    date: new Date(new Date().setDate(new Date().getDate() + 1)), time: '15:00', 
-    services: [{ serviceId: 's2', serviceName: 'Peeling Químico', price: 8000 }],
-    products: [],
-    status: 'programado', totalAmount: 8000, paidAmount: 0 
-  }
-]
+const mockAppointments: Appointment[] = []
 
 export const useClinicStore = create<ClinicStore>((set, get) => ({
   currentUser: null,
   setCurrentUser: (user) => set({ currentUser: user }),
   
   professionals: mockProfessionals,
-  appointments: mockAppointments,
+  appointments: [],
   sales: [],
   patients: mockPatients,
   services: [],
@@ -436,9 +416,80 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     }
   },
 
-  addAppointment: (appointment) => {
-    const newAppointment = { ...appointment, id: Date.now().toString() }
-    set(state => ({ appointments: [...state.appointments, newAppointment] }))
+  addAppointment: async (appointment) => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert([{
+          patientId: appointment.patientId,
+          patientName: appointment.patientName,
+          professionalId: appointment.professionalId,
+          date: format(appointment.date, "yyyy-MM-dd'T'12:00:00.000'Z'"),
+          time: appointment.time,
+          services: appointment.services,
+          products: appointment.products || [],
+          status: appointment.status,
+          totalAmount: appointment.totalAmount,
+          paidAmount: appointment.paidAmount
+        }])
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Supabase add appointment error:', error.message || error);
+      } else if (data) {
+        const newAppointment = {
+          id: data.id,
+          patientId: data.patientId,
+          patientName: data.patientName,
+          professionalId: data.professionalId,
+          date: new Date(data.date),
+          time: data.time,
+          services: data.services || [],
+          products: data.products || [],
+          status: data.status,
+          totalAmount: data.totalAmount,
+          paidAmount: data.paidAmount
+        };
+        set(state => ({ appointments: [...state.appointments, newAppointment] }));
+      }
+    } catch (err) {
+      console.error('Network error adding appointment:', err);
+    }
+  },
+
+  fetchAppointments: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .limit(2000);
+        
+      if (error) {
+        console.error('Supabase fetch appointments error:', error.message || error);
+        return;
+      }
+
+      if (data) {
+        set({
+          appointments: data.map((a: any) => ({
+            id: a.id,
+            patientId: a.patientId,
+            patientName: a.patientName,
+            professionalId: a.professionalId,
+            date: new Date(a.date),
+            time: a.time,
+            services: a.services || [],
+            products: a.products || [],
+            status: a.status,
+            totalAmount: a.totalAmount,
+            paidAmount: a.paidAmount
+          }))
+        });
+      }
+    } catch (err) {
+      console.error('Network error fetching appointments:', err);
+    }
   },
 
   getProfessionalsForService: (serviceId) => {
@@ -789,18 +840,43 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     }
   },
 
-  cancelAppointment: (id) => {
-    set((state) => ({
-      appointments: state.appointments.filter(a => a.id !== id)
-    }))
+  cancelAppointment: async (id) => {
+    try {
+      const { error } = await supabase.from('appointments').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase delete appointment error:', error);
+      } else {
+        set((state) => ({
+          appointments: state.appointments.filter(a => a.id !== id)
+        }))
+      }
+    } catch (err) { console.error('Network error cancelling:', err) }
   },
 
-  updateAppointment: (id, updates) => {
-    set((state) => ({
-      appointments: state.appointments.map(a => 
-        a.id === id ? { ...a, ...updates } : a
-      )
-    }))
+  updateAppointment: async (id, updates) => {
+    try {
+      const dbUpdates: any = {};
+      if (updates.professionalId) dbUpdates.professionalId = updates.professionalId;
+      if (updates.time) dbUpdates.time = updates.time;
+      if (updates.status) dbUpdates.status = updates.status;
+      if (updates.services) dbUpdates.services = updates.services;
+      if (updates.products) dbUpdates.products = updates.products;
+      if (updates.totalAmount !== undefined) dbUpdates.totalAmount = updates.totalAmount;
+      if (updates.paidAmount !== undefined) dbUpdates.paidAmount = updates.paidAmount;
+      if (updates.date) dbUpdates.date = format(updates.date, "yyyy-MM-dd'T'12:00:00.000'Z'");
+
+      const { error } = await supabase.from('appointments').update(dbUpdates).eq('id', id);
+      
+      if (error) {
+        console.error('Supabase update appointment error:', error);
+      } else {
+        set((state) => ({
+          appointments: state.appointments.map(a => 
+            a.id === id ? { ...a, ...updates } : a
+          )
+        }))
+      }
+    } catch (err) { console.error('Network error updating appointment:', err) }
   },
 
   updatePatientGiftCardBalance: async (id: string, amountToAdd: number) => {

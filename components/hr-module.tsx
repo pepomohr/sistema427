@@ -163,7 +163,7 @@ export function HRModule() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-[#16A34A]">Gestión de Personal</h2>
-        <Badge className="bg-[#16A34A] text-[#2d3529]">
+        <Badge className="bg-[#16A34A] text-white">
           {(professionals || []).filter((p) => p.isActive).length} Activos
         </Badge>
       </div>
@@ -290,7 +290,7 @@ export function HRModule() {
               </div>
 
               <div className="pt-4">
-                <Button onClick={handlePayLiquidation} className="w-full bg-[#16A34A] hover:bg-[#15803D] text-[#2d3529] font-bold h-12 text-lg">
+                <Button onClick={handlePayLiquidation} className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold h-12 text-lg">
                   Registrar Pago de ${liquidationData.payTotal.toLocaleString()}
                 </Button>
                 <p className="text-[10px] text-center mt-2 text-muted-foreground italic">Al registrarlo, impactará automáticamente en Gastos y el Neto del mes.</p>
@@ -397,7 +397,7 @@ export function HRModule() {
           
           <div className="pt-4 flex justify-end gap-3">
             <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancelar</Button>
-            <Button className="bg-[#16A34A] text-[#2d3529] hover:bg-[#15803D] font-bold" onClick={handleSaveSchedule}>
+            <Button className="bg-[#16A34A] text-white hover:bg-[#15803D] font-bold" onClick={handleSaveSchedule}>
               Guardar Horarios
             </Button>
           </div>

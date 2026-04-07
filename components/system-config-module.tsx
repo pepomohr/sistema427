@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useConfirm } from "@/hooks/use-confirm"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2, Edit2, Package, Sparkles, Percent, Layers, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -20,6 +21,7 @@ export function SystemConfigModule() {
   } = useClinicStore()
 
   const [activeTab, setActiveTab] = useState<"servicios" | "productos" | "ofertas" | "combos">("servicios")
+  const { confirm, ConfirmDialog } = useConfirm()
   
   // Modal states
   const [showServiceDialog, setShowServiceDialog] = useState(false)
@@ -147,16 +149,16 @@ export function SystemConfigModule() {
       </div>
 
       <div className="flex gap-4 mb-4 overflow-x-auto pb-2">
-        <Button variant={activeTab === "servicios" ? "default" : "outline"} onClick={() => setActiveTab("servicios")} className={activeTab === "servicios" ? "bg-[#16A34A] text-[#2d3529]" : "border-[#16A34A] text-[#16A34A]"}>
+        <Button variant={activeTab === "servicios" ? "default" : "outline"} onClick={() => setActiveTab("servicios")} className={activeTab === "servicios" ? "bg-[#16A34A] text-white" : "border-[#16A34A] text-[#16A34A]"}>
           <Sparkles className="h-4 w-4 mr-2"/> Servicios
         </Button>
-        <Button variant={activeTab === "productos" ? "default" : "outline"} onClick={() => setActiveTab("productos")} className={activeTab === "productos" ? "bg-[#16A34A] text-[#2d3529]" : "border-[#16A34A] text-[#16A34A]"}>
+        <Button variant={activeTab === "productos" ? "default" : "outline"} onClick={() => setActiveTab("productos")} className={activeTab === "productos" ? "bg-[#16A34A] text-white" : "border-[#16A34A] text-[#16A34A]"}>
           <Package className="h-4 w-4 mr-2"/> Productos
         </Button>
-        <Button variant={activeTab === "combos" ? "default" : "outline"} onClick={() => setActiveTab("combos")} className={activeTab === "combos" ? "bg-[#16A34A] text-[#2d3529]" : "border-[#16A34A] text-[#16A34A]"}>
+        <Button variant={activeTab === "combos" ? "default" : "outline"} onClick={() => setActiveTab("combos")} className={activeTab === "combos" ? "bg-[#16A34A] text-white" : "border-[#16A34A] text-[#16A34A]"}>
           <Layers className="h-4 w-4 mr-2"/> Combos
         </Button>
-        <Button variant={activeTab === "ofertas" ? "default" : "outline"} onClick={() => setActiveTab("ofertas")} className={activeTab === "ofertas" ? "bg-[#16A34A] text-[#2d3529]" : "border-[#16A34A] text-[#16A34A]"}>
+        <Button variant={activeTab === "ofertas" ? "default" : "outline"} onClick={() => setActiveTab("ofertas")} className={activeTab === "ofertas" ? "bg-[#16A34A] text-white" : "border-[#16A34A] text-[#16A34A]"}>
           <Percent className="h-4 w-4 mr-2"/> Ofertas
         </Button>
       </div>
@@ -186,7 +188,14 @@ export function SystemConfigModule() {
                   </div>
                   <div className="flex gap-2 border-l border-gray-200 pl-4">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenService(s)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" onClick={() => { if(window.confirm("¿Seguro que deseas eliminarlo?")) deleteService(s.id); }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" onClick={() => { 
+                      confirm({
+                        title: "¿Estás seguro?",
+                        description: `Vas a eliminar el servicio "${s.name}". Esta acción no se puede deshacer.`,
+                        actionType: "danger",
+                        onConfirm: () => deleteService(s.id)
+                      })
+                    }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 </div>
               </div>
@@ -220,7 +229,14 @@ export function SystemConfigModule() {
                   </div>
                   <div className="flex gap-2 border-l border-gray-200 pl-4">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenProduct(p)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" onClick={() => { if(window.confirm("¿Seguro que deseas eliminarlo?")) deleteProduct(p.id); }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" onClick={() => { 
+                      confirm({
+                        title: "¿Estás seguro?",
+                        description: `Vas a eliminar el producto "${p.name}". Esta acción no se puede deshacer.`,
+                        actionType: "danger",
+                        onConfirm: () => deleteProduct(p.id)
+                      })
+                    }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 </div>
               </div>
@@ -253,7 +269,14 @@ export function SystemConfigModule() {
                   </div>
                   <div className="flex gap-2 border-l border-green-200 pl-4">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenOffer(o)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" onClick={() => { if(window.confirm("¿Seguro que deseas eliminarlo?")) deleteOffer(o.id); }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" onClick={() => { 
+                      confirm({
+                        title: "¿Estás seguro?",
+                        description: `Vas a eliminar la oferta "${o.name}". Esta acción no se puede deshacer.`,
+                        actionType: "danger",
+                        onConfirm: () => deleteOffer(o.id)
+                      })
+                    }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 </div>
               </div>
@@ -295,7 +318,14 @@ export function SystemConfigModule() {
                   </div>
                   <div className="flex gap-2 border-l border-gray-200 pl-4 h-full items-center">
                     <Button variant="ghost" size="sm" onClick={() => handleOpenCombo(c)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" onClick={() => { if(window.confirm("¿Seguro que deseas eliminarlo?")) deleteCombo(c.id); }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" onClick={() => { 
+                      confirm({
+                        title: "¿Estás seguro?",
+                        description: `Vas a eliminar el combo "${c.name}". Esta acción no se puede deshacer.`,
+                        actionType: "danger",
+                        onConfirm: () => deleteCombo(c.id)
+                      })
+                    }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 </div>
               </div>
@@ -329,7 +359,7 @@ export function SystemConfigModule() {
               <div><Label>Precio Tarjeta ($)</Label><Input type="number" value={svcForm.price || ""} onChange={e=>setSvcForm({...svcForm, price: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
             </div>
             <Label>Duración (mins)</Label><Input type="number" value={svcForm.duration || ""} onChange={e=>setSvcForm({...svcForm, duration: Number(e.target.value)})} className="bg-input border-gray-200" />
-            <Button onClick={handleSaveService} className="w-full mt-4 bg-[#16A34A] text-[#2d3529] hover:bg-[#15803D]">Guardar</Button>
+            <Button onClick={handleSaveService} className="w-full mt-4 bg-[#16A34A] text-white hover:bg-[#15803D]">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -346,7 +376,7 @@ export function SystemConfigModule() {
               <div><Label>Precio Lista ($)</Label><Input type="number" value={prodForm.priceList || ""} onChange={e=>setProdForm({...prodForm, priceList: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
             </div>
             <Label>Stock Actual</Label><Input type="number" value={prodForm.stock || 0} onChange={e=>setProdForm({...prodForm, stock: Number(e.target.value)})} className="bg-input border-gray-200" />
-            <Button onClick={handleSaveProduct} className="w-full mt-4 bg-[#16A34A] text-[#2d3529] hover:bg-[#15803D]">Guardar</Button>
+            <Button onClick={handleSaveProduct} className="w-full mt-4 bg-[#16A34A] text-white hover:bg-[#15803D]">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -362,7 +392,7 @@ export function SystemConfigModule() {
             <Label>Descuento Porcentual (%)</Label>
             <Input type="number" value={offerForm.discountPercentage || ""} onChange={e=>setOfferForm({...offerForm, discountPercentage: Number(e.target.value)})} className="bg-input border-gray-200" placeholder="Ej: 15" />
             
-            <Button onClick={handleSaveOffer} className="w-full mt-4 bg-[#16A34A] text-[#2d3529] hover:bg-[#15803D]">Guardar</Button>
+            <Button onClick={handleSaveOffer} className="w-full mt-4 bg-[#16A34A] text-white hover:bg-[#15803D]">Guardar</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -430,10 +460,11 @@ export function SystemConfigModule() {
               <div><Label>Precio Cerrado Lista ($)</Label><Input type="number" value={comboForm.priceList || ""} onChange={e=>setComboForm({...comboForm, priceList: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
             </div>
             
-            <Button onClick={handleSaveCombo} className="w-full mt-4 bg-[#16A34A] text-[#2d3529] hover:bg-[#15803D]">Guardar Combo</Button>
+            <Button onClick={handleSaveCombo} className="w-full mt-4 bg-[#16A34A] text-white hover:bg-[#15803D]">Guardar Combo</Button>
           </div>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog />
     </div>
   )
 }

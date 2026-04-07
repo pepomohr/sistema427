@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
+import { useConfirm } from "@/hooks/use-confirm"
 import { 
   Clock, 
   Award,
@@ -36,6 +38,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     finishAttention,
     fetchServices,
     fetchProducts,
+    fetchAppointments,
     addAppointment,
     cancelAppointment
   } = useClinicStore()
@@ -67,10 +70,13 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const [schedulingServiceSearch, setSchedulingServiceSearch] = useState("")
   const [schedulingServiceMenuOpen, setSchedulingServiceMenuOpen] = useState(false)
 
+  const { confirm, ConfirmDialog } = useConfirm()
+
   useEffect(() => {
     if (typeof fetchServices === 'function') fetchServices()
     if (typeof fetchProducts === 'function') fetchProducts()
-  }, [fetchServices, fetchProducts])
+    if (typeof fetchAppointments === 'function') fetchAppointments()
+  }, [fetchServices, fetchProducts, fetchAppointments])
 
   const currentProfessional = professionals.find(p => p.id === (professionalId || currentUser?.professionalId))
   
@@ -158,9 +164,12 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   }
 
   const handleFinishAttention = (aptId: string) => {
-    if (window.confirm("¿Confirmás que querés Finalizar la Sesión y enviar este paciente a Recepción para que le cobren?")) {
-      finishAttention(aptId, getCurrentServices(aptId), getCurrentProducts(aptId));
-    }
+    confirm({
+      title: "¿Finalizar Sesión?",
+      description: "¿Confirmás que querés Finalizar la Sesión y enviar este paciente a Recepción para que le cobren?",
+      actionType: "success",
+      onConfirm: () => finishAttention(aptId, getCurrentServices(aptId), getCurrentProducts(aptId))
+    })
   }
 
   const getPatientName = (patientId: string) => patients.find(p => p.id === patientId)?.name || 'Paciente Desconocido'
@@ -169,7 +178,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     if (!currentProfessional || !schedulingDate) return []
     
     const defaultSchedule = { start: "09:00", end: "20:00" }
-    const date = new Date(schedulingDate)
+    const date = new Date(schedulingDate + 'T12:00:00')
     const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
     
     const daySchedules = (currentProfessional.schedule as any)?.[dayName]
@@ -206,30 +215,37 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     if (!service) return
     
     // Correct timezone adjusting for the date
-    const finalDate = new Date(schedulingDate)
+    const finalDate = new Date(schedulingDate + 'T12:00:00')
     // Add timezone offset to avoid previous day error
     finalDate.setMinutes(finalDate.getMinutes() + finalDate.getTimezoneOffset())
     
-    addAppointment({
-      patientId: schedulingPatientId,
-      patientName: getPatientName(schedulingPatientId),
-      professionalId: currentProfessional.id,
-      date: finalDate,
-      time: schedulingTime,
-      services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
-      products: [],
-      status: Number(schedulingPaidAmount) > 0 ? "confirmado" : "programado",
-      totalAmount: service.price,
-      paidAmount: Number(schedulingPaidAmount) || 0,
+    confirm({
+      title: "Agendar Turno",
+      description: `Estás por agendar a ${getPatientName(schedulingPatientId)} con ${currentProfessional.shortName} para un ${service.name} a las ${schedulingTime}hs.`,
+      actionType: "success",
+      onConfirm: () => {
+        addAppointment({
+          patientId: schedulingPatientId,
+          patientName: getPatientName(schedulingPatientId),
+          professionalId: currentProfessional.id,
+          date: finalDate,
+          time: schedulingTime,
+          services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
+          products: [],
+          status: Number(schedulingPaidAmount) > 0 ? "confirmado" : "programado",
+          totalAmount: service.price,
+          paidAmount: Number(schedulingPaidAmount) || 0,
+        })
+        
+        setSchedulingService("")
+        setSchedulingTime("")
+        setSchedulingPaidAmount("")
+        setSchedulingPatientId("")
+        setSchedulingPatientSearch("")
+        setSchedulingServiceSearch("")
+        setShowScheduleDialog(false)
+      }
     })
-    
-    setSchedulingService("")
-    setSchedulingTime("")
-    setSchedulingPaidAmount("")
-    setSchedulingPatientId("")
-    setSchedulingPatientSearch("")
-    setSchedulingServiceSearch("")
-    setShowScheduleDialog(false)
   }
 
   return (
@@ -258,7 +274,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
               </div>
               <div className="text-right space-y-1">
                 <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión Actual</p>
-                <Badge className="bg-[#16A34A] text-[#2d3529] text-lg font-bold px-4 py-1.5 border-none">
+                <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5 border-none">
                   {currentCommission}%
                 </Badge>
               </div>
@@ -313,7 +329,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                     </div>
                     
                     {apt.status === 'confirmado' ? (
-                      <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-[#2d3529] font-bold hover:bg-[#15803D]">
+                      <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-white font-bold hover:bg-[#15803D]">
                         <Play className="h-4 w-4 mr-2" /> LLAMAR
                       </Button>
                     ) : (
@@ -346,7 +362,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                 <Badge
                                   key={cat}
                                   variant={activeSvcCat[apt.id] === cat ? "default" : "outline"}
-                                  className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-[10px] ${activeSvcCat[apt.id] === cat ? 'bg-[#16A34A] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                                  className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-[10px] ${activeSvcCat[apt.id] === cat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                                   onClick={() => setActiveSvcCat({...activeSvcCat, [apt.id]: cat})}
                                 >
                                   {cat === "Corporales" ? "Corporal" : cat === "Facial" ? "Facial" : getCategoryDisplayName(cat)}
@@ -408,7 +424,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                                 <Badge
                                   key={cat}
                                   variant={activeProdCat[apt.id] === cat ? "default" : "outline"}
-                                  className={`cursor-pointer uppercase tracking-wider whitespace-nowrap px-2 py-0.5 text-[10px] ${activeProdCat[apt.id] === cat ? 'bg-[#16A34A] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                                  className={`cursor-pointer uppercase tracking-wider whitespace-nowrap px-2 py-0.5 text-[10px] ${activeProdCat[apt.id] === cat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                                   onClick={() => setActiveProdCat({...activeProdCat, [apt.id]: cat})}
                                 >
                                   {cat}
@@ -491,7 +507,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
               
               <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#16A34A] hover:bg-[#15803D] text-[#2d3529] font-bold">
+                  <Button className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold">
                     <Plus className="h-4 w-4 mr-2" /> Agendar Turno
                   </Button>
                 </DialogTrigger>
@@ -558,7 +574,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                           <Badge 
                             key={cat} 
                             variant={schedulingServiceCat === cat ? "default" : "outline"}
-                            className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${schedulingServiceCat === cat ? 'bg-[#16A34A] text-[#2d3529]' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                            className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${schedulingServiceCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
                             onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
                           >
                             {cat}
@@ -566,45 +582,54 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         ))}
                       </div>
                       {schedulingServiceCat && (
-                        <div className="relative">
-                          <Input 
-                            placeholder="Buscar servicio específico..." 
-                            value={schedulingServiceSearch} 
-                            onChange={(e) => {
-                              setSchedulingServiceSearch(e.target.value)
-                              setSchedulingServiceMenuOpen(true)
-                              if(e.target.value === "") setSchedulingService("")
-                            }}
-                            onFocus={() => setSchedulingServiceMenuOpen(true)}
-                            onBlur={() => setTimeout(() => setSchedulingServiceMenuOpen(false), 200)}
-                            className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 mt-2"
-                          />
-                          {schedulingServiceMenuOpen && (
-                            <div className="absolute top-[48px] left-0 w-full bg-card border border-gray-200 shadow-xl rounded-md max-h-[150px] overflow-y-auto z-50">
-                              {servicesByCategory[schedulingServiceCat]
-                                ?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase()))
-                                .map(s => (
-                                <button 
-                                  key={s.id}
-                                  onClick={() => {
-                                    setSchedulingService(s.id)
-                                    setSchedulingServiceSearch(s.name)
-                                    setSchedulingServiceMenuOpen(false)
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-secondary hover:text-white text-foreground transition-colors border-b border-gray-100"
-                                >
-                                  {s.name} <span className="text-[#16A34A] ml-2 font-bold">${s.price}</span>
-                                </button>
-                              ))}
-                              {servicesByCategory[schedulingServiceCat]?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase())).length === 0 && (
-                                <div className="p-3 text-sm text-gray-500 text-center italic">No hay servicios coincidentes.</div>
-                              )}
+                        <Popover open={schedulingServiceMenuOpen} onOpenChange={setSchedulingServiceMenuOpen}>
+                          <PopoverAnchor asChild>
+                            <div className="relative w-full">
+                              <Input 
+                                placeholder="Buscar servicio específico..." 
+                                value={schedulingServiceSearch} 
+                                onChange={(e) => {
+                                  setSchedulingServiceSearch(e.target.value)
+                                  setSchedulingServiceMenuOpen(true)
+                                  if(e.target.value === "") setSchedulingService("")
+                                }}
+                                onFocus={() => setSchedulingServiceMenuOpen(true)}
+                                className="bg-input border-emerald-500/50 focus-visible:ring-emerald-500 text-foreground placeholder:text-gray-400 mt-2 service-search-input"
+                              />
                             </div>
-                          )}
-                        </div>
+                          </PopoverAnchor>
+                          <PopoverContent
+                            onOpenAutoFocus={(e) => e.preventDefault()}
+                            onInteractOutside={(e) => {
+                              if ((e.target as Element)?.closest('.service-search-input')) {
+                                e.preventDefault()
+                              }
+                            }}
+                            className="w-[var(--radix-popover-trigger-width)] max-h-60 overflow-y-auto p-0 z-[100] border-emerald-500/30 shadow-xl"
+                          >
+                            {servicesByCategory[schedulingServiceCat]
+                              ?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase()))
+                              .map(s => (
+                              <button 
+                                key={s.id}
+                                onClick={() => {
+                                  setSchedulingService(s.id)
+                                  setSchedulingServiceSearch(s.name)
+                                  setSchedulingServiceMenuOpen(false)
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 text-[#2d3529] font-medium border-b border-black/5 transition-colors"
+                              >
+                                {s.name} <span className="text-[#16A34A] ml-2 font-bold">${s.price}</span>
+                              </button>
+                            ))}
+                            {servicesByCategory[schedulingServiceCat]?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase())).length === 0 && (
+                              <div className="p-3 text-sm text-gray-500 text-center italic">No hay servicios coincidentes.</div>
+                            )}
+                          </PopoverContent>
+                        </Popover>
                       )}
                     </div>
-                    <Button onClick={handleScheduleAppointment} disabled={!schedulingPatientId || !schedulingService || !schedulingTime || !schedulingDate} className="w-full bg-[#16A34A] text-[#2d3529] font-bold hover:bg-[#15803D]">
+                    <Button onClick={handleScheduleAppointment} disabled={!schedulingPatientId || !schedulingService || !schedulingTime || !schedulingDate} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]">
                       Confirmar Turno
                     </Button>
                   </div>
@@ -656,7 +681,14 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                             variant="ghost" 
                             size="sm" 
                             className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10" 
-                            onClick={() => { if(window.confirm('¿Seguro que querés cancelar este turno?')) cancelAppointment(apt.id); }}
+                            onClick={() => {
+                              confirm({
+                                title: "Cancelar Turno",
+                                description: "¿Seguro que querés cancelar este turno? Esta acción no se puede deshacer.",
+                                actionType: "danger",
+                                onConfirm: () => cancelAppointment(apt.id)
+                              })
+                            }}
                           >
                             <Trash2 className="h-4 w-4"/>
                           </Button>
@@ -670,6 +702,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
           </div>
         </div>
       )}
+      <ConfirmDialog />
     </div>
   )
 }

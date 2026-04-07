@@ -1,63 +1,39 @@
 const fs = require('fs');
 const path = require('path');
+const dir = path.join(__dirname, 'components');
 
-const directoryPath = path.join(__dirname, 'components');
+const files = fs.readdirSync(dir);
+for (const file of files) {
+  if (!file.endsWith('.tsx')) continue;
+  const p = path.join(dir, file);
+  let content = fs.readFileSync(p, 'utf8');
+  let changed = false;
 
-const replacements = [
-  // Typography mapping
-  { from: /text-white\/10/g, to: 'text-gray-200' },
-  { from: /text-white\/20/g, to: 'text-gray-300' },
-  { from: /text-white\/30/g, to: 'text-gray-400' },
-  { from: /text-white\/40/g, to: 'text-gray-400' },
-  { from: /text-white\/50/g, to: 'text-gray-500' },
-  { from: /text-white\/60/g, to: 'text-gray-500' },
-  { from: /text-white\/70/g, to: 'text-gray-600' },
-  { from: /text-white\/80/g, to: 'text-gray-700' },
-  { from: /text-white\/90/g, to: 'text-gray-800' },
-  // Remove raw text-white from spans, p, div, labels, h1-h6 (BUT NOT buttons! Button might be text-white)
-  // This helps clean up stray whites.
-  { from: /<p className="([^"]*)text-white([^"]*)">/g, to: '<p className="$1text-foreground$2">' },
-  { from: /<span className="([^"]*)text-white([^"]*)">/g, to: '<span className="$1text-foreground$2">' },
-  { from: /<h([1-6]) className="([^"]*)text-white([^"]*)">/g, to: '<h$1 className="$2text-foreground$3">' },
-  { from: /<Label className="([^"]*)text-white([^"]*)">/g, to: '<Label className="$1text-foreground$2">' },
-  { from: /<CardTitle className="([^"]*)text-white([^"]*)">/g, to: '<CardTitle className="$1text-foreground$2">' },
-  { from: /<div className="([^"]*)text-white([^"]*)">/g, to: '<div className="$1text-foreground$2">' },
-  
-  // Borders
-  { from: /border-white\/5/g, to: 'border-gray-100' },
-  { from: /border-white\/10/g, to: 'border-gray-200' },
-  { from: /border-white\/20/g, to: 'border-gray-300' },
-  { from: /border-white\/30/g, to: 'border-gray-300' },
-  { from: /border-border/g, to: 'border-gray-200' },
+  // Replace standard background & text combination
+  if (content.includes('text-[#2d3529]')) {
+    content = content.replace(/bg-\[\#16A34A\] text-\[\#2d3529\]/g, 'bg-[#16A34A] text-white');
+    content = content.replace(/bg-\[\#16A34A\] hover:bg-\[\#15803D\] text-\[\#2d3529\]/g, 'bg-[#16A34A] hover:bg-[#15803D] text-white');
+    content = content.replace(/data-\[state=active\]:bg-\[\#16A34A\] data-\[state=active\]:text-\[\#2d3529\]/g, 'data-[state=active]:bg-[#16A34A] data-[state=active]:text-white');
+    content = content.replace(/bg-\[\#16A34A\] text-\[\#2d3529\] hover:bg-\[\#15803D\]/g, 'bg-[#16A34A] text-white hover:bg-[#15803D]');
+    
+    // Additional loose replaces manually targeting the button classes
+    content = content.replace(/className=\"w-full mt-4 bg-\[\#16A34A\] text-\[\#2d3529\] hover:bg-\[\#15803D\]\"/g, 'className="w-full mt-4 bg-[#16A34A] text-white hover:bg-[#15803D]"')
+    content = content.replace(/className=\"bg-\[\#16A34A\] text-\[\#2d3529\] text-lg font-bold px-4 py-1.5 border-none\"/g, 'className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5 border-none"')
+    content = content.replace(/className=\"bg-\[\#16A34A\] text-\[\#2d3529\] font-bold hover:bg-\[\#15803D\]\"/g, 'className="bg-[#16A34A] text-white font-bold hover:bg-[#15803D]"')
+    content = content.replace(/className=\"bg-\[\#16A34A\] text-\[\#2d3529\] hover:bg-\[\#15803D\] font-bold\"/g, 'className="bg-[#16A34A] text-white hover:bg-[#15803D] font-bold"')
+    content = content.replace(/className=\"bg-\[\#16A34A\] hover:bg-\[\#15803D\] text-\[\#2d3529\] font-bold\"/g, 'className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold"')
+    content = content.replace(/className=\"w-full bg-\[\#16A34A\] text-\[\#2d3529\] font-bold hover:bg-\[\#15803D\]\"/g, 'className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]"')
+    content = content.replace(/className=\"bg-\[\#16A34A\] text-\[\#2d3529\] hover:bg-\[\#15803D\]\"/g, 'className="bg-[#16A34A] text-white hover:bg-[#15803D]"')
+    content = content.replace(/className=\"w-full bg-\[\#16A34A\] text-\[\#2d3529\] hover:bg-\[\#15803D\]\"/g, 'className="w-full bg-[#16A34A] text-white hover:bg-[#15803D]"')
+    content = content.replace(/h-14 text-\[\#2d3529\]/g, 'h-14 text-white')
+    content = content.replace(/className=\"bg-\[\#16A34A\] hover:bg-\[\#15803D\] text-\[\#2d3529\] font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg\"/g, 'className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"')
+    content = content.replace(/className=\"bg-\[\#16A34A\] text-\[\#2d3529\]\"/g, 'className="bg-[#16A34A] text-white"')
 
-  // Backgrounds
-  { from: /bg-black\/10/g, to: 'bg-gray-50' },
-  { from: /bg-black\/20/g, to: 'bg-gray-100' },
-  { from: /bg-black\/30/g, to: 'bg-gray-200' },
-  { from: /bg-secondary\/20/g, to: 'bg-secondary/5' },
-  { from: /bg-secondary\/30/g, to: 'bg-secondary/10' },
-  { from: /bg-secondary\/40/g, to: 'bg-secondary/10' },
-  { from: /bg-secondary\/50/g, to: 'bg-secondary/15' },
-  { from: /bg-[#2d3529]\/50/g, to: 'bg-secondary/10' },
-  { from: /bg-[#252c22]\/50/g, to: 'bg-secondary/10' },
-];
+    changed = true;
+  }
 
-function walk(dir) {
-  const files = fs.readdirSync(dir);
-  files.forEach(file => {
-    const fullPath = path.join(dir, file);
-    if (fs.statSync(fullPath).isDirectory()) {
-      walk(fullPath);
-    } else if (fullPath.endsWith('.tsx')) {
-      let content = fs.readFileSync(fullPath, 'utf8');
-      replacements.forEach(r => {
-        content = content.replace(r.from, r.to);
-      });
-      fs.writeFileSync(fullPath, content, 'utf8');
-      console.log(`Processed: ${file}`);
-    }
-  });
+  if (changed) {
+    fs.writeFileSync(p, content);
+    console.log('Updated ' + file);
+  }
 }
-
-walk(directoryPath);
-console.log("Done.");

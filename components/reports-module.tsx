@@ -385,16 +385,16 @@ export function ReportsModule() {
       {/* Charts Section */}
       <Tabs defaultValue="facturacion" className="space-y-4">
         <TabsList className="bg-secondary border border-gray-200 h-auto flex flex-wrap justify-start overflow-hidden">
-          <TabsTrigger value="facturacion" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-[#2d3529]">
+          <TabsTrigger value="facturacion" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
             Facturacion
           </TabsTrigger>
-          <TabsTrigger value="servicios" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-[#2d3529]">
+          <TabsTrigger value="servicios" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
             Servicios vs Productos
           </TabsTrigger>
-          <TabsTrigger value="comisiones" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-[#2d3529]">
+          <TabsTrigger value="comisiones" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
             Comisiones
           </TabsTrigger>
-          <TabsTrigger value="egresos" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-[#2d3529]">
+          <TabsTrigger value="egresos" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
             Gastos Fijos
           </TabsTrigger>
         </TabsList>

@@ -28,7 +28,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               className="object-contain scale-[2.6] sm:scale-[1.35] drop-shadow-sm translate-y-3 sm:translate-y-0"
             />
           </div>
-          <p className="text-muted-foreground text-xs sm:text-base font-medium mt-10 sm:mt-6">Sistema de Gestión Clínica</p>
+          <p className="text-muted-foreground text-xs sm:text-base font-medium mt-10 sm:mt-6">Sistema de Gestión Profesional</p>
         </div>
 
         <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-6 shrink-0 pb-12 sm:pb-8 pt-2">
