@@ -173,21 +173,21 @@ export function SystemConfigModule() {
           </CardHeader>
           <CardContent className="space-y-4 max-h-[600px] overflow-y-auto mt-4">
             {services.map(s => (
-              <div key={s.id} className="flex justify-between items-center p-3 bg-secondary/10 rounded-lg border border-gray-200/50">
-                <div>
-                  <h4 className="font-bold text-foreground">{s.name}</h4>
-                  <div className="flex items-center gap-2 mt-1">
+              <div key={s.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-4 sm:p-3 bg-secondary/10 rounded-xl sm:rounded-lg border border-gray-200/50 gap-3 sm:gap-0 w-full">
+                <div className="w-full">
+                  <h4 className="font-bold text-foreground leading-tight">{s.name}</h4>
+                  <div className="flex items-center gap-2 mt-2 sm:mt-1">
                     <span className="text-xs px-2 py-0.5 bg-gray-200 rounded text-[#16A34A] uppercase tracking-wide">{getCategoryDisplayName(s.category as any)}</span>
                     <span className="text-xs text-gray-500">{s.duration} mins</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-emerald-400">Cash: ${s.priceCash}</p>
+                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pt-3 sm:pt-0 border-t border-gray-200 sm:border-t-0 sm:border-l-0 sm:pl-4">
+                  <div className="text-left sm:text-right">
+                    <p className="text-sm font-semibold text-emerald-600 sm:text-emerald-400">Cash: ${s.priceCash}</p>
                     <p className="text-xs text-gray-500">Lista: ${s.price}</p>
                   </div>
-                  <div className="flex gap-2 border-l border-gray-200 pl-4">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenService(s)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
+                  <div className="flex gap-2 sm:border-l border-gray-200 sm:pl-4">
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenService(s)} className="text-blue-500 sm:text-blue-400 p-2 h-8 w-8"><Edit2 className="h-4 w-4"/></Button>
                     <Button variant="ghost" size="sm" onClick={() => { 
                       confirm({
                         title: "¿Estás seguro?",
@@ -195,7 +195,7 @@ export function SystemConfigModule() {
                         actionType: "danger",
                         onConfirm: () => deleteService(s.id)
                       })
-                    }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
+                    }} className="text-red-500 sm:text-red-400 p-2 h-8 w-8"><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 </div>
               </div>
@@ -214,21 +214,21 @@ export function SystemConfigModule() {
           </CardHeader>
           <CardContent className="space-y-4 max-h-[600px] overflow-y-auto mt-4">
             {products.map(p => (
-              <div key={p.id} className="flex justify-between items-center p-3 bg-secondary/10 rounded-lg border border-gray-200/50">
-                <div>
-                  <h4 className="font-bold text-foreground">{p.name}</h4>
-                  <div className="flex items-center gap-2 mt-1">
+              <div key={p.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-4 sm:p-3 bg-secondary/10 rounded-xl sm:rounded-lg border border-gray-200/50 gap-3 sm:gap-0 w-full">
+                <div className="w-full">
+                  <h4 className="font-bold text-foreground leading-tight">{p.name}</h4>
+                  <div className="flex items-center gap-2 mt-2 sm:mt-1">
                     <span className="text-xs px-2 py-0.5 bg-gray-200 rounded text-[#16A34A] uppercase tracking-wide">{p.category}</span>
-                    <span className={`text-xs ${p.stock > 5 ? 'text-blue-400' : 'text-red-400'}`}>Stock: {p.stock}</span>
+                    <span className={`text-xs ${p.stock > 5 ? 'text-blue-600 sm:text-blue-400' : 'text-red-600 sm:text-red-400'}`}>Stock: {p.stock}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-emerald-400">Cash: ${p.priceCash}</p>
+                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pt-3 sm:pt-0 border-t border-gray-200 sm:border-t-0 sm:border-l-0 sm:pl-4">
+                  <div className="text-left sm:text-right">
+                    <p className="text-sm font-semibold text-emerald-600 sm:text-emerald-400">Cash: ${p.priceCash}</p>
                     <p className="text-xs text-gray-500">Lista: ${p.priceList}</p>
                   </div>
-                  <div className="flex gap-2 border-l border-gray-200 pl-4">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenProduct(p)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
+                  <div className="flex gap-2 sm:border-l border-gray-200 sm:pl-4">
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenProduct(p)} className="text-blue-500 sm:text-blue-400 p-2 h-8 w-8"><Edit2 className="h-4 w-4"/></Button>
                     <Button variant="ghost" size="sm" onClick={() => { 
                       confirm({
                         title: "¿Estás seguro?",
@@ -236,7 +236,7 @@ export function SystemConfigModule() {
                         actionType: "danger",
                         onConfirm: () => deleteProduct(p.id)
                       })
-                    }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
+                    }} className="text-red-500 sm:text-red-400 p-2 h-8 w-8"><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 </div>
               </div>
@@ -257,18 +257,18 @@ export function SystemConfigModule() {
             {offers.length === 0 ? (
               <p className="text-center italic text-gray-500 py-6">No hay ofertas cargadas actualmente.</p>
             ) : offers.map(o => (
-              <div key={o.id} className="flex justify-between items-center p-3 bg-[#16A34A]/5 rounded-lg border border-[#16A34A]/20">
-                <div>
-                  <h4 className="font-bold text-[#14532D] flex items-center gap-2">
+              <div key={o.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-4 sm:p-3 bg-[#16A34A]/10 sm:bg-[#16A34A]/5 rounded-xl sm:rounded-lg border border-[#16A34A]/20 gap-3 sm:gap-0 w-full">
+                <div className="w-full">
+                  <h4 className="font-bold text-[#14532D] flex items-center gap-2 leading-tight">
                     <Percent className="h-4 w-4 text-[#16A34A]" /> {o.name}
                   </h4>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
+                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pt-3 sm:pt-0 border-t border-green-200/50 sm:border-t-0 sm:border-l-0 sm:pl-4">
+                  <div className="text-left sm:text-right">
                     <p className="text-lg font-bold text-[#16A34A]">{o.discountPercentage}% OFF</p>
                   </div>
-                  <div className="flex gap-2 border-l border-green-200 pl-4">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenOffer(o)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
+                  <div className="flex gap-2 sm:border-l border-green-200 sm:pl-4">
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenOffer(o)} className="text-blue-500 sm:text-blue-400 p-2 h-8 w-8"><Edit2 className="h-4 w-4"/></Button>
                     <Button variant="ghost" size="sm" onClick={() => { 
                       confirm({
                         title: "¿Estás seguro?",
@@ -276,7 +276,7 @@ export function SystemConfigModule() {
                         actionType: "danger",
                         onConfirm: () => deleteOffer(o.id)
                       })
-                    }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
+                    }} className="text-red-500 sm:text-red-400 p-2 h-8 w-8"><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 </div>
               </div>
@@ -297,9 +297,9 @@ export function SystemConfigModule() {
             {combos.length === 0 ? (
               <p className="text-center italic text-gray-500 py-6">No hay combos cargados actualmente.</p>
             ) : combos.map(c => (
-              <div key={c.id} className="flex justify-between items-start p-4 bg-secondary/20 rounded-lg border border-gray-200">
-                <div className="space-y-2">
-                  <h4 className="font-bold text-foreground text-lg">{c.name}</h4>
+              <div key={c.id} className="flex flex-col sm:flex-row justify-between sm:items-start p-4 bg-secondary/20 rounded-xl sm:rounded-lg border border-gray-200 gap-4 w-full">
+                <div className="space-y-2 w-full">
+                  <h4 className="font-bold text-foreground text-lg leading-tight">{c.name}</h4>
                   <div className="space-y-1">
                     {c.items.map((it, i) => {
                       const itemName = it.type === 'service' ? services.find(s=>s.id===it.itemId)?.name : products.find(p=>p.id===it.itemId)?.name;
@@ -311,13 +311,13 @@ export function SystemConfigModule() {
                     })}
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-emerald-500">${c.priceCash}</p>
+                <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto pt-3 sm:pt-0 border-t border-gray-200 sm:border-t-0 sm:h-full">
+                  <div className="text-left sm:text-right">
+                    <p className="text-xl font-bold text-emerald-600 sm:text-emerald-500">${c.priceCash}</p>
                     <p className="text-xs text-gray-500">Lista: ${c.priceList}</p>
                   </div>
-                  <div className="flex gap-2 border-l border-gray-200 pl-4 h-full items-center">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenCombo(c)} className="text-blue-400 p-2"><Edit2 className="h-4 w-4"/></Button>
+                  <div className="flex gap-2 sm:border-l border-gray-200 sm:pl-4 h-full items-center">
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenCombo(c)} className="text-blue-500 sm:text-blue-400 p-2 h-8 w-8"><Edit2 className="h-4 w-4"/></Button>
                     <Button variant="ghost" size="sm" onClick={() => { 
                       confirm({
                         title: "¿Estás seguro?",
@@ -325,7 +325,7 @@ export function SystemConfigModule() {
                         actionType: "danger",
                         onConfirm: () => deleteCombo(c.id)
                       })
-                    }} className="text-red-400 p-2"><Trash2 className="h-4 w-4"/></Button>
+                    }} className="text-red-500 sm:text-red-400 p-2 h-8 w-8"><Trash2 className="h-4 w-4"/></Button>
                   </div>
                 </div>
               </div>

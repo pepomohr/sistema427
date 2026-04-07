@@ -608,46 +608,46 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
       {selectedPatient && (
         <Card className="bg-secondary text-secondary-foreground border border-gray-800 shadow-2xl rounded-2xl overflow-hidden relative">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-full bg-[#16A34A]/20 flex items-center justify-center"><User className="h-7 w-7 text-[#16A34A]" /></div>
+          <CardHeader className="pb-4 relative pt-6 sm:pt-6">
+            <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 sm:gap-0">
+              <div className="flex items-center gap-3 sm:gap-4 pr-8 sm:pr-0">
+                <div className="h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0 rounded-full bg-[#16A34A]/20 flex items-center justify-center"><User className="h-6 w-6 sm:h-7 sm:w-7 text-[#16A34A]" /></div>
                 <div>
-                  <CardTitle className="text-xl flex items-center gap-2">
+                  <CardTitle className="text-lg sm:text-xl flex flex-wrap items-center gap-2">
                     {selectedPatient.name}
                     {(selectedPatient.giftCardBalance || 0) > 0 && (
                       <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-none">
-                        Saldo a Favor: ${selectedPatient.giftCardBalance.toLocaleString()}
+                        Saldo: ${selectedPatient.giftCardBalance.toLocaleString()}
                       </Badge>
                     )}
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">DNI: {selectedPatient.dni} | Tel: {selectedPatient.phone}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">DNI: {selectedPatient.dni} | Tel: {selectedPatient.phone}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowGiftCardLoader(true)} className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10">
-                  <Gift className="h-4 w-4 mr-2" /> Cargar Saldo a Favor
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                <Button variant="outline" size="sm" onClick={() => setShowGiftCardLoader(true)} className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 justify-start sm:justify-center">
+                  <Gift className="h-4 w-4 mr-2 flex-shrink-0" /> Cargar Saldo a Favor
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleEditPatientClick} className="border-[#16A34A]/30 text-[#16A34A] hover:bg-[#16A34A]/10">
-                  <Edit2 className="h-4 w-4 mr-2" /> Editar Info
+                <Button variant="outline" size="sm" onClick={handleEditPatientClick} className="border-[#16A34A]/30 text-[#16A34A] hover:bg-[#16A34A]/10 justify-start sm:justify-center">
+                  <Edit2 className="h-4 w-4 mr-2 flex-shrink-0" /> Editar Info
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}><X className="h-5 w-5" /></Button>
               </div>
             </div>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)} className="absolute top-4 right-4 p-2 h-8 w-8 flex items-center justify-center"><X className="h-5 w-5" /></Button>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              <Button variant={activePanel === "historial" ? "default" : "outline"} className="h-20 flex-col gap-2" onClick={() => setActivePanel("historial")}>
-                <History className="h-6 w-6" /> Historial
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+              <Button variant={activePanel === "historial" ? "default" : "outline"} className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm" onClick={() => setActivePanel("historial")}>
+                <History className="h-5 w-5 sm:h-6 sm:w-6" /> Historial
               </Button>
-              <Button variant={activePanel === "agendar" ? "default" : "outline"} className="h-20 flex-col gap-2" onClick={() => setActivePanel("agendar")}>
-                <CalendarIcon className="h-6 w-6" /> Agendar
+              <Button variant={activePanel === "agendar" ? "default" : "outline"} className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm" onClick={() => setActivePanel("agendar")}>
+                <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" /> Agendar
               </Button>
-              <Button variant={activePanel === "cobrar" ? "default" : "outline"} className="h-20 flex-col gap-2" onClick={() => setActivePanel("cobrar")}>
-                <CreditCard className="h-6 w-6" /> Cobrar Turno
+              <Button variant={activePanel === "cobrar" ? "default" : "outline"} className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm" onClick={() => setActivePanel("cobrar")}>
+                <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" /> Cobrar Turno
               </Button>
-              <Button variant={activePanel === "venta_directa" ? "default" : "outline"} className="h-20 flex-col gap-2" onClick={() => setActivePanel("venta_directa")}>
-                <ShoppingBag className="h-6 w-6" /> Vender Producto
+              <Button variant={activePanel === "venta_directa" ? "default" : "outline"} className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-[10px] sm:text-sm text-center leading-tight" onClick={() => setActivePanel("venta_directa")}>
+                <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" /> Vender Producto
               </Button>
             </div>
 
@@ -711,12 +711,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   </div>
                   <div className="space-y-3">
                     <Label>Servicio</Label>
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide scroll-smooth snap-x">
                       {Object.keys(servicesByCategory).map(cat => (
                         <Badge 
                           key={cat} 
                           variant={schedulingServiceCat === cat ? "default" : "outline"}
-                          className={`cursor-pointer whitespace-nowrap px-3 py-1.5 ${schedulingServiceCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-600 border-gray-300 hover:bg-white/5'}`}
+                          className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-3 sm:py-1.5 flex-shrink-0 snap-start min-w-max text-center flex justify-center text-sm sm:text-xs ${schedulingServiceCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-600 border-gray-300 hover:bg-white/5'}`}
                           onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
                         >
                           {getCategoryDisplayName(cat as any)}
@@ -967,12 +967,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <Label className="text-[#16A34A] uppercase text-xs font-bold tracking-wider">Vender Producto</Label>
                 <div className="bg-secondary/10 p-3 rounded-lg border border-dashed border-gray-200 space-y-2">
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                    <Badge variant={directSaleProdCat === 'COMBOS' ? "default" : "outline"} onClick={() => { setDirectSaleProdCat('COMBOS'); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === 'COMBOS' ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
-                      COMBOS 🔥
+                  <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide scroll-smooth snap-x">
+                    <Badge variant={directSaleProdCat === 'COMBOS' ? "default" : "outline"} onClick={() => { setDirectSaleProdCat('COMBOS'); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start ${directSaleProdCat === 'COMBOS' ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
+                      Combos
                     </Badge>
                     {Array.from(new Set(useClinicStore.getState().products.map(p => p.category))).map(cat => (
-                      <Badge key={cat} variant={directSaleProdCat === cat ? "default" : "outline"} onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-2 py-0.5 text-xs ${directSaleProdCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
+                      <Badge key={cat} variant={directSaleProdCat === cat ? "default" : "outline"} onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start ${directSaleProdCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
                         {cat}
                       </Badge>
                     ))}
