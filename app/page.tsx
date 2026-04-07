@@ -5,6 +5,7 @@ import { useClinicStore, type User, type UserRole } from "@/lib/store"
 import { LoginScreen } from "@/components/login-screen"
 import { ProfessionalSelectScreen } from "@/components/professional-select-screen"
 import { MainLayout } from "@/components/main-layout"
+import Loader from "@/components/loader" // Asegurate de haber creado este archivo
 
 const STORAGE_KEY = "c427_professional_session"
 
@@ -14,6 +15,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   
   useEffect(() => {
+    // 1. Recuperar sesión del localStorage
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
@@ -31,7 +33,13 @@ export default function Home() {
         localStorage.removeItem(STORAGE_KEY)
       }
     }
-    setIsLoading(false)
+
+    // 2. Tiempo mínimo de carga para que luzca el logo (3 segs)
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 3000)
+
+    return () => clearTimeout(timer)
   }, [professionals, setCurrentUser])
   
   const handleLogin = (role: UserRole, name: string) => {
@@ -59,7 +67,8 @@ export default function Home() {
     setShowProfessionalSelect(false)
   }
   
-  if (isLoading) return <div className="min-h-screen bg-white flex items-center justify-center text-primary font-semibold">Cargando...</div>
+  // Reemplazamos el div de "Cargando..." por tu nuevo Loader pro
+  if (isLoading) return <Loader />
   
   if (!currentUser && !showProfessionalSelect) {
     return <LoginScreen onLogin={handleLogin} />

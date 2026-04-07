@@ -56,6 +56,26 @@ export interface Product {
   category: string
 }
 
+export interface Offer {
+  id: string
+  name: string
+  discountPercentage: number
+}
+
+export interface ComboItem {
+  type: 'service' | 'product'
+  itemId: string
+  quantity: number
+}
+
+export interface Combo {
+  id: string
+  name: string
+  items: ComboItem[]
+  priceCash: number
+  priceList: number
+}
+
 export interface WeekSchedule {
   monday?: { start: string, end: string }
   tuesday?: { start: string, end: string }
@@ -95,7 +115,7 @@ export interface Appointment {
 }
 
 export interface SaleItem {
-  type: 'service' | 'product'
+  type: 'service' | 'product' | 'combo'
   itemId: string
   itemName: string
   price: number
@@ -170,6 +190,13 @@ const mockProfessionals: Professional[] = [
   { id: 'mavy', name: 'Mavy', shortName: 'Mavy', specialties: ['Maderoterapia'], isActive: true, hourlyRate: 6000, monthlySalesCount: 35, color: '#B8E0D2' },
 ]
 
+const mockOffers: Offer[] = [
+  { id: 'off1', name: 'Promo Empleados 20%', discountPercentage: 20 },
+  { id: 'off2', name: 'Descuento Especial 10%', discountPercentage: 10 }
+]
+
+const mockCombos: Combo[] = []
+
 // ============================================
 // STORE (ZUSTAND)
 // ============================================
@@ -184,6 +211,8 @@ interface ClinicStore {
   patients: Patient[]
   services: Service[]
   expenses: Expense[]
+  offers: Offer[]
+  combos: Combo[]
   
   // Actions
   addExpense: (expense: Omit<Expense, 'id' | 'date'>) => void
@@ -222,6 +251,14 @@ interface ClinicStore {
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>
   deleteProduct: (id: string) => Promise<void>
+
+  addOffer: (offer: Omit<Offer, 'id'>) => void
+  updateOffer: (id: string, updates: Partial<Offer>) => void
+  deleteOffer: (id: string) => void
+
+  addCombo: (combo: Omit<Combo, 'id'>) => void
+  updateCombo: (id: string, updates: Partial<Combo>) => void
+  deleteCombo: (id: string) => void
 }
 
  
@@ -266,6 +303,8 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   services: [],
   expenses: [],
   products: [],
+  offers: mockOffers,
+  combos: mockCombos,
 
   addExpense: (expenseData) => {
     const newExpense = { ...expenseData, id: Date.now().toString(), date: new Date() }
@@ -273,7 +312,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   addSale: (saleData) => {
-    const { professionals, updatePatientGiftCardBalance } = get()
+    const { professionals, combos } = get()
     const newSale = { ...saleData, id: Date.now().toString(), date: new Date() }
     
     // Lógica de Nico: Si se vendió un producto, sumamos al contador de la profesional
@@ -287,10 +326,36 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       return prof
     })
 
-    set((state) => ({ 
-      sales: [...state.sales, newSale],
-      professionals: updatedProfessionals 
-    }))
+    set((state) => {
+      let currentProducts = [...state.products]
+
+      // Helper for stock deduction
+      const deductStock = (prodId: string, qtyToDeduct: number) => {
+        currentProducts = currentProducts.map(p => 
+          p.id === prodId ? { ...p, stock: Math.max(0, p.stock - qtyToDeduct) } : p
+        )
+      }
+
+      // Deduct stock for all products explicitly sold or sold within combos
+      saleData.items.forEach(item => {
+        if (item.type === 'product') {
+          deductStock(item.itemId, item.quantity)
+        } else if (item.type === 'combo') {
+          const comboDef = state.combos.find(c => c.id === item.itemId)
+          if (comboDef) {
+            comboDef.items.forEach(i => {
+              if (i.type === 'product') deductStock(i.itemId, i.quantity * item.quantity)
+            })
+          }
+        }
+      })
+
+      return { 
+        sales: [...state.sales, newSale],
+        professionals: updatedProfessionals,
+        products: currentProducts
+      }
+    })
   },
 
   updateHourlyRate: (id, rate) => {
@@ -683,11 +748,33 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
          extraProdQtyByProf = extraProducts.reduce((acc, item) => acc + item.quantity, 0);
       }
 
+      let currentProducts = [...state.products]
+      const deductStock = (prodId: string, qtyToDeduct: number) => {
+        currentProducts = currentProducts.map(p => 
+          p.id === prodId ? { ...p, stock: Math.max(0, p.stock - qtyToDeduct) } : p
+        )
+      }
+
+      // Deduct stock for all products explicitly sold or sold within combos
+      saleItems.forEach(item => {
+        if (item.type === 'product') {
+          deductStock(item.itemId, item.quantity)
+        } else if (item.type === 'combo') {
+          const comboDef = state.combos.find(c => c.id === item.itemId)
+          if (comboDef) {
+            comboDef.items.forEach(i => {
+              if (i.type === 'product') deductStock(i.itemId, i.quantity * item.quantity)
+            })
+          }
+        }
+      })
+
       return {
         appointments: state.appointments.map(a => 
           a.id === id ? { ...a, status: 'completado', paidAmount: a.totalAmount } : a
         ),
         sales: [...state.sales, newSale],
+        products: currentProducts,
         professionals: state.professionals.map(prof => {
           if (prof.id === apt.professionalId && prodQty > 0) prof.monthlySalesCount += prodQty;
           if (prof.id === extraSoldBy && extraProdQtyByProf > 0) prof.monthlySalesCount += extraProdQtyByProf;
@@ -741,6 +828,14 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     } catch (err) {
       console.error(err);
     }
-  }
+  },
+
+  addOffer: (offer) => set(state => ({ offers: [...state.offers, { id: Date.now().toString(), ...offer }] })),
+  updateOffer: (id, updates) => set(state => ({ offers: state.offers.map(o => o.id === id ? { ...o, ...updates } : o) })),
+  deleteOffer: (id) => set(state => ({ offers: state.offers.filter(o => o.id !== id) })),
+  
+  addCombo: (combo) => set(state => ({ combos: [...state.combos, { id: Date.now().toString(), ...combo }] })),
+  updateCombo: (id, updates) => set(state => ({ combos: state.combos.map(c => c.id === id ? { ...c, ...updates } : c) })),
+  deleteCombo: (id) => set(state => ({ combos: state.combos.filter(c => c.id !== id) })),
 
 }))

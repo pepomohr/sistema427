@@ -127,7 +127,7 @@ export function ReportsModule() {
       .reduce((sum, s) => sum + s.total, 0)
     
     return [
-      { name: "Servicios", value: serviciosTotal, color: "#FFD700" },
+      { name: "Servicios", value: serviciosTotal, color: "#16A34A" },
       { name: "Productos", value: productosTotal, color: "#8fb87f" },
     ]
   }, [sales])
@@ -235,20 +235,20 @@ export function ReportsModule() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h2 className="text-2xl font-bold text-[#FFD700]">Reportes</h2>
+        <h2 className="text-2xl font-bold text-[#16A34A]">Reportes</h2>
         
         {/* Neto/Bruto Switch */}
         <div className="flex items-center gap-4 p-3 bg-card rounded-lg border border-gray-200">
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium ${!showNeto ? "text-[#FFD700]" : "text-muted-foreground"}`}>
+            <span className={`text-sm font-medium ${!showNeto ? "text-[#16A34A]" : "text-muted-foreground"}`}>
               Bruto
             </span>
             <Switch
               checked={showNeto}
               onCheckedChange={setShowNeto}
-              className="data-[state=checked]:bg-[#FFD700]"
+              className="data-[state=checked]:bg-[#16A34A]"
             />
-            <span className={`text-sm font-medium ${showNeto ? "text-[#FFD700]" : "text-muted-foreground"}`}>
+            <span className={`text-sm font-medium ${showNeto ? "text-[#16A34A]" : "text-muted-foreground"}`}>
               Neto
             </span>
           </div>
@@ -270,7 +270,7 @@ export function ReportsModule() {
                 <p className="text-sm text-muted-foreground">
                   Facturacion Hoy {showNeto && "(Neto)"}
                 </p>
-                <p className="text-2xl font-bold text-[#FFD700]">
+                <p className="text-2xl font-bold text-[#16A34A]">
                   ${todaySales.toLocaleString()}
                 </p>
                 {showNeto && (
@@ -279,8 +279,8 @@ export function ReportsModule() {
                   </p>
                 )}
               </div>
-              <div className="h-12 w-12 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-[#FFD700]" />
+              <div className="h-12 w-12 rounded-full bg-[#16A34A]/20 flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-[#16A34A]" />
               </div>
             </div>
           </CardContent>
@@ -293,7 +293,7 @@ export function ReportsModule() {
                 <p className="text-sm text-muted-foreground">
                   Facturacion Semana {showNeto && "(Neto)"}
                 </p>
-                <p className="text-2xl font-bold text-[#FFD700]">
+                <p className="text-2xl font-bold text-[#16A34A]">
                   ${weekSales.toLocaleString()}
                 </p>
                 {showNeto && (
@@ -333,7 +333,7 @@ export function ReportsModule() {
                 <p className="text-sm text-muted-foreground">
                   Facturacion Mes {showNeto && "(Neto)"}
                 </p>
-                <p className="text-2xl font-bold text-[#FFD700]">
+                <p className="text-2xl font-bold text-[#16A34A]">
                   ${monthSales.toLocaleString()}
                 </p>
                 {showNeto && (
@@ -384,17 +384,17 @@ export function ReportsModule() {
 
       {/* Charts Section */}
       <Tabs defaultValue="facturacion" className="space-y-4">
-        <TabsList className="bg-secondary border border-gray-200">
-          <TabsTrigger value="facturacion" className="data-[state=active]:bg-[#FFD700] data-[state=active]:text-[#2d3529]">
+        <TabsList className="bg-secondary border border-gray-200 h-auto flex flex-wrap justify-start overflow-hidden">
+          <TabsTrigger value="facturacion" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-[#2d3529]">
             Facturacion
           </TabsTrigger>
-          <TabsTrigger value="servicios" className="data-[state=active]:bg-[#FFD700] data-[state=active]:text-[#2d3529]">
+          <TabsTrigger value="servicios" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-[#2d3529]">
             Servicios vs Productos
           </TabsTrigger>
-          <TabsTrigger value="comisiones" className="data-[state=active]:bg-[#FFD700] data-[state=active]:text-[#2d3529]">
+          <TabsTrigger value="comisiones" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-[#2d3529]">
             Comisiones
           </TabsTrigger>
-          <TabsTrigger value="egresos" className="data-[state=active]:bg-[#FFD700] data-[state=active]:text-[#2d3529]">
+          <TabsTrigger value="egresos" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-[#2d3529]">
             Gastos Fijos
           </TabsTrigger>
         </TabsList>
@@ -403,7 +403,7 @@ export function ReportsModule() {
           <Card className="bg-card border-gray-200">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-[#FFD700]" />
+                <TrendingUp className="h-5 w-5 text-[#16A34A]" />
                 Facturacion Ultimos 7 Dias {showNeto ? "(Bruto vs Neto)" : "(Servicios vs Productos)"}
               </CardTitle>
             </CardHeader>
@@ -426,7 +426,7 @@ export function ReportsModule() {
                       />
                       <Legend />
                       <Bar dataKey="bruto" name="Bruto" fill="#8fb87f" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="neto" name="Neto" fill="#FFD700" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="neto" name="Neto" fill="#16A34A" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   ) : (
                     <BarChart data={dailySalesData}>
@@ -443,7 +443,7 @@ export function ReportsModule() {
                         formatter={(value: number) => [`$${value.toLocaleString()}`, ""]}
                       />
                       <Legend />
-                      <Bar dataKey="servicios" name="Servicios" fill="#FFD700" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="servicios" name="Servicios" fill="#16A34A" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="productos" name="Productos" fill="#8fb87f" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   )}
@@ -458,7 +458,7 @@ export function ReportsModule() {
             <Card className="bg-card border-gray-200">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
-                  <Stethoscope className="h-5 w-5 text-[#FFD700]" />
+                  <Stethoscope className="h-5 w-5 text-[#16A34A]" />
                   Servicios vs Productos
                 </CardTitle>
               </CardHeader>
@@ -511,7 +511,7 @@ export function ReportsModule() {
             <Card className="bg-card border-gray-200">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
-                  <Package className="h-5 w-5 text-[#FFD700]" />
+                  <Package className="h-5 w-5 text-[#16A34A]" />
                   Productos Mas Vendidos
                 </CardTitle>
               </CardHeader>
@@ -525,7 +525,7 @@ export function ReportsModule() {
                     {topProducts.map((product, index) => (
                       <div key={index} className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <span className="text-lg font-bold text-[#FFD700]">
+                          <span className="text-lg font-bold text-[#16A34A]">
                             #{index + 1}
                           </span>
                           <div>
@@ -535,7 +535,7 @@ export function ReportsModule() {
                             </p>
                           </div>
                         </div>
-                        <span className="font-medium text-[#FFD700]">
+                        <span className="font-medium text-[#16A34A]">
                           ${product.revenue.toLocaleString()}
                         </span>
                       </div>
@@ -548,7 +548,7 @@ export function ReportsModule() {
             <Card className="bg-card border-gray-200">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
-                  <Stethoscope className="h-5 w-5 text-[#FFD700]" />
+                  <Stethoscope className="h-5 w-5 text-[#16A34A]" />
                   Top 10 Servicios Realizados
                 </CardTitle>
               </CardHeader>
@@ -562,7 +562,7 @@ export function ReportsModule() {
                     {topServices.map((service, index) => (
                       <div key={index} className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <span className="text-lg font-bold text-[#FFD700]">
+                          <span className="text-lg font-bold text-[#16A34A]">
                             #{index + 1}
                           </span>
                           <div>
@@ -572,7 +572,7 @@ export function ReportsModule() {
                             </p>
                           </div>
                         </div>
-                        <span className="font-medium text-[#FFD700]">
+                        <span className="font-medium text-[#16A34A]">
                           ${service.revenue.toLocaleString()}
                         </span>
                       </div>
@@ -588,7 +588,7 @@ export function ReportsModule() {
           <Card className="bg-card border-gray-200">
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
-                <Award className="h-5 w-5 text-[#FFD700]" />
+                <Award className="h-5 w-5 text-[#16A34A]" />
                 Ranking de Comisiones
               </CardTitle>
             </CardHeader>
@@ -613,7 +613,7 @@ export function ReportsModule() {
                     />
                     <Legend />
                     <Bar dataKey="facturado" name="Facturado" fill="#8fb87f" radius={[0, 4, 4, 0]} />
-                    <Bar dataKey="comision" name="Comision" fill="#FFD700" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="comision" name="Comision" fill="#16A34A" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -639,17 +639,17 @@ export function ReportsModule() {
                         <td className="py-3 px-2 text-right text-foreground">
                           ${prof.facturado.toLocaleString()}
                         </td>
-                        <td className="py-3 px-2 text-right font-medium text-[#FFD700]">
+                        <td className="py-3 px-2 text-right font-medium text-[#16A34A]">
                           ${prof.comision.toLocaleString()}
                         </td>
                       </tr>
                     ))}
-                    <tr className="border-t-2 border-[#FFD700]/30">
+                    <tr className="border-t-2 border-[#16A34A]/30">
                       <td colSpan={3} className="py-3 px-2 text-foreground font-medium">Total</td>
                       <td className="py-3 px-2 text-right text-foreground font-medium">
                         ${commissionsData.reduce((sum, p) => sum + p.facturado, 0).toLocaleString()}
                       </td>
-                      <td className="py-3 px-2 text-right font-bold text-[#FFD700]">
+                      <td className="py-3 px-2 text-right font-bold text-[#16A34A]">
                         ${commissionsData.reduce((sum, p) => sum + p.comision, 0).toLocaleString()}
                       </td>
                     </tr>

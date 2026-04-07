@@ -11,8 +11,8 @@
   --card-foreground: #111827;
   --popover: #FFFFFF;
   --popover-foreground: #111827;
-  --primary: #FFD700;
-  --primary-foreground: #1F2937;
+  --primary: #16A34A;
+  --primary-foreground: #FFFFFF;
   --secondary: #F0FDF4;
   --secondary-foreground: #14532D;
   --muted: #F8FAFC;
@@ -23,7 +23,7 @@
   --destructive-foreground: #FFFFFF;
   --border: #E2E8F0;
   --input: #E2E8F0;
-  --ring: #FFD700;
+  --ring: #16A34A;
   --chart-1: #16A34A;
   --chart-2: #22C55E;
   --chart-3: #4ADE80;
@@ -40,7 +40,7 @@
   --sidebar-ring: #16A34A;
   
   /* Custom C427 tokens */
-  --gold: #FFD700;
+  --gold: #16A34A;
   --olive: #16A34A;
   --olive-dark: #14532D;
   --olive-light: #86EFAC;
