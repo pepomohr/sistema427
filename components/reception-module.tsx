@@ -239,36 +239,49 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
       const doc = new jsPDF()
       const dateFormatted = agendaDate ? agendaDate.toLocaleDateString('es-ES') : new Date().toLocaleDateString('es-ES')
-    const title = `Reporte de Turnos - Clínica C427`
+      const title = `Reporte de Turnos - Consultorio C427`
     
-    doc.setFontSize(16)
-    doc.text(title, 14, 22)
-    doc.setFontSize(11)
-    doc.text(`Fecha: ${dateFormatted}`, 14, 30)
+      doc.setFontSize(16)
+      doc.text(title, 14, 22)
+      doc.setFontSize(11)
+      doc.text(`Fecha: ${dateFormatted}`, 14, 30)
 
-    const tableColumn = ["Hora", "Paciente", "Servicio/s", "Profesional"]
-    const tableRows: any[] = []
+      const tableColumn = ["Hora", "Paciente", "Servicio/s", "Profesional"]
+      const tableRows: any[] = []
 
-    agendaAppointments.forEach(apt => {
-      const pat = patients.find(p => p.id === apt.patientId)
-      const prof = professionals.find(p => p.id === apt.professionalId)
-      const serviceNames = apt.services ? apt.services.map(s => s.name).join(', ') : ''
+      agendaAppointments.forEach((apt: any) => {
+        const pat = patients.find(p => p.id === apt.patientId)
+        const prof = professionals.find(p => p.id === apt.professionalId)
+        
+        // Default fallbacks with null safety for patient
+        const patientName = apt.patientName || apt.patient?.name || pat?.name || 'Desconocido'
+        
+        // Default fallbacks with null safety for service
+        let serviceNames = 'Desconocido'
+        if (Array.isArray(apt.services)) {
+          serviceNames = apt.services.map((s: any) => s.serviceName || s.name).filter(Boolean).join(', ')
+        } else if (apt.serviceName) {
+          serviceNames = apt.serviceName
+        }
 
-      const aptData = [
-        apt.time,
-        pat ? pat.name : 'Desconocido',
-        serviceNames,
-        prof ? prof.name : 'Desconocido'
-      ]
-      tableRows.push(aptData)
-    })
+        const aptData = [
+          apt.time,
+          patientName,
+          serviceNames,
+          prof ? prof.name : 'Desconocido'
+        ]
+        tableRows.push(aptData)
+      })
 
       applyAutoTable(doc, {
         head: [tableColumn],
         body: tableRows,
         startY: 40,
         headStyles: { fillColor: '#10b981' },
-        styles: { fontSize: 10 },
+        styles: { fontSize: 10, cellPadding: 3 },
+        columnStyles: {
+          2: { cellWidth: 'wrap' }
+        },
         alternateRowStyles: { fillColor: '#f9f9f9' }
       })
 
@@ -365,6 +378,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     
     addAppointment({
       patientId: selectedPatient.id,
+      patientName: selectedPatient.name,
       professionalId: schedulingProfessional,
       date: new Date(schedulingDate),
       time: schedulingTime,
@@ -1110,7 +1124,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         
                         <div className="space-y-1 z-0">
                           <p className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-foreground'}`}>
-                            {pat?.name || 'Desconocido'}
+                            {apt.patientName || pat?.name || 'Desconocido'}
                           </p>
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="text-gray-600">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span>

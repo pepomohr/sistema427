@@ -104,6 +104,7 @@ export type AppointmentStatus = 'programado' | 'confirmado' | 'en_atencion' | 'p
 export interface Appointment {
   id: string
   patientId: string
+  patientName?: string // Added to prevent 'Desconocido' when patients list is fetched and clears mocks
   professionalId: string
   date: Date
   time: string
@@ -270,21 +271,21 @@ const mockPatients: Patient[] = [
 
 const mockAppointments: Appointment[] = [
   { 
-    id: 'a1', patientId: 'pat1', professionalId: 'ceci', 
+    id: 'a1', patientId: 'pat1', patientName: 'Laura Gómez', professionalId: 'ceci', 
     date: new Date(), time: '09:00', 
     services: [{ serviceId: 's1', serviceName: 'Limpieza Facial Profunda', price: 5000, priceCash: 4500 }],
     products: [],
     status: 'confirmado', totalAmount: 5000, paidAmount: 0 
   },
   { 
-    id: 'a2', patientId: 'pat2', professionalId: 'ceci', 
+    id: 'a2', patientId: 'pat2', patientName: 'Mariana Pérez', professionalId: 'ceci', 
     date: new Date(), time: '10:30', 
     services: [{ serviceId: 's3', serviceName: 'Masaje Reductor', price: 6000, priceCash: 5000 }],
     products: [],
     status: 'en_atencion', totalAmount: 6000, paidAmount: 0 
   },
   { 
-    id: 'a3', patientId: 'pat3', professionalId: 'ceci', 
+    id: 'a3', patientId: 'pat3', patientName: 'Sofía Martínez', professionalId: 'ceci', 
     date: new Date(new Date().setDate(new Date().getDate() + 1)), time: '15:00', 
     services: [{ serviceId: 's2', serviceName: 'Peeling Químico', price: 8000 }],
     products: [],

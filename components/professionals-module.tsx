@@ -212,6 +212,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     
     addAppointment({
       patientId: schedulingPatientId,
+      patientName: getPatientName(schedulingPatientId),
       professionalId: currentProfessional.id,
       date: finalDate,
       time: schedulingTime,
@@ -306,7 +307,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         {apt.time}
                       </div>
                       <div>
-                        <p className="font-bold text-foreground text-lg">{getPatientName(apt.patientId)}</p>
+                        <p className="font-bold text-foreground text-lg">{apt.patientName || getPatientName(apt.patientId)}</p>
                         <p className="text-xs text-[#16A34A]">Recepción agendó: {apt.services[0]?.serviceName}</p>
                       </div>
                     </div>
@@ -623,7 +624,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-[#16A34A] w-12">{apt.time}</span>
                     <div className="border-l border-gray-200 pl-3">
-                      <p className="font-bold text-foreground text-sm">{getPatientName(apt.patientId)}</p>
+                      <p className="font-bold text-foreground text-sm">{apt.patientName || getPatientName(apt.patientId)}</p>
                       <p className="text-xs text-gray-500">{apt.services[0]?.serviceName}</p>
                     </div>
                   </div>
