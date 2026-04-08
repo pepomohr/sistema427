@@ -177,12 +177,20 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const availableSlots = useMemo(() => {
     if (!currentProfessional || !schedulingDate) return []
     
-    const defaultSchedule = { start: "09:00", end: "20:00" }
-    const date = new Date(schedulingDate + 'T12:00:00')
-    const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
-    
-    const daySchedules = (currentProfessional.schedule as any)?.[dayName]
-    const intervals = Array.isArray(daySchedules) ? daySchedules : (daySchedules ? [daySchedules] : [defaultSchedule])
+    // Si hay una excepción cargada para la fecha actual (ej. YYYY-MM-DD), usamos eso de forma prioritaria
+    // Si no hay (undefined), buscamos el horario de la semana o caemos en default
+    let intervals = [];
+    const exceptionSchedules = currentProfessional.exceptions?.[schedulingDate];
+    if (exceptionSchedules !== undefined) {
+      intervals = exceptionSchedules;
+    } else {
+      const defaultSchedule = { start: "09:00", end: "20:00" }
+      const date = new Date(schedulingDate + 'T12:00:00')
+      const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
+      
+      const daySchedules = (currentProfessional.schedule as any)?.[dayName]
+      intervals = Array.isArray(daySchedules) ? daySchedules : (daySchedules ? [daySchedules] : [defaultSchedule])
+    }
     
     const allSlots: string[] = []
     
@@ -197,11 +205,12 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       }
     })
     
+    const dateForFilter = new Date(schedulingDate + 'T12:00:00')
     const bookedSlots = appointments
       .filter(
         (a) =>
           a.professionalId === currentProfessional.id &&
-          new Date(a.date).toDateString() === date.toDateString() &&
+          new Date(a.date).toDateString() === dateForFilter.toDateString() &&
           a.status !== "cancelado"
       )
       .map((a) => a.time)

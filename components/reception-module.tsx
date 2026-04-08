@@ -72,6 +72,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     fetchServices,
     fetchProducts,
     fetchAppointments,
+    fetchProfessionals,
     getProfessionalsForService,
     startAttention,
     cancelAppointment,
@@ -135,7 +136,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     if (typeof fetchServices === 'function') fetchServices()
     if (typeof fetchProducts === 'function') fetchProducts()
     if (typeof fetchAppointments === 'function') fetchAppointments()
-  }, [fetchPatients, fetchServices, fetchProducts, fetchAppointments])
+    if (typeof fetchProfessionals === 'function') fetchProfessionals()
+  }, [fetchPatients, fetchServices, fetchProducts, fetchAppointments, fetchProfessionals])
 
   useEffect(() => {
     let active = true;
@@ -362,13 +364,20 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     const professional = professionals.find((p) => p.id === schedulingProfessional)
     if (!professional) return []
     
-    const defaultSchedule = { start: "09:00", end: "20:00" }
-    
-    const date = new Date(schedulingDate + 'T12:00:00')
-    const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
-    
-    const daySchedules = (professional.schedule as any)?.[dayName]
-    const intervals = Array.isArray(daySchedules) ? daySchedules : (daySchedules ? [daySchedules] : [defaultSchedule])
+    // Si hay una excepción cargada para la fecha actual (ej. YYYY-MM-DD), usamos eso de forma prioritaria
+    // Si no hay (undefined), buscamos el horario de la semana o caemos en default
+    let intervals = [];
+    const exceptionSchedules = professional.exceptions?.[schedulingDate];
+    if (exceptionSchedules !== undefined) {
+      intervals = exceptionSchedules;
+    } else {
+      const defaultSchedule = { start: "09:00", end: "20:00" }
+      const date = new Date(schedulingDate + 'T12:00:00')
+      const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
+      
+      const daySchedules = (professional.schedule as any)?.[dayName]
+      intervals = Array.isArray(daySchedules) ? daySchedules : (daySchedules ? [daySchedules] : [defaultSchedule])
+    }
     
     const allSlots: string[] = []
     
@@ -383,11 +392,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       }
     })
     
+    const dateForFilter = new Date(schedulingDate + 'T12:00:00')
     const bookedSlots = (appointments || [])
       .filter(
         (a) =>
           a.professionalId === schedulingProfessional &&
-          new Date(a.date).toDateString() === date.toDateString() &&
+          new Date(a.date).toDateString() === dateForFilter.toDateString() &&
           a.status !== "cancelado"
       )
       .map((a) => a.time)

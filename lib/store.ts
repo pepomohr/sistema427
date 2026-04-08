@@ -93,11 +93,14 @@ export interface Professional {
   shortName: string
   specialties: ServiceCategory[]
   isActive: boolean
-  hourlyRate: number // Pago por hora (Sueldo Nico)
+  hourlyRate: number // Pago por hora (Sueldo Nico) - Default
+  hourlyRateFacial?: number // Opcional, si hace Facial orgánico
+  hourlyRateCorporal?: number // Opcional, si hace Corporal orgánico
   monthlySalesCount: number // Contador de productos vendidos
   color: string
   avatar?: string
   schedule?: WeekSchedule
+  exceptions?: Record<string, { start: string, end: string }[]>
 }
 
 export type AppointmentStatus = 'programado' | 'confirmado' | 'en_atencion' | 'pendiente_cobro' | 'completado' | 'cancelado'
@@ -231,6 +234,10 @@ interface ClinicStore {
   cancelAppointment: (id: string) => void
   updateAppointment: (id: string, updates: Partial<Appointment>) => void
   
+  // Supabase Professional Actions
+  fetchProfessionals: () => Promise<void>
+  addProfessional: (prof: Omit<Professional, 'id'>) => Promise<void>
+  
   // Supabase Patient Actions
   fetchPatients: () => Promise<void>
   searchPatients: (query: string) => Promise<Patient[]>
@@ -342,19 +349,78 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   updateHourlyRate: (id, rate) => {
     set((state) => ({
       professionals: state.professionals.map(p => p.id === id ? { ...p, hourlyRate: rate } : p)
-    }))
+    }));
+    supabase.from('professionals').update({ hourlyRate: rate }).eq('id', id).then(({error}) => {
+       if(error) console.error('updateHourlyRate error:', error);
+    });
   },
 
-  updateProfessional: (id, updates) => set(state => ({
-    professionals: state.professionals.map(p => p.id === id ? { ...p, ...updates } : p)
-  })),
+  updateProfessional: (id, updates) => {
+    set(state => ({
+      professionals: state.professionals.map(p => p.id === id ? { ...p, ...updates } : p)
+    }));
+    supabase.from('professionals').update(updates).eq('id', id).then(({error}) => {
+       if(error) console.error('updateProfessional error:', error);
+    });
+  },
+
+  addProfessional: async (prof) => {
+    try {
+      const { data, error } = await supabase
+        .from('professionals')
+        .insert([{
+          id: Date.now().toString(), // Podríamos usar UUID, pero timestamp string es seguro para id
+          name: prof.name,
+          "shortName": prof.shortName,
+          specialties: prof.specialties,
+          "isActive": prof.isActive,
+          "hourlyRate": prof.hourlyRate,
+          "hourlyRateFacial": prof.hourlyRateFacial,
+          "hourlyRateCorporal": prof.hourlyRateCorporal,
+          "monthlySalesCount": 0,
+          color: prof.color
+        }])
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Supabase add professional error:', error);
+      } else if (data) {
+        set(state => ({
+           professionals: [...state.professionals, {
+             id: data.id,
+             name: data.name,
+             shortName: data.shortName,
+             specialties: data.specialties,
+             isActive: data.isActive,
+             hourlyRate: data.hourlyRate,
+             hourlyRateFacial: data.hourlyRateFacial,
+             hourlyRateCorporal: data.hourlyRateCorporal,
+             monthlySalesCount: data.monthlySalesCount,
+             color: data.color
+           }]
+        }))
+      }
+    } catch(err) {
+      console.error(err)
+    }
+  },
 
   addVacation: (id) => {},
   removeVacation: (id) => {},
 
-  toggleProfessionalActive: (id) => set(state => ({
-    professionals: state.professionals.map(p => p.id === id ? { ...p, isActive: !p.isActive } : p)
-  })),
+  toggleProfessionalActive: (id) => {
+    set(state => ({
+      professionals: state.professionals.map(p => p.id === id ? { ...p, isActive: !p.isActive } : p)
+    }));
+    const { professionals } = get();
+    const prof = professionals.find(p => p.id === id);
+    if (prof) {
+       supabase.from('professionals').update({ isActive: prof.isActive }).eq('id', id).then(({error}) => {
+          if(error) console.error('toggleProfessionalActive error:', error);
+       });
+    }
+  },
 
   addPatient: async (patient) => {
     try {
@@ -497,6 +563,37 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     const service = services.find(s => s.id === serviceId)
     if (!service) return []
     return professionals.filter(p => p.isActive && p.specialties.includes(service.category))
+  },
+
+  fetchProfessionals: async () => {
+    try {
+      const { data, error } = await supabase.from('professionals').select('*');
+      if (error) {
+        console.error('Supabase fetch professionals error:', error);
+        return;
+      }
+      if (data && data.length > 0) {
+        set({
+           professionals: data.map((p: any) => ({
+             id: p.id,
+             name: p.name,
+             shortName: p.shortName,
+             specialties: p.specialties,
+             isActive: p.isActive,
+             hourlyRate: p.hourlyRate,
+             hourlyRateFacial: p.hourlyRateFacial,
+             hourlyRateCorporal: p.hourlyRateCorporal,
+             monthlySalesCount: p.monthlySalesCount,
+             color: p.color,
+             avatar: p.avatar,
+             schedule: p.schedule,
+             exceptions: p.exceptions
+           }))
+        });
+      }
+    } catch (err) {
+      console.error('Network error fetching professionals:', err);
+    }
   },
 
   fetchPatients: async () => {
