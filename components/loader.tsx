@@ -9,7 +9,7 @@ export default function Loader() {
     // Animación suave de 0 a 100
     const interval = setInterval(() => {
       setFill((prev) => (prev >= 100 ? 100 : prev + 1))
-    }, 25) // Ajustá este número para que cargue más rápido o lento
+    }, 25) 
     return () => clearInterval(interval)
   }, [])
 
@@ -19,7 +19,7 @@ export default function Loader() {
         {/* Capa 1: Logo de fondo (Gris transparente) */}
         <div className="absolute inset-0 grayscale opacity-10">
           <Image 
-            src="/images/c427logodorado.png" 
+            src="/images/c427logodorado.png" // Si cambiaste el nombre del archivo, actualizalo acá
             alt="C427 Fondo" 
             fill 
             className="object-contain" 
@@ -32,7 +32,7 @@ export default function Loader() {
           style={{ clipPath: `inset(0 ${100 - fill}% 0 0)` }}
         >
           <Image 
-            src="/images/c427logodorado.png" 
+            src="/images/c427logodorado.png" // Si cambiaste el nombre del archivo, actualizalo acá
             alt="C427 Carga" 
             fill 
             className="object-contain" 
@@ -40,8 +40,8 @@ export default function Loader() {
         </div>
       </div>
       
-      {/* Porcentaje con el dorado del logo */}
-      <p className="mt-4 text-lg font-bold text-[#D4AF37] tracking-widest">
+      {/* Porcentaje con el NUEVO COLOR del logo #B68C5C */}
+      <p className="mt-4 text-lg font-bold text-[#B68C5C] tracking-widest">
         {Math.round(fill)}%
       </p>
     </div>

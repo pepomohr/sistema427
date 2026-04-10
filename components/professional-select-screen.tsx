@@ -58,7 +58,7 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
         setTimeout(() => {
           setPin("")
           setErrorShake(false)
-        }, 500)
+        }, 700)
       }
     }
   }
@@ -191,8 +191,12 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
               </button>
             </div>
             
-            <div className="h-6 mt-4">
-               {errorShake && <p className="text-red-500 text-sm font-medium animate-in fade-in">PIN Incorrecto</p>}
+            <div className="h-12 mt-4 flex items-center justify-center">
+               {errorShake && (
+                 <div className="bg-red-500/10 border border-red-400/40 rounded-xl px-6 py-2.5 animate-in fade-in">
+                   <p className="text-red-600 text-sm font-semibold text-center">Contraseña incorrecta, volvé a intentarlo</p>
+                 </div>
+               )}
             </div>
           </div>
         </div>

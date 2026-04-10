@@ -530,9 +530,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           {mainTab === "pacientes" && (
         <>
       {todayBirthdays.length > 0 && !selectedPatient && (
-        <Card className="bg-gradient-to-r from-amber-500/10 to-transparent border-amber-500/30">
+        <Card className="bg-gradient-to-r from-[#B68C5C]/10 to-transparent border-[#B68C5C]/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-amber-500 flex items-center gap-2 text-lg">
+            <CardTitle className="text-[#B68C5C] flex items-center gap-2 text-lg">
               <Gift className="h-5 w-5 animate-bounce" /> ¡Cumpleañeros de Hoy!
             </CardTitle>
           </CardHeader>
@@ -541,14 +541,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               {todayBirthdays.map(p => (
                 <Badge 
                   key={p.id} 
-                  className="bg-amber-500/20 text-amber-500 border-amber-500/30 hover:bg-amber-500/40 px-3 py-1 text-sm font-semibold cursor-pointer transition-colors" 
+                  className="bg-[#B68C5C]/20 text-[#B68C5C] border-[#B68C5C]/30 hover:bg-[#B68C5C]/40 px-3 py-1 text-sm font-semibold cursor-pointer transition-colors" 
                   onClick={() => { setSelectedPatient(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 >
                   🎉 {p.name}
                 </Badge>
               ))}
             </div>
-            <p className="text-xs text-amber-500/70 mt-3 italic">Hacé clic en ellos para ver su ficha. Recordá aplicarles el descuento o entregarles el detallito de cortesía en gabinete.</p>
+            <p className="text-xs text-[#B68C5C]/70 mt-3 italic">Hacé clic en ellos para ver su ficha. Recordá aplicarles el descuento o entregarles el detallito de cortesía en gabinete.</p>
           </CardContent>
         </Card>
       )}
@@ -1057,7 +1057,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       <div key={`vdp-${i}`} className="flex justify-between items-center text-xs font-bold leading-none py-1.5 border-t border-gray-100">
                         <div className="flex items-center gap-2">
                           <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-red-500 hover:bg-transparent hover:scale-125" onClick={() => handleRemoveProductFromDirectSale(item.product.id, item.type)}>✕</Button>
-                          <span>{item.quantity}x {item.product.name} {item.type === 'combo' && <span className="text-yellow-600 font-normal ml-1">(Combo)</span>}</span>
+                          <span>{item.quantity}x {item.product.name} {item.type === 'combo' && <span className="text-[#B68C5C] font-normal ml-1">(Combo)</span>}</span>
                         </div>
                         <span>${(directSalePaymentMethod === 'efectivo' ? item.product.priceCash : item.product.priceList) * item.quantity}</span>
                       </div>
@@ -1198,7 +1198,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
-                    className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold w-full sm:w-auto"
+                    className="bg-[#B68C5C] hover:bg-[#a07840] text-white font-bold w-full sm:w-auto"
                     disabled={agendaAppointments.length === 0}
                   >
                     Descargar Turnos (PDF)
@@ -1325,7 +1325,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     
                     <p className="relative z-10 text-xs sm:text-sm text-emerald-100/90 font-bold uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
                     <p className="relative z-10 text-5xl sm:text-6xl font-black text-white drop-shadow-md">${totalIncome.toLocaleString()}</p>
-                    <p className="relative z-10 text-xs text-yellow-300/90 mt-4 mx-auto font-medium max-w-md">No incluye pagos realizados con Gift Cards (ya se cobraron al ser adquiridas).</p>
+                    <p className="relative z-10 text-xs text-[#B68C5C]/90 mt-4 mx-auto font-medium max-w-md">No incluye pagos realizados con Gift Cards (ya se cobraron al ser adquiridas).</p>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1392,7 +1392,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             const tierInfo = {
               missing: nextTarget === 999 ? 0 : nextTarget - salesCount,
               label: nextTarget === 999 ? "Nivel Máximo (20%)" : `${nextCommission}% de comisión`,
-              color: salesCount >= 21 ? "bg-amber-400" : (salesCount >= 11 ? "bg-emerald-400" : "bg-blue-400")
+              color: salesCount >= 21 ? "bg-[#B68C5C]" : (salesCount >= 11 ? "bg-emerald-400" : "bg-blue-400")
             }
     
             const maxProgress = 30

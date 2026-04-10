@@ -530,7 +530,7 @@ export function HRModule() {
               )
             })}
             
-            <h4 className="font-bold text-sm text-yellow-600 border-b pb-1 mt-6">Fechas Especiales / Feriados</h4>
+            <h4 className="font-bold text-sm text-[#B68C5C] border-b pb-1 mt-6">Fechas Especiales / Feriados</h4>
             {editingExceptions && Object.entries(editingExceptions).map(([dateKey, intervals]) => {
                const isWorking = intervals.length > 0;
                return (
@@ -617,7 +617,7 @@ export function HRModule() {
                   if (val && editingExceptions && !editingExceptions[val]) {
                      setEditingExceptions({...editingExceptions, [val]: [{ start: "09:00", end: "18:00" }]});
                   }
-               }} className="bg-yellow-500 text-white hover:bg-yellow-600 shrink-0 h-9 px-3 text-sm font-bold">Añadir Fecha</Button>
+               }} className="bg-[#B68C5C] text-white hover:bg-[#a07840] shrink-0 h-9 px-3 text-sm font-bold">Añadir Fecha</Button>
             </div>
             
           </div>

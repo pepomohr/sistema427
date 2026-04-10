@@ -127,8 +127,8 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const getNextTierInfo = (count: number) => {
     if (count < 10) return { next: 10, label: "5%", missing: 10 - count, color: "bg-sky-500" }
     if (count < 21) return { next: 21, label: "7.5%", missing: 21 - count, color: "bg-emerald-500" }
-    if (count < 31) return { next: 31, label: "10%", missing: 31 - count, color: "bg-amber-500" }
-    return { next: count, label: "10% (Max)", missing: 0, color: "bg-amber-500" }
+    if (count < 31) return { next: 31, label: "10%", missing: 31 - count, color: "bg-[#B68C5C]" }
+    return { next: count, label: "10% (Max)", missing: 0, color: "bg-[#B68C5C]" }
   }
   const tierInfo = getNextTierInfo(salesCount)
   const progressValue = tierInfo.next > 0 ? (salesCount / tierInfo.next) * 100 : 100
