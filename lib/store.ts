@@ -51,8 +51,8 @@ export interface Service {
 export interface Product {
   id: string
   name: string
-  priceCash: number // Precio Efectivo (Base para comisión)
-  priceList: number // Precio Lista (Tarjeta/Transfe)
+  priceCash: number 
+  priceList: number 
   stock: number
   category: string
 }
@@ -93,12 +93,13 @@ export interface Professional {
   shortName: string
   specialties: ServiceCategory[]
   isActive: boolean
-  hourlyRate: number // Pago por hora (Sueldo Nico) - Default
-  hourlyRateFacial?: number // Opcional, si hace Facial orgánico
-  hourlyRateCorporal?: number // Opcional, si hace Corporal orgánico
-  monthlySalesCount: number // Contador de productos vendidos
+  hourlyRate: number 
+  hourlyRateFacial?: number 
+  hourlyRateCorporal?: number 
+  monthlySalesCount: number 
   color: string
   avatar?: string
+  pin?: string | null
   schedule?: WeekSchedule
   exceptions?: Record<string, { start: string, end: string }[]>
 }
@@ -108,7 +109,7 @@ export type AppointmentStatus = 'programado' | 'confirmado' | 'en_atencion' | 'p
 export interface Appointment {
   id: string
   patientId: string
-  patientName?: string // Added to prevent 'Desconocido' when patients list is fetched and clears mocks
+  patientName?: string 
   professionalId: string
   date: Date
   time: string
@@ -124,9 +125,9 @@ export interface SaleItem {
   itemId: string
   itemName: string
   price: number
-  priceCashReference: number // El valor efectivo para calcular la comisión
+  priceCashReference: number 
   quantity: number
-  soldBy: string // ID de la profesional que lo vendió
+  soldBy: string 
 }
 
 export interface Sale {
@@ -150,7 +151,6 @@ export interface Expense {
 // HELPERS & LOGIC
 // ============================================
 
-// La función que faltaba para arreglar el error de Next.js
 export const getCategoryDisplayName = (category: string): string => {
   const names: Record<string, string> = {
     'Facial': 'Facial/Escote',
@@ -161,46 +161,16 @@ export const getCategoryDisplayName = (category: string): string => {
     'Capilar': 'Capilar',
     'Depilación': 'Depilación',
     'Planes': 'Planes',
-    // Fallbacks just in case
-    'facial': 'Facial/Escote',
-    'escote': 'Facial/Escote',
-    'corporal': 'Corporales',
-    'cejas_pestanas': 'Cejas y Pestañas',
-    'unas': 'Uñas',
   }
   return names[category] || category
 }
 
-// La escala de comisiones de Nico
 export const calculateCommissionTab = (count: number) => {
   if (count >= 31) return 10
   if (count >= 21) return 7.5
   if (count >= 10) return 5
   return 0
 }
-
-// ============================================
-// DATA INICIAL (MOCK)
-// ============================================
-
-const mockProfessionals: Professional[] = [
-  { id: 'ceci', name: 'Cecilia', shortName: 'Ceci', specialties: ['Facial', 'Corporales'], isActive: true, hourlyRate: 5000, monthlySalesCount: 12, color: '#E8B4B8' },
-  { id: 'adri', name: 'Adriana', shortName: 'Adri', specialties: ['Facial', 'Corporales'], isActive: true, hourlyRate: 5000, monthlySalesCount: 8, color: '#A8D8EA' },
-  { id: 'vero', name: 'Vero', shortName: 'Vero', specialties: ['Facial', 'Corporales'], isActive: true, hourlyRate: 5000, monthlySalesCount: 22, color: '#C9B1FF' },
-  { id: 'isabel', name: 'Isabel', shortName: 'Isabel', specialties: ['Facial'], isActive: true, hourlyRate: 5000, monthlySalesCount: 4, color: '#F8B195' },
-  { id: 'delfi', name: 'Delfi', shortName: 'Delfi', specialties: ['Facial'], isActive: true, hourlyRate: 5000, monthlySalesCount: 7, color: '#F67280' },
-  { id: 'martina', name: 'Martina', shortName: 'Martina', specialties: ['CyP'], isActive: true, hourlyRate: 4000, monthlySalesCount: 15, color: '#C06C84' },
-  { id: 'fiorella', name: 'Fiorella', shortName: 'Fiorella', specialties: ['Uñas', 'CyP'], isActive: true, hourlyRate: 4500, monthlySalesCount: 5, color: '#F0A6CA' },
-  { id: 'bianca', name: 'Bianca', shortName: 'Bianca', specialties: ['CyP'], isActive: true, hourlyRate: 4000, monthlySalesCount: 11, color: '#6C5B7B' },
-  { id: 'mavy', name: 'Mavy', shortName: 'Mavy', specialties: ['Maderoterapia'], isActive: true, hourlyRate: 6000, monthlySalesCount: 35, color: '#B8E0D2' },
-]
-
-const mockOffers: Offer[] = [
-  { id: 'off1', name: 'Promo Empleados 20%', discountPercentage: 20 },
-  { id: 'off2', name: 'Descuento Especial 10%', discountPercentage: 10 }
-]
-
-const mockCombos: Combo[] = []
 
 // ============================================
 // STORE (ZUSTAND)
@@ -219,80 +189,55 @@ interface ClinicStore {
   offers: Offer[]
   combos: Combo[]
   
-  // Actions
   addExpense: (expense: Omit<Expense, 'id' | 'date'>) => void
   addSale: (sale: Omit<Sale, 'id' | 'date'>) => void
   updateHourlyRate: (id: string, rate: number) => void
   updateProfessional: (id: string, updates: Partial<Professional>) => void
-  addVacation: (id: string) => void
-  removeVacation: (id: string) => void
+  resetProfessionalPin: (id: string) => Promise<void>
   toggleProfessionalActive: (id: string) => void
-  getProfessionalAppointments: (id: string, date: Date) => Appointment[]
   startAttention: (id: string) => void
   finishAttention: (id: string, finalServices: any[], finalProducts: any[]) => void
   completeAppointment: (id: string, paymentMethod: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card", finalTotal: number, extraProducts?: any[], extraSoldBy?: string) => void
   cancelAppointment: (id: string) => void
   updateAppointment: (id: string, updates: Partial<Appointment>) => void
-  
-  // Supabase Professional Actions
   fetchProfessionals: () => Promise<void>
   addProfessional: (prof: Omit<Professional, 'id'>) => Promise<void>
-  
-  // Supabase Patient Actions
   fetchPatients: () => Promise<void>
   searchPatients: (query: string) => Promise<Patient[]>
   updatePatientGiftCardBalance: (id: string, amountToAdd: number) => Promise<void>
-  
-  // Supabase Products & Services
   fetchServices: () => Promise<void>
   fetchProducts: () => Promise<void>
-  
-  // Reception actions
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => Promise<void>
   updatePatient: (id: string, updates: Partial<Patient>) => Promise<void>
   addAppointment: (appointment: Omit<Appointment, 'id'>) => Promise<void>
   fetchAppointments: () => Promise<void>
   getProfessionalsForService: (serviceId: string) => Professional[]
-
-  // Supabase Products & Services Admin
   addService: (service: Omit<Service, 'id'>) => Promise<void>
   updateService: (id: string, updates: Partial<Service>) => Promise<void>
   deleteService: (id: string) => Promise<void>
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>
   deleteProduct: (id: string) => Promise<void>
-
   addOffer: (offer: Omit<Offer, 'id'>) => void
   updateOffer: (id: string, updates: Partial<Offer>) => void
   deleteOffer: (id: string) => void
-
   addCombo: (combo: Omit<Combo, 'id'>) => void
   updateCombo: (id: string, updates: Partial<Combo>) => void
   deleteCombo: (id: string) => void
 }
 
- 
-const mockPatients: Patient[] = [
-  { id: 'pat1', name: 'Laura Gómez', phone: '1123456789', dni: '30123456', createdAt: new Date() },
-  { id: 'pat2', name: 'Mariana Pérez', phone: '1198765432', dni: '31987654', createdAt: new Date() },
-  { id: 'pat3', name: 'Sofía Martínez', phone: '1176543210', dni: '32000111', createdAt: new Date() },
-]
-
-const mockAppointments: Appointment[] = []
-
 export const useClinicStore = create<ClinicStore>((set, get) => ({
   currentUser: null,
   setCurrentUser: (user) => set({ currentUser: user }),
-  
-  professionals: mockProfessionals,
+  professionals: [],
   appointments: [],
   sales: [],
-  patients: mockPatients,
+  patients: [],
   services: [],
   expenses: [],
   products: [],
-  offers: mockOffers,
-  combos: mockCombos,
+  offers: [],
+  combos: [],
 
   addExpense: (expenseData) => {
     const newExpense = { ...expenseData, id: Date.now().toString(), date: new Date() }
@@ -300,31 +245,23 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   addSale: (saleData) => {
-    const { professionals, combos } = get()
+    const { professionals } = get()
     const newSale = { ...saleData, id: Date.now().toString(), date: new Date() }
     
-    // Lógica de Nico: Si se vendió un producto, sumamos al contador de la profesional
     const updatedProfessionals = professionals.map(prof => {
       const soldItems = saleData.items.filter(item => item.type === 'product' && item.soldBy === prof.id)
       const totalQty = soldItems.reduce((acc, item) => acc + item.quantity, 0)
-      
-      if (totalQty > 0) {
-        return { ...prof, monthlySalesCount: prof.monthlySalesCount + totalQty }
-      }
-      return prof
+      return totalQty > 0 ? { ...prof, monthlySalesCount: prof.monthlySalesCount + totalQty } : prof
     })
 
     set((state) => {
       let currentProducts = [...state.products]
-
-      // Helper for stock deduction
       const deductStock = (prodId: string, qtyToDeduct: number) => {
         currentProducts = currentProducts.map(p => 
           p.id === prodId ? { ...p, stock: Math.max(0, p.stock - qtyToDeduct) } : p
         )
       }
 
-      // Deduct stock for all products explicitly sold or sold within combos
       saleData.items.forEach(item => {
         if (item.type === 'product') {
           deductStock(item.itemId, item.quantity)
@@ -364,61 +301,61 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     });
   },
 
+  resetProfessionalPin: async (id) => {
+    // 1. Limpiar en Supabase
+    const { error } = await supabase
+      .from('professionals')
+      .update({ pin: null })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error reseteando PIN en Supabase:', error);
+    }
+
+    // 2. Limpiar en el estado local
+    set(state => ({
+      professionals: state.professionals.map(p => p.id === id ? { ...p, pin: null } : p)
+    }));
+
+    // 3. Tip importante: Como el PIN se guarda en localStorage del dispositivo de la profesional,
+    // esto servirá cuando ella intente entrar y el sistema vea que en la DB el PIN es null.
+  },
+
   addProfessional: async (prof) => {
     try {
       const { data, error } = await supabase
         .from('professionals')
         .insert([{
-          id: Date.now().toString(), // Podríamos usar UUID, pero timestamp string es seguro para id
           name: prof.name,
-          "shortName": prof.shortName,
+          shortName: prof.shortName,
           specialties: prof.specialties,
-          "isActive": prof.isActive,
-          "hourlyRate": prof.hourlyRate,
-          "hourlyRateFacial": prof.hourlyRateFacial,
-          "hourlyRateCorporal": prof.hourlyRateCorporal,
-          "monthlySalesCount": 0,
+          isActive: prof.isActive,
+          hourlyRate: prof.hourlyRate,
+          hourlyRateFacial: prof.hourlyRateFacial,
+          hourlyRateCorporal: prof.hourlyRateCorporal,
+          monthlySalesCount: 0,
           color: prof.color
         }])
         .select()
         .single();
         
-      if (error) {
-        console.error('Supabase add professional error:', error);
-      } else if (data) {
-        set(state => ({
-           professionals: [...state.professionals, {
-             id: data.id,
-             name: data.name,
-             shortName: data.shortName,
-             specialties: data.specialties,
-             isActive: data.isActive,
-             hourlyRate: data.hourlyRate,
-             hourlyRateFacial: data.hourlyRateFacial,
-             hourlyRateCorporal: data.hourlyRateCorporal,
-             monthlySalesCount: data.monthlySalesCount,
-             color: data.color
-           }]
-        }))
+      if (!error && data) {
+        set(state => ({ professionals: [...state.professionals, data] }))
       }
-    } catch(err) {
-      console.error(err)
-    }
+    } catch(err) { console.error(err) }
   },
 
-  addVacation: (id) => {},
-  removeVacation: (id) => {},
-
   toggleProfessionalActive: (id) => {
-    set(state => ({
-      professionals: state.professionals.map(p => p.id === id ? { ...p, isActive: !p.isActive } : p)
-    }));
     const { professionals } = get();
     const prof = professionals.find(p => p.id === id);
     if (prof) {
-       supabase.from('professionals').update({ isActive: prof.isActive }).eq('id', id).then(({error}) => {
-          if(error) console.error('toggleProfessionalActive error:', error);
-       });
+      const nextActive = !prof.isActive;
+      set(state => ({
+        professionals: state.professionals.map(p => p.id === id ? { ...p, isActive: nextActive } : p)
+      }));
+      supabase.from('professionals').update({ isActive: nextActive }).eq('id', id).then(({error}) => {
+         if(error) console.error('toggleProfessionalActive error:', error);
+      });
     }
   },
 
@@ -436,126 +373,51 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         .select()
         .single();
         
-      if (error) {
-        console.error('Supabase add patient error:', error);
-      } else if (data) {
-        const newPatient = {
-          id: data.id,
-          name: data.name,
-          phone: data.phone,
-          dni: data.dni,
-          email: data.email,
-          birthdate: data.birth_date,
-          createdAt: new Date(data.created_at || Date.now()),
-          notes: data.notes
+      if (!error && data) {
+        const np = {
+          id: data.id, name: data.name, phone: data.phone, dni: data.dni, email: data.email,
+          birthdate: data.birth_date, createdAt: new Date(data.created_at || Date.now()), notes: data.notes
         };
-        set(state => ({ patients: [...state.patients, newPatient] }));
+        set(state => ({ patients: [...state.patients, np] }));
       }
-    } catch (err) {
-      console.error('Network error adding patient:', err);
-    }
+    } catch (err) { console.error(err); }
   },
 
   updatePatient: async (id, updates) => {
     try {
-      const { error } = await supabase
-        .from('patients')
-        .update({
-          name: updates.name,
-          dni: updates.dni,
-          phone: updates.phone,
-          email: updates.email,
-          birth_date: updates.birthdate,
-          notes: updates.notes
-        })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Supabase update patient error:', error);
-      } else {
-        set(state => ({
-          patients: state.patients.map(p => p.id === id ? { ...p, ...updates } : p)
-        }));
+      const { error } = await supabase.from('patients').update({
+          name: updates.name, dni: updates.dni, phone: updates.phone,
+          email: updates.email, birth_date: updates.birthdate, notes: updates.notes
+        }).eq('id', id);
+      if (!error) {
+        set(state => ({ patients: state.patients.map(p => p.id === id ? { ...p, ...updates } : p) }));
       }
-    } catch (err) {
-      console.error('Network error updating patient:', err);
-    }
+    } catch (err) { console.error(err); }
   },
 
   addAppointment: async (appointment) => {
     try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .insert([{
-          patientId: appointment.patientId,
-          patientName: appointment.patientName,
+      const { data, error } = await supabase.from('appointments').insert([{
+          patientId: appointment.patientId, patientName: appointment.patientName,
           professionalId: appointment.professionalId,
           date: format(appointment.date, "yyyy-MM-dd'T'12:00:00.000'Z'"),
-          time: appointment.time,
-          services: appointment.services,
-          products: appointment.products || [],
-          status: appointment.status,
-          totalAmount: appointment.totalAmount,
-          paidAmount: appointment.paidAmount
-        }])
-        .select()
-        .single();
-        
-      if (error) {
-        console.error('Supabase add appointment error:', error.message || error);
-      } else if (data) {
-        const newAppointment = {
-          id: data.id,
-          patientId: data.patientId,
-          patientName: data.patientName,
-          professionalId: data.professionalId,
-          date: new Date(data.date),
-          time: data.time,
-          services: data.services || [],
-          products: data.products || [],
-          status: data.status,
-          totalAmount: data.totalAmount,
-          paidAmount: data.paidAmount
-        };
-        set(state => ({ appointments: [...state.appointments, newAppointment] }));
+          time: appointment.time, services: appointment.services,
+          products: appointment.products || [], status: appointment.status,
+          totalAmount: appointment.totalAmount, paidAmount: appointment.paidAmount
+        }]).select().single();
+      if (!error && data) {
+        set(state => ({ appointments: [...state.appointments, { ...data, date: new Date(data.date) }] }));
       }
-    } catch (err) {
-      console.error('Network error adding appointment:', err);
-    }
+    } catch (err) { console.error(err); }
   },
 
   fetchAppointments: async () => {
     try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .limit(2000);
-        
-      if (error) {
-        console.error('Supabase fetch appointments error:', error.message || error);
-        return;
+      const { data, error } = await supabase.from('appointments').select('*').limit(2000);
+      if (!error && data) {
+        set({ appointments: data.map((a: any) => ({ ...a, date: new Date(a.date) })) });
       }
-
-      if (data) {
-        set({
-          appointments: data.map((a: any) => ({
-            id: a.id,
-            patientId: a.patientId,
-            patientName: a.patientName,
-            professionalId: a.professionalId,
-            date: new Date(a.date),
-            time: a.time,
-            services: a.services || [],
-            products: a.products || [],
-            status: a.status,
-            totalAmount: a.totalAmount,
-            paidAmount: a.paidAmount
-          }))
-        });
-      }
-    } catch (err) {
-      console.error('Network error fetching appointments:', err);
-    }
+    } catch (err) { console.error(err); }
   },
 
   getProfessionalsForService: (serviceId) => {
@@ -568,269 +430,116 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   fetchProfessionals: async () => {
     try {
       const { data, error } = await supabase.from('professionals').select('*');
-      if (error) {
-        console.error('Supabase fetch professionals error:', error);
-        return;
+      if (!error && data) {
+        set({ professionals: data });
       }
-      if (data && data.length > 0) {
-        set({
-           professionals: data.map((p: any) => ({
-             id: p.id,
-             name: p.name,
-             shortName: p.shortName,
-             specialties: p.specialties,
-             isActive: p.isActive,
-             hourlyRate: p.hourlyRate,
-             hourlyRateFacial: p.hourlyRateFacial,
-             hourlyRateCorporal: p.hourlyRateCorporal,
-             monthlySalesCount: p.monthlySalesCount,
-             color: p.color,
-             avatar: p.avatar,
-             schedule: p.schedule,
-             exceptions: p.exceptions
-           }))
-        });
-      }
-    } catch (err) {
-      console.error('Network error fetching professionals:', err);
-    }
+    } catch (err) { console.error(err); }
   },
 
   fetchPatients: async () => {
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .limit(1300);
-        
-      if (error) {
-        console.error('Supabase fetch error:', error);
-        return; // Fallback to mock data already in state
-      }
-
-      if (data && data.length > 0) {
-        set({
-          patients: data.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            phone: p.phone,
-            dni: p.dni,
-            email: p.email,
-            birthdate: p.birth_date,
-            createdAt: new Date(p.created_at || p.createdAt || Date.now()),
-            notes: p.notes,
-            giftCardBalance: p.gift_card_balance || 0
+      const { data, error } = await supabase.from('patients').select('*').limit(1300);
+      if (!error && data) {
+        set({ patients: data.map((p: any) => ({
+            id: p.id, name: p.name, phone: p.phone, dni: p.dni, email: p.email,
+            birthdate: p.birth_date, createdAt: new Date(p.created_at || Date.now()),
+            notes: p.notes, giftCardBalance: p.gift_card_balance || 0
           }))
         });
       }
-    } catch (err) {
-      console.error('Network error fetching patients:', err);
-      // Fails silently, keeping local state intact
-    }
+    } catch (err) { console.error(err); }
   },
 
   searchPatients: async (query: string) => {
     const cleanQuery = query.trim().toLowerCase();
     if (!cleanQuery) return [];
-    
     const { patients } = get();
-
-    // 1. Local state search (ultra fast)
-    const localResults = patients.filter(p => 
-      (p.name && p.name.toLowerCase().includes(cleanQuery)) || 
-      (p.dni && p.dni.includes(cleanQuery)) || 
-      (p.phone && p.phone.includes(cleanQuery))
-    );
-
-    // 2. Also query Supabase and merge, so local partial matches
-    // never hide valid records that are not loaded in-memory yet.
+    const localResults = patients.filter(p => (p.name?.toLowerCase().includes(cleanQuery)) || (p.dni?.includes(cleanQuery)) || (p.phone?.includes(cleanQuery)));
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .or(`name.ilike.%${cleanQuery}%,dni.ilike.%${cleanQuery}%,phone.ilike.%${cleanQuery}%`)
-        .limit(20);
-
-      if (error) {
-         console.error('Supabase search error:', error);
-         return [];
-      }
-
+      const { data } = await supabase.from('patients').select('*').or(`name.ilike.%${cleanQuery}%,dni.ilike.%${cleanQuery}%,phone.ilike.%${cleanQuery}%`).limit(20);
       if (data) {
-         const remoteResults = data.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          phone: p.phone,
-          dni: p.dni,
-          email: p.email,
-          birthdate: p.birth_date,
-          createdAt: new Date(p.created_at || p.createdAt || Date.now()),
-          notes: p.notes,
-          giftCardBalance: p.gift_card_balance || 0
-         }));
-
-         const merged = [...localResults];
-         const seen = new Set(localResults.map((p) => p.id));
-         for (const patient of remoteResults) {
-           if (!seen.has(patient.id)) {
-             merged.push(patient);
-             seen.add(patient.id);
-           }
-         }
-         return merged;
+          const remoteResults = data.map((p: any) => ({
+            id: p.id, name: p.name, phone: p.phone, dni: p.dni, email: p.email,
+            birthdate: p.birth_date, createdAt: new Date(p.created_at || Date.now()),
+            notes: p.notes, giftCardBalance: p.gift_card_balance || 0
+          }));
+          const merged = [...localResults];
+          const seen = new Set(localResults.map(p => p.id));
+          for (const p of remoteResults) { if (!seen.has(p.id)) merged.push(p); }
+          return merged;
       }
-    } catch (err) {
-      console.error('Network error searching Supabase:', err);
-    }
-    
+    } catch (err) { console.error(err); }
     return localResults;
   },
 
   fetchServices: async () => {
     try {
-      const { data, error } = await supabase.from('services').select('*').limit(500);
-      if (data && data.length > 0) {
-        set({
-          services: data.map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            price: s.price,
-            priceCash: s.price_cash || s.price,
-            duration: s.duration || 60,
-            category: s.category
-          }))
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching services:', err);
-    }
+      const { data } = await supabase.from('services').select('*').limit(500);
+      if (data) set({ services: data.map((s: any) => ({ id: s.id, name: s.name, price: s.price, priceCash: s.price_cash || s.price, duration: s.duration || 60, category: s.category })) });
+    } catch (err) { console.error(err); }
   },
 
   fetchProducts: async () => {
     try {
-      const { data, error } = await supabase.from('products').select('*').limit(500);
-      if (data && data.length > 0) {
-        set({
-          products: data.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            priceCash: p.price_cash || p.priceCash || p.price || 0,
-            priceList: p.price_list || p.priceList || p.price || 0,
-            stock: p.stock || 0,
-            category: p.category
-          }))
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching products:', err);
-    }
+      const { data } = await supabase.from('products').select('*').limit(500);
+      if (data) set({ products: data.map((p: any) => ({ id: p.id, name: p.name, priceCash: p.price_cash || 0, priceList: p.price_list || 0, stock: p.stock || 0, category: p.category })) });
+    } catch (err) { console.error(err); }
   },
 
   addService: async (service) => {
     try {
-      const { data, error } = await supabase.from('services').insert([{
-        name: service.name,
-        price: service.price,
-        price_cash: service.priceCash,
-        duration: service.duration,
-        category: service.category
-      }]).select().single()
-      
-      if (!error && data) {
-        set(state => ({ services: [...state.services, {
-          id: data.id,
-          name: data.name,
-          price: data.price,
-          priceCash: data.price_cash || data.price,
-          duration: data.duration || 60,
-          category: data.category
-        }]}))
-      }
+      const { data, error } = await supabase.from('services').insert([{ name: service.name, price: service.price, price_cash: service.priceCash, duration: service.duration, category: service.category }]).select().single()
+      if (!error && data) set(state => ({ services: [...state.services, { id: data.id, name: data.name, price: data.price, priceCash: data.price_cash || data.price, duration: data.duration || 60, category: data.category }]}))
     } catch (err) { console.error(err) }
   },
 
   updateService: async (id, updates) => {
     try {
-      const updatePayload: any = {}
-      if (updates.name !== undefined) updatePayload.name = updates.name
-      if (updates.price !== undefined) updatePayload.price = updates.price
-      if (updates.priceCash !== undefined) updatePayload.price_cash = updates.priceCash
-      if (updates.duration !== undefined) updatePayload.duration = updates.duration
-      if (updates.category !== undefined) updatePayload.category = updates.category
-
-      const { error } = await supabase.from('services').update(updatePayload).eq('id', id)
-      if (!error) {
-        set(state => ({ services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) }))
-      }
+      const up: any = {}
+      if (updates.name !== undefined) up.name = updates.name
+      if (updates.price !== undefined) up.price = updates.price
+      if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
+      if (updates.category !== undefined) up.category = updates.category
+      const { error } = await supabase.from('services').update(up).eq('id', id)
+      if (!error) set(state => ({ services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) }))
     } catch (err) { console.error(err) }
   },
 
   deleteService: async (id) => {
     try {
       const { error } = await supabase.from('services').delete().eq('id', id)
-      if (!error) {
-        set(state => ({ services: state.services.filter(s => s.id !== id) }))
-      }
+      if (!error) set(state => ({ services: state.services.filter(s => s.id !== id) }))
     } catch (err) { console.error(err) }
   },
 
   addProduct: async (product) => {
     try {
-      const { data, error } = await supabase.from('products').insert([{
-        name: product.name,
-        price_cash: product.priceCash,
-        price_list: product.priceList,
-        stock: product.stock,
-        category: product.category
-      }]).select().single()
-      
-      if (!error && data) {
-        set(state => ({ products: [...state.products, {
-          id: data.id,
-          name: data.name,
-          priceCash: data.price_cash || 0,
-          priceList: data.price_list || 0,
-          stock: data.stock || 0,
-          category: data.category
-        }]}))
-      }
+      const { data, error } = await supabase.from('products').insert([{ name: product.name, price_cash: product.priceCash, price_list: product.priceList, stock: product.stock, category: product.category }]).select().single()
+      if (!error && data) set(state => ({ products: [...state.products, { id: data.id, name: data.name, priceCash: data.price_cash || 0, priceList: data.price_list || 0, stock: data.stock || 0, category: data.category }]}))
     } catch (err) { console.error(err) }
   },
 
   updateProduct: async (id, updates) => {
     try {
-      const updatePayload: any = {}
-      if (updates.name !== undefined) updatePayload.name = updates.name
-      if (updates.priceCash !== undefined) updatePayload.price_cash = updates.priceCash
-      if (updates.priceList !== undefined) updatePayload.price_list = updates.priceList
-      if (updates.stock !== undefined) updatePayload.stock = updates.stock
-      if (updates.category !== undefined) updatePayload.category = updates.category
-
-      const { error } = await supabase.from('products').update(updatePayload).eq('id', id)
-      if (!error) {
-        set(state => ({ products: state.products.map(p => p.id === id ? { ...p, ...updates } : p) }))
-      }
+      const up: any = {}
+      if (updates.name !== undefined) up.name = updates.name
+      if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
+      if (updates.priceList !== undefined) up.price_list = updates.priceList
+      if (updates.stock !== undefined) up.stock = updates.stock
+      const { error } = await supabase.from('products').update(up).eq('id', id)
+      if (!error) set(state => ({ products: state.products.map(p => p.id === id ? { ...p, ...updates } : p) }))
     } catch (err) { console.error(err) }
   },
 
   deleteProduct: async (id) => {
     try {
       const { error } = await supabase.from('products').delete().eq('id', id)
-      if (!error) {
-        set(state => ({ products: state.products.filter(p => p.id !== id) }))
-      }
+      if (!error) set(state => ({ products: state.products.filter(p => p.id !== id) }))
     } catch (err) { console.error(err) }
   },
 
-  getProfessionalAppointments: (id, date) => {
-    const { appointments } = get()
-    return appointments.filter(a => a.professionalId === id && Math.abs(a.date.getTime() - date.getTime()) < 86400000 * 2 ) // A bit relaxed comparison for calendar
-  },
-
   startAttention: (id) => {
-    set((state) => ({
-      appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'en_atencion' } : a)
-    }))
+    set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'en_atencion' } : a) }))
   },
 
   finishAttention: (id, finalServices, finalProducts) => {
@@ -838,18 +547,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       let calcTotal = 0;
       finalServices.forEach(s => calcTotal += s.price);
       finalProducts.forEach(p => calcTotal += (p.price * p.quantity));
-
-      return {
-        appointments: state.appointments.map(a => 
-          a.id === id ? { 
-            ...a, 
-            status: 'pendiente_cobro', 
-            services: finalServices, 
-            products: finalProducts,
-            totalAmount: calcTotal 
-          } : a
-        )
-      };
+      return { appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal } : a) };
     })
   },
 
@@ -857,157 +555,59 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     set((state) => {
       const apt = state.appointments.find(a => a.id === id);
       if(!apt) return state;
-
-      // Generar venta integrada para que el Dashboard lo absorba
       const saleItems: SaleItem[] = [];
-      apt.services.forEach(s => saleItems.push({ 
-        type: 'service', itemId: s.serviceId, itemName: s.serviceName, 
-        price: method === 'efectivo' ? (s.priceCash || s.price) : s.price, 
-        priceCashReference: s.priceCash || s.price, quantity: 1, soldBy: apt.professionalId 
-      }));
-      
-      apt.products?.forEach(p => saleItems.push({ 
-        type: 'product', itemId: p.productId, itemName: p.productName, 
-        price: method === 'efectivo' ? (p.priceCashReference || p.price) : p.price, 
-        priceCashReference: p.priceCashReference || p.price, quantity: p.quantity, soldBy: apt.professionalId 
-      }));
-
-      extraProducts.forEach(p => saleItems.push({
-        type: 'product', itemId: p.product.id, itemName: p.product.name,
-        price: method === 'efectivo' ? p.product.priceCash : p.product.priceList,
-        priceCashReference: p.product.priceCash, quantity: p.quantity, soldBy: extraSoldBy || apt.professionalId
-      }));
-
-      const newSale: Sale = {
-        id: Date.now().toString(),
-        type: 'appointment',
-        items: saleItems,
-        total: finalTotal,
-        paymentMethod: method,
-        date: new Date(),
-        processedBy: "Recepción" // O cajero logueado
-      };
-
-      // Actualizar contador de ventas de productos para la comision/tier
-      // Incluye los productos de gabinete + los directos de mostrador vendidos por la profesional
+      apt.services.forEach(s => saleItems.push({ type: 'service', itemId: s.serviceId, itemName: s.serviceName, price: method === 'efectivo' ? (s.priceCash || s.price) : s.price, priceCashReference: s.priceCash || s.price, quantity: 1, soldBy: apt.professionalId }));
+      apt.products?.forEach(p => saleItems.push({ type: 'product', itemId: p.productId, itemName: p.productName, price: method === 'efectivo' ? (p.priceCashReference || p.price) : p.price, priceCashReference: p.priceCashReference || p.price, quantity: p.quantity, soldBy: apt.professionalId }));
+      extraProducts.forEach(p => saleItems.push({ type: 'product', itemId: p.product.id, itemName: p.product.name, price: method === 'efectivo' ? p.product.priceCash : p.product.priceList, priceCashReference: p.product.priceCash, quantity: p.quantity, soldBy: extraSoldBy || apt.professionalId }));
+      const newSale: Sale = { id: Date.now().toString(), type: 'appointment', items: saleItems, total: finalTotal, paymentMethod: method, date: new Date(), processedBy: "Recepción" };
       let prodQty = apt.products?.reduce((acc, p) => acc + p.quantity, 0) || 0;
-      
-      let extraProdQtyByProf = 0;
-      if (extraSoldBy !== "recepcion") {
-         extraProdQtyByProf = extraProducts.reduce((acc, item) => acc + item.quantity, 0);
-      }
-
+      let extraProdQtyByProf = extraSoldBy !== "recepcion" ? extraProducts.reduce((acc, item) => acc + item.quantity, 0) : 0;
       let currentProducts = [...state.products]
-      const deductStock = (prodId: string, qtyToDeduct: number) => {
-        currentProducts = currentProducts.map(p => 
-          p.id === prodId ? { ...p, stock: Math.max(0, p.stock - qtyToDeduct) } : p
-        )
-      }
-
-      // Deduct stock for all products explicitly sold or sold within combos
-      saleItems.forEach(item => {
-        if (item.type === 'product') {
-          deductStock(item.itemId, item.quantity)
-        } else if (item.type === 'combo') {
-          const comboDef = state.combos.find(c => c.id === item.itemId)
-          if (comboDef) {
-            comboDef.items.forEach(i => {
-              if (i.type === 'product') deductStock(i.itemId, i.quantity * item.quantity)
-            })
-          }
-        }
-      })
-
-      return {
-        appointments: state.appointments.map(a => 
-          a.id === id ? { ...a, status: 'completado', paidAmount: a.totalAmount } : a
-        ),
-        sales: [...state.sales, newSale],
-        products: currentProducts,
-        professionals: state.professionals.map(prof => {
-          if (prof.id === apt.professionalId && prodQty > 0) prof.monthlySalesCount += prodQty;
-          if (prof.id === extraSoldBy && extraProdQtyByProf > 0) prof.monthlySalesCount += extraProdQtyByProf;
-          return prof;
-        })
-      };
+      const deductStock = (pId: string, q: number) => { currentProducts = currentProducts.map(p => p.id === pId ? { ...p, stock: Math.max(0, p.stock - q) } : p) }
+      saleItems.forEach(item => { if (item.type === 'product') deductStock(item.itemId, item.quantity); else if (item.type === 'combo') { const c = state.combos.find(x => x.id === item.itemId); if (c) c.items.forEach(i => { if (i.type === 'product') deductStock(i.itemId, i.quantity * item.quantity) }) } })
+      return { appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'completado', paidAmount: a.totalAmount } : a), sales: [...state.sales, newSale], products: currentProducts, professionals: state.professionals.map(prof => { if (prof.id === apt.professionalId && prodQty > 0) prof.monthlySalesCount += prodQty; if (prof.id === extraSoldBy && extraProdQtyByProf > 0) prof.monthlySalesCount += extraProdQtyByProf; return prof; }) };
     });
     const aptFound = get().appointments.find(a => a.id === id);
-    if (method === 'gift_card' && aptFound) {
-      get().updatePatientGiftCardBalance(aptFound.patientId, -finalTotal);
-    }
+    if (method === 'gift_card' && aptFound) get().updatePatientGiftCardBalance(aptFound.patientId, -finalTotal);
   },
 
   cancelAppointment: async (id) => {
     try {
       const { error } = await supabase.from('appointments').delete().eq('id', id);
-      if (error) {
-        console.error('Supabase delete appointment error:', error);
-      } else {
-        set((state) => ({
-          appointments: state.appointments.filter(a => a.id !== id)
-        }))
-      }
-    } catch (err) { console.error('Network error cancelling:', err) }
+      if (!error) set((state) => ({ appointments: state.appointments.filter(a => a.id !== id) }))
+    } catch (err) { console.error(err) }
   },
 
   updateAppointment: async (id, updates) => {
     try {
-      const dbUpdates: any = {};
-      if (updates.professionalId) dbUpdates.professionalId = updates.professionalId;
-      if (updates.time) dbUpdates.time = updates.time;
-      if (updates.status) dbUpdates.status = updates.status;
-      if (updates.services) dbUpdates.services = updates.services;
-      if (updates.products) dbUpdates.products = updates.products;
-      if (updates.totalAmount !== undefined) dbUpdates.totalAmount = updates.totalAmount;
-      if (updates.paidAmount !== undefined) dbUpdates.paidAmount = updates.paidAmount;
-      if (updates.date) dbUpdates.date = format(updates.date, "yyyy-MM-dd'T'12:00:00.000'Z'");
-
-      const { error } = await supabase.from('appointments').update(dbUpdates).eq('id', id);
-      
-      if (error) {
-        console.error('Supabase update appointment error:', error);
-      } else {
-        set((state) => ({
-          appointments: state.appointments.map(a => 
-            a.id === id ? { ...a, ...updates } : a
-          )
-        }))
-      }
-    } catch (err) { console.error('Network error updating appointment:', err) }
+      const up: any = {};
+      if (updates.professionalId) up.professionalId = updates.professionalId;
+      if (updates.time) up.time = updates.time;
+      if (updates.status) up.status = updates.status;
+      if (updates.services) up.services = updates.services;
+      if (updates.products) up.products = updates.products;
+      if (updates.totalAmount !== undefined) up.totalAmount = updates.totalAmount;
+      if (updates.paidAmount !== undefined) up.paidAmount = updates.paidAmount;
+      if (updates.date) up.date = format(updates.date, "yyyy-MM-dd'T'12:00:00.000'Z'");
+      const { error } = await supabase.from('appointments').update(up).eq('id', id);
+      if (!error) set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, ...updates } : a) }))
+    } catch (err) { console.error(err) }
   },
 
-  updatePatientGiftCardBalance: async (id: string, amountToAdd: number) => {
+  updatePatientGiftCardBalance: async (id, amountToAdd) => {
     const { patients } = get();
     const patient = patients.find(p => p.id === id);
     if (!patient) return;
-
     const newBalance = (patient.giftCardBalance || 0) + amountToAdd;
-
     try {
-      const { error } = await supabase
-        .from('patients')
-        .update({ gift_card_balance: newBalance })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Failed to update gift card balance:', error);
-        return;
-      }
-
-      set((state) => ({
-        patients: state.patients.map(p => 
-          p.id === id ? { ...p, giftCardBalance: newBalance } : p
-        )
-      }));
-    } catch (err) {
-      console.error(err);
-    }
+      const { error } = await supabase.from('patients').update({ gift_card_balance: newBalance }).eq('id', id);
+      if (!error) set((state) => ({ patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: newBalance } : p) }));
+    } catch (err) { console.error(err); }
   },
 
   addOffer: (offer) => set(state => ({ offers: [...state.offers, { id: Date.now().toString(), ...offer }] })),
   updateOffer: (id, updates) => set(state => ({ offers: state.offers.map(o => o.id === id ? { ...o, ...updates } : o) })),
   deleteOffer: (id) => set(state => ({ offers: state.offers.filter(o => o.id !== id) })),
-  
   addCombo: (combo) => set(state => ({ combos: [...state.combos, { id: Date.now().toString(), ...combo }] })),
   updateCombo: (id, updates) => set(state => ({ combos: state.combos.map(c => c.id === id ? { ...c, ...updates } : c) })),
   deleteCombo: (id) => set(state => ({ combos: state.combos.filter(c => c.id !== id) })),

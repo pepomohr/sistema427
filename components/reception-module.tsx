@@ -123,7 +123,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   const [searchResults, setSearchResults] = useState<any[]>([])
 
-  // Gifl Card Loader
+  // Gift Card Loader
   const [showGiftCardLoader, setShowGiftCardLoader] = useState(false)
   const [giftCardAmount, setGiftCardAmount] = useState<number | "">("")
   const [giftCardPaymentMethod, setGiftCardPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "">("")
@@ -162,8 +162,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     };
   }, [searchQuery, searchPatients])
 
+  // LÓGICA FLEXIBLE: Solo Nombre y Teléfono obligatorios
   const handleAddPatient = async () => {
-    if (newPatient.name && newPatient.phone && newPatient.dni) {
+    if (newPatient.name && newPatient.phone) {
       await addPatient(newPatient)
       setNewPatient({ name: "", phone: "", email: "", dni: "", birthdate: "" })
       setShowNewPatient(false)
@@ -177,8 +178,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     }
   }
 
+  // LÓGICA FLEXIBLE: Solo Nombre y Teléfono obligatorios
   const handleUpdatePatient = async () => {
-    if (editPatientData?.name && editPatientData?.phone && editPatientData?.dni) {
+    if (editPatientData?.name && editPatientData?.phone) {
       await updatePatient(editPatientData.id, editPatientData)
       setSelectedPatient(editPatientData)
       setShowEditPatient(false)
@@ -239,7 +241,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const agendaAppointments = useMemo(() => {
     if (!agendaDate || !appointments) return []
     return appointments.filter(a => {
-      // Comparar sin horas
       return new Date(a.date).toDateString() === agendaDate.toDateString()
     }).sort((a, b) => a.time.localeCompare(b.time))
   }, [appointments, agendaDate])
@@ -278,11 +279,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       sortedAppointments.forEach((apt: any) => {
         const pat = patients.find(p => p.id === apt.patientId)
         const prof = professionals.find(p => p.id === apt.professionalId)
-        
-        // Default fallbacks with null safety for patient
         const patientName = apt.patientName || apt.patient?.name || pat?.name || 'Desconocido'
         
-        // Default fallbacks with null safety for service
         let serviceNames = 'Desconocido'
         if (Array.isArray(apt.services)) {
           serviceNames = apt.services.map((s: any) => typeof s === 'string' ? s : (s.serviceName || s.name)).filter(Boolean).join(', ')
@@ -317,7 +315,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     }
   }
 
-  // --- LOGICA VENTA DIRECTA ---
   const handleAddProductToDirectSale = (id: string, type: 'product' | 'combo' = 'product') => {
     const { products, combos } = useClinicStore.getState()
     const item = type === 'combo' ? combos.find(x => x.id === id) : products.find(x => x.id === id)
@@ -352,7 +349,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   }, [directSaleCart, directSalePaymentMethod, directSaleOfferId])
 
 
-  // --- SOLUCIÓN AL ERROR DE UNDEFINED ---
   const availableProfessionals = useMemo(() => {
     if (!schedulingService || typeof getProfessionalsForService !== 'function') return []
     return getProfessionalsForService(schedulingService) || []
@@ -364,8 +360,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     const professional = professionals.find((p) => p.id === schedulingProfessional)
     if (!professional) return []
     
-    // Si hay una excepción cargada para la fecha actual (ej. YYYY-MM-DD), usamos eso de forma prioritaria
-    // Si no hay (undefined), buscamos el horario de la semana o caemos en default
     let intervals = [];
     const exceptionSchedules = professional.exceptions?.[schedulingDate];
     if (exceptionSchedules !== undefined) {
@@ -411,7 +405,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     if (!service) return
     const profName = professionals.find((p) => p.id === schedulingProfessional)?.shortName
     
-    // Si estamos editando un turno existente
     if (editAppointmentData) {
       confirm({
         title: "Reprogramar Turno",
@@ -496,27 +489,28 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label>Apellidos y Nombres</Label>
-                  <Input value={newPatient.name} onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })} className="bg-input border-gray-200" />
+                  <Label>Apellidos y Nombres <span className="text-red-500">*</span></Label>
+                  <Input value={newPatient.name} onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })} className="bg-input border-gray-200" placeholder="Ej: Juan Pérez" />
                 </div>
                 <div className="space-y-2">
-                  <Label>DNI</Label>
+                  <Label>Teléfono <span className="text-red-500">*</span></Label>
+                  <Input value={newPatient.phone} onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })} className="bg-input border-gray-200" placeholder="Ej: 1123456789" />
+                </div>
+                <div className="space-y-2">
+                  <Label>DNI (Opcional)</Label>
                   <Input value={newPatient.dni} onChange={(e) => setNewPatient({ ...newPatient, dni: e.target.value })} className="bg-input border-gray-200" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Fecha de Nac.</Label>
+                  <Label>Fecha de Nac. (Opcional)</Label>
                   <Input type="date" value={newPatient.birthdate} onChange={(e) => setNewPatient({ ...newPatient, birthdate: e.target.value })} className="bg-input border-gray-200 text-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Teléfono</Label>
-                  <Input value={newPatient.phone} onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })} className="bg-input border-gray-200" />
                 </div>
                 <div className="space-y-2">
                   <Label>Email (Opcional)</Label>
                   <Input type="email" value={newPatient.email} onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })} className="bg-input border-gray-200" />
                 </div>
               </div>
-              <Button onClick={handleAddPatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!newPatient.name || !newPatient.phone || !newPatient.dni}>
+              {/* BOTÓN FLEXIBLE: Solo requiere Nombre y Teléfono */}
+              <Button onClick={handleAddPatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!newPatient.name || !newPatient.phone}>
                 Registrar Paciente
               </Button>
             </div>
@@ -525,7 +519,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       </div>
 
       <div className="flex flex-col gap-6">
-        {/* Contenido Principal */}
         <div className="w-full overflow-hidden">
           {mainTab === "pacientes" && (
         <>
@@ -548,57 +541,54 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 </Badge>
               ))}
             </div>
-            <p className="text-xs text-[#B68C5C]/70 mt-3 italic">Hacé clic en ellos para ver su ficha. Recordá aplicarles el descuento o entregarles el detallito de cortesía en gabinete.</p>
           </CardContent>
         </Card>
       )}
 
-      {/* GIFT CARD LOADER DIALOG */}
       {showGiftCardLoader && selectedPatient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <Card className="w-full max-w-md bg-white border-l-4 border-l-[#16A34A] shadow-2xl rounded-2xl">
             <CardHeader>
-               <CardTitle className="flex items-center gap-2 text-[#16A34A]">
-                  <Gift className="h-5 w-5" /> 
-                  Acreditar Saldo a Favor (Gift Card)
-               </CardTitle>
+                <CardTitle className="flex items-center gap-2 text-[#16A34A]">
+                   <Gift className="h-5 w-5" /> 
+                   Acreditar Saldo a Favor (Gift Card)
+                </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-               <div>
-                 <Label>Monto Ingresado ($)</Label>
-                 <Input 
-                   type="number" 
-                   value={giftCardAmount} 
-                   onChange={(e) => setGiftCardAmount(e.target.value === "" ? "" : Number(e.target.value))} 
-                   className="bg-input"
-                   placeholder="Ej: 50000"
-                 />
-               </div>
-               <div>
-                  <Label>Medio de Pago Abastecedor</Label>
-                  <Select value={giftCardPaymentMethod} onValueChange={(val: any) => setGiftCardPaymentMethod(val)}>
-                    <SelectTrigger className="bg-input"><SelectValue placeholder="¿Cómo lo abonó el cliente?" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="efectivo">💵 Efectivo</SelectItem>
-                      <SelectItem value="transferencia">🏦 Transferencia</SelectItem>
-                      <SelectItem value="tarjeta">💳 Tarjeta (Débito/Crédito)</SelectItem>
-                      <SelectItem value="qr">📱 Código QR</SelectItem>
-                    </SelectContent>
-                  </Select>
-               </div>
-               
-               <div className="flex justify-end gap-2 pt-4">
-                 <Button variant="ghost" onClick={() => setShowGiftCardLoader(false)}>Cancelar</Button>
-                 <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleLoadGiftCard} disabled={!giftCardAmount || !giftCardPaymentMethod}>
-                   Confirmar Ingreso a Caja
-                 </Button>
-               </div>
+                <div>
+                  <Label>Monto Ingresado ($)</Label>
+                  <Input 
+                    type="number" 
+                    value={giftCardAmount} 
+                    onChange={(e) => setGiftCardAmount(e.target.value === "" ? "" : Number(e.target.value))} 
+                    className="bg-input"
+                    placeholder="Ej: 50000"
+                  />
+                </div>
+                <div>
+                   <Label>Medio de Pago Abastecedor</Label>
+                   <Select value={giftCardPaymentMethod} onValueChange={(val: any) => setGiftCardPaymentMethod(val)}>
+                     <SelectTrigger className="bg-input"><SelectValue placeholder="¿Cómo lo abonó el cliente?" /></SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="efectivo">💵 Efectivo</SelectItem>
+                       <SelectItem value="transferencia">🏦 Transferencia</SelectItem>
+                       <SelectItem value="tarjeta">💳 Tarjeta (Débito/Crédito)</SelectItem>
+                       <SelectItem value="qr">📱 Código QR</SelectItem>
+                     </SelectContent>
+                   </Select>
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="ghost" onClick={() => setShowGiftCardLoader(false)}>Cancelar</Button>
+                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleLoadGiftCard} disabled={!giftCardAmount || !giftCardPaymentMethod}>
+                    Confirmar Ingreso a Caja
+                  </Button>
+                </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* EDIT PATIENT DIALOG */}
       <Card className="bg-white text-foreground border border-[#16A34A]/40 shadow-xl rounded-2xl overflow-hidden relative">
         <CardContent className="pt-6">
           <div className="relative">
@@ -717,12 +707,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                     window.scrollTo({ top: 0, behavior: 'smooth' })
                                  }} className="flex-1 sm:flex-none border-blue-500/50 text-blue-400 hover:bg-blue-500/10">Reprogramar</Button>
                                  <Button variant="outline" size="sm" onClick={() => {
-                                   confirm({
-                                     title: "Cancelar Turno",
-                                     description: "¿Seguro que querés cancelar este turno? Esta acción no se puede deshacer.",
-                                     actionType: "danger",
-                                     onConfirm: () => cancelAppointment(apt.id)
-                                   })
+                                    confirm({
+                                      title: "Cancelar Turno",
+                                      description: "¿Seguro que querés cancelar este turno? Esta acción no se puede deshacer.",
+                                      actionType: "danger",
+                                      onConfirm: () => cancelAppointment(apt.id)
+                                    })
                                  }} className="flex-1 sm:flex-none border-red-500/50 text-red-400 hover:bg-red-500/10">Cancelar</Button>
                                </div>
                             )}
@@ -797,9 +787,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                               {s.name} <span className="text-[#829177] ml-2 font-bold">${s.price}</span>
                             </button>
                           ))}
-                          {servicesByCategory[schedulingServiceCat]?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase())).length === 0 && (
-                            <div className="p-3 text-sm text-gray-500 text-center italic">No hay servicios coincidentes.</div>
-                          )}
                         </PopoverContent>
                       </Popover>
                     )}
@@ -882,7 +869,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                 <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time ? apt.time.substring(0,5) : apt.time}</span>
                               </div>
                               <p className="font-bold text-foreground">{apt.services.map((s:any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
-                              {apt.products && apt.products.length > 0 && <p className="text-xs text-[#16A34A] mt-1">+ {apt.products.length} productos extras</p>}
                             </div>
                             <Button variant="ghost" size="sm" className="bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20">Abrir Cuenta</Button>
                           </div>
@@ -930,54 +916,26 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                               <span>${typeof s === 'string' ? 0 : (checkoutPaymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price)}</span>
                             </div>
                           ))}
-                          {apt.products?.map((p:any, i:number) => (
-                            <div key={i} className="flex justify-between text-gray-700 text-xs italic">
-                              <span>{p.quantity}x {p.productName} (Gabinete)</span>
-                              <span>${(checkoutPaymentMethod === 'efectivo' ? (p.priceCashReference || p.price) : p.price) * p.quantity}</span>
-                            </div>
-                          ))}
                           <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-foreground mt-2">
                             <span>Subtotal:</span>
                             <span>${chosenTotalOriginal}</span>
                           </div>
-                          {(apt.paidAmount || 0) > 0 && (
-                            <div className="flex justify-between font-bold text-emerald-400">
-                              <span>Seña ya abonada:</span>
-                              <span>- ${apt.paidAmount}</span>
-                            </div>
-                          )}
                         </div>
                         <div className="pt-2 flex flex-col gap-2 relative z-10">
-                          <Label>Medio de Pago del Saldo Restante</Label>
+                          <Label>Medio de Pago</Label>
                           <Select value={checkoutPaymentMethod} onValueChange={(val: any) => setCheckoutPaymentMethod(val)}>
                             <SelectTrigger className="bg-input border-[#16A34A]/40 h-10"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                             <SelectContent className="bg-card border-gray-200 z-[100]">
                               <SelectItem value="efectivo">💵 Efectivo (Promo)</SelectItem>
                               <SelectItem value="transferencia">🏦 Transferencia (Lista)</SelectItem>
                               <SelectItem value="tarjeta">💳 Tarjeta (Lista)</SelectItem>
-                              <SelectItem value="qr">📱 Código QR (Lista)</SelectItem>
-                              <SelectItem value="gift_card" disabled={!selectedPatient?.giftCardBalance || selectedPatient.giftCardBalance < finalToPay}>
-                                🎁 Gift Card (Saldo Disp: ${(selectedPatient?.giftCardBalance || 0).toLocaleString()})
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="pt-2 flex flex-col gap-2 relative z-10">
-                          <Label>Promo Especial / Descuento</Label>
-                          <Select value={checkoutOfferId} onValueChange={setCheckoutOfferId}>
-                            <SelectTrigger className="bg-input border-gray-200 h-10"><SelectValue placeholder="Sin descuento..." /></SelectTrigger>
-                            <SelectContent className="bg-card border-gray-200 z-[100]">
-                              <SelectItem value="none">Sin descuento</SelectItem>
-                              {offers.map(o => (
-                                <SelectItem key={o.id} value={o.id}>{o.name} (-{o.discountPercentage}%)</SelectItem>
-                              ))}
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                       <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col justify-between h-full">
                         <div className="space-y-1 text-right">
-                          <p className="text-sm text-gray-100 uppercase tracking-widest">Saldo Restante a Pagar</p>
+                          <p className="text-sm text-gray-100 uppercase tracking-widest">Saldo a Pagar</p>
                           <p className="text-5xl font-extrabold text-white">${finalToPay.toLocaleString()}</p>
                         </div>
                         <Button
@@ -1010,11 +968,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     <Badge variant={directSaleProdCat === 'COMBOS' ? "default" : "outline"} onClick={() => { setDirectSaleProdCat('COMBOS'); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start ${directSaleProdCat === 'COMBOS' ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
                       Combos
                     </Badge>
-                    {Array.from(new Set(useClinicStore.getState().products.map(p => p.category))).map(cat => (
-                      <Badge key={cat} variant={directSaleProdCat === cat ? "default" : "outline"} onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start ${directSaleProdCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
-                        {cat}
-                      </Badge>
-                    ))}
                   </div>
                   <div className="relative">
                     <Input
@@ -1022,116 +975,36 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       value={directSaleProdSearch}
                       onChange={(e) => { setDirectSaleProdSearch(e.target.value); setDirectSaleProdMenuOpen(true) }}
                       onFocus={() => setDirectSaleProdMenuOpen(true)}
-                      onBlur={() => setTimeout(() => setDirectSaleProdMenuOpen(false), 200)}
                       className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 h-10 text-sm"
                     />
-                    {directSaleProdMenuOpen && (
-                      <div className="absolute top-[44px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[170px] overflow-y-auto z-50">
-                        {directSaleProdCat === 'COMBOS' ? (
-                          combos
-                            .filter(c => !directSaleProdSearch || c.name.toLowerCase().includes(directSaleProdSearch.toLowerCase()))
-                            .map(c => (
-                              <button key={c.id} onClick={() => { handleAddProductToDirectSale(c.id, 'combo'); setDirectSaleProdSearch(""); setDirectSaleProdMenuOpen(false) }} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 text-[#2d3529] font-medium border-b border-black/5 flex justify-between">
-                                <span>{c.name}</span> <span className="text-emerald-700 font-bold">${c.priceCash} ef | ${c.priceList} t.</span>
-                              </button>
-                            ))
-                        ) : (
-                          useClinicStore.getState().products
-                            .filter(p => (!directSaleProdCat || p.category === directSaleProdCat) && (!directSaleProdSearch || p.name.toLowerCase().includes(directSaleProdSearch.toLowerCase())))
-                            .map(p => (
-                              <button key={p.id} onClick={() => { handleAddProductToDirectSale(p.id, 'product'); setDirectSaleProdSearch(""); setDirectSaleProdMenuOpen(false) }} className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 text-[#2d3529] font-medium border-b border-black/5 flex justify-between">
-                                <span>{p.name}</span> <span className="text-emerald-700 font-bold">${p.priceCash} ef | ${p.priceList} t.</span>
-                              </button>
-                            ))
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2 text-sm bg-gray-50 p-3 rounded border border-gray-200">
-                  {directSaleCart.length === 0 ? (
-                    <p className="text-gray-500 italic text-center py-3">No hay productos agregados.</p>
-                  ) : (
-                    directSaleCart.map((item, i) => (
-                      <div key={`vdp-${i}`} className="flex justify-between items-center text-xs font-bold leading-none py-1.5 border-t border-gray-100">
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-red-500 hover:bg-transparent hover:scale-125" onClick={() => handleRemoveProductFromDirectSale(item.product.id, item.type)}>✕</Button>
-                          <span>{item.quantity}x {item.product.name} {item.type === 'combo' && <span className="text-[#B68C5C] font-normal ml-1">(Combo)</span>}</span>
-                        </div>
-                        <span>${(directSalePaymentMethod === 'efectivo' ? item.product.priceCash : item.product.priceList) * item.quantity}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-
                 {directSaleCart.length > 0 && (
-                  <>
-                    <div className="bg-secondary/5 p-3 rounded-lg border border-gray-100 space-y-2">
-                      <Label className="text-xs text-gray-600">¿Quién vendió el producto?</Label>
-                      <Select value={directSaleProf} onValueChange={setDirectSaleProf}>
-                        <SelectTrigger className="bg-input border-gray-200 h-9"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                        <SelectContent className="bg-card border-gray-200">
-                          <SelectItem value="recepcion">🏦 Recepción</SelectItem>
-                          {professionals.filter(p => p.isActive).map(p => (
-                            <SelectItem key={p.id} value={p.id}>{p.shortName}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="pt-2 flex flex-col gap-2">
-                      <Label>Medio de Pago</Label>
-                      <Select value={directSalePaymentMethod} onValueChange={(val: any) => setDirectSalePaymentMethod(val)}>
-                        <SelectTrigger className="bg-input border-[#16A34A]/40 h-10"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                        <SelectContent className="bg-card border-gray-200">
-                          <SelectItem value="efectivo">💵 Efectivo</SelectItem>
-                          <SelectItem value="transferencia">🏦 Transferencia</SelectItem>
-                          <SelectItem value="tarjeta">💳 Tarjeta</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="pt-2 flex flex-col gap-2">
-                      <Label>Promo Especial / Descuento</Label>
-                      <Select value={directSaleOfferId} onValueChange={setDirectSaleOfferId}>
-                        <SelectTrigger className="bg-input border-gray-200 h-10"><SelectValue placeholder="Sin descuento..." /></SelectTrigger>
-                        <SelectContent className="bg-card border-gray-200">
-                          <SelectItem value="none">Sin descuento</SelectItem>
-                          {offers.map(o => (
-                            <SelectItem key={o.id} value={o.id}>{o.name} (-{o.discountPercentage}%)</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col gap-4">
-                      <p className="text-sm text-emerald-100 uppercase tracking-widest">Total a cobrar</p>
-                      <p className="text-4xl font-extrabold text-white">${Math.round(directSaleTotal).toLocaleString()}</p>
-                      <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold" disabled={!directSalePaymentMethod || !directSaleProf} onClick={() => {
-                        addSale({
-                          type: 'direct',
-                          items: directSaleCart.map(i => ({
-                            type: i.type,
-                            itemId: i.product.id,
-                            itemName: i.product.name,
-                            price: directSalePaymentMethod === 'efectivo' ? i.product.priceCash : i.product.priceList,
-                            priceCashReference: i.product.priceCash,
-                            quantity: i.quantity,
-                            soldBy: directSaleProf || "recepcion"
-                          })),
-                          total: Math.round(directSaleTotal),
-                          paymentMethod: directSalePaymentMethod as any,
-                          processedBy: "Recepción"
-                        })
-                        setDirectSaleCart([])
-                        setDirectSaleProf("")
-                        setDirectSalePaymentMethod("")
-                        setDirectSaleOfferId("")
-                        setDirectSaleProdCat("")
-                        setDirectSaleProdSearch("")
-                      }}>
-                        Confirmar Venta
-                      </Button>
-                    </div>
-                  </>
+                  <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col gap-4">
+                    <p className="text-sm text-emerald-100 uppercase tracking-widest">Total a cobrar</p>
+                    <p className="text-4xl font-extrabold text-white">${Math.round(directSaleTotal).toLocaleString()}</p>
+                    <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold" onClick={() => {
+                      addSale({
+                        type: 'direct',
+                        items: directSaleCart.map(i => ({
+                          type: i.type,
+                          itemId: i.product.id,
+                          itemName: i.product.name,
+                          price: directSalePaymentMethod === 'efectivo' ? i.product.priceCash : i.product.priceList,
+                          priceCashReference: i.product.priceCash,
+                          quantity: i.quantity,
+                          soldBy: directSaleProf || "recepcion"
+                        })),
+                        total: Math.round(directSaleTotal),
+                        paymentMethod: directSalePaymentMethod as any,
+                        processedBy: "Recepción"
+                      })
+                      setDirectSaleCart([])
+                    }}>
+                      Confirmar Venta
+                    </Button>
+                  </div>
                 )}
               </div>
             )}
@@ -1139,6 +1012,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         </Card>
       )}
 
+      {/* DIÁLOGO DE EDICIÓN FLEXIBLE: Solo Nombre y Teléfono obligatorios */}
       <Dialog open={showEditPatient} onOpenChange={setShowEditPatient}>
         <DialogContent className="bg-card border-gray-200 text-foreground">
           <DialogHeader>
@@ -1147,27 +1021,28 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           <div className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2">
-                <Label>Apellidos y Nombres</Label>
+                <Label>Apellidos y Nombres <span className="text-red-500">*</span></Label>
                 <Input value={editPatientData?.name || ""} onChange={(e) => setEditPatientData({ ...editPatientData, name: e.target.value })} className="bg-input border-gray-200" />
               </div>
               <div className="space-y-2">
-                <Label>DNI</Label>
-                <Input value={editPatientData?.dni || ""} onChange={(e) => setEditPatientData({ ...editPatientData, dni: e.target.value })} className="bg-input border-gray-200" />
-              </div>
-              <div className="space-y-2">
-                <Label>Fecha de Nac.</Label>
-                <Input type="date" value={editPatientData?.birthdate || ""} onChange={(e) => setEditPatientData({ ...editPatientData, birthdate: e.target.value })} className="bg-input border-gray-200 text-foreground" />
-              </div>
-              <div className="space-y-2">
-                <Label>Teléfono</Label>
+                <Label>Teléfono <span className="text-red-500">*</span></Label>
                 <Input value={editPatientData?.phone || ""} onChange={(e) => setEditPatientData({ ...editPatientData, phone: e.target.value })} className="bg-input border-gray-200" />
               </div>
               <div className="space-y-2">
-                <Label>Email</Label>
+                <Label>DNI (Opcional)</Label>
+                <Input value={editPatientData?.dni || ""} onChange={(e) => setEditPatientData({ ...editPatientData, dni: e.target.value })} className="bg-input border-gray-200" />
+              </div>
+              <div className="space-y-2">
+                <Label>Fecha de Nac. (Opcional)</Label>
+                <Input type="date" value={editPatientData?.birthdate || ""} onChange={(e) => setEditPatientData({ ...editPatientData, birthdate: e.target.value })} className="bg-input border-gray-200 text-foreground" />
+              </div>
+              <div className="space-y-2">
+                <Label>Email (Opcional)</Label>
                 <Input type="email" value={editPatientData?.email || ""} onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })} className="bg-input border-gray-200" />
               </div>
             </div>
-            <Button onClick={handleUpdatePatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!editPatientData?.name || !editPatientData?.phone || !editPatientData?.dni}>
+            {/* BOTÓN FLEXIBLE: Solo requiere Nombre y Teléfono */}
+            <Button onClick={handleUpdatePatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!editPatientData?.name || !editPatientData?.phone}>
               Guardar Cambios
             </Button>
           </div>
@@ -1235,7 +1110,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         isAttended ? 'opacity-50 grayscale border-gray-100' : 'border-gray-200 hover:border-[#16A34A]/30'
                       }`}
                     >
-                      {/* Tachado Overlay if attended */}
                       {isAttended && <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/20 -translate-y-1/2 rounded-full pointer-events-none z-10"></div>}
                       
                       <div className="flex items-center gap-4 z-0">
@@ -1266,9 +1140,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                             }
                             if (apt.status === 'confirmado') {
                               return <Badge className="bg-emerald-500 text-white font-bold text-[10px] uppercase">Confirmado</Badge>;
-                            }
-                            if (apt.status === 'cancelado' || (apt.status as string) === 'cancelled') {
-                              return <Badge className="bg-red-100/80 text-red-600 border-red-200 font-bold text-[10px] uppercase">Cancelado</Badge>;
                             }
                             return <Badge variant="outline">{apt.status}</Badge>;
                           })()}
@@ -1306,8 +1177,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               }
               if (byMethod[s.paymentMethod] !== undefined) {
                  byMethod[s.paymentMethod] += s.total;
-              } else {
-                 byMethod[s.paymentMethod] = s.total;
               }
             });
 
@@ -1320,128 +1189,23 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="bg-gradient-to-br from-[#16A34A] to-[#14532D] p-8 rounded-2xl border border-emerald-500/30 text-center shadow-lg relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400 rounded-full mix-blend-overlay filter blur-2xl opacity-40"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500 rounded-full mix-blend-overlay filter blur-xl opacity-40"></div>
-                    
                     <p className="relative z-10 text-xs sm:text-sm text-emerald-100/90 font-bold uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
                     <p className="relative z-10 text-5xl sm:text-6xl font-black text-white drop-shadow-md">${totalIncome.toLocaleString()}</p>
-                    <p className="relative z-10 text-xs text-[#B68C5C]/90 mt-4 mx-auto font-medium max-w-md">No incluye pagos realizados con Gift Cards (ya se cobraron al ser adquiridas).</p>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-shadow group">
-                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2 group-hover:text-[#16A34A] transition-colors">Efectivo</p>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
+                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Efectivo</p>
                        <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.efectivo.toLocaleString()}</p>
                     </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-shadow group">
-                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2 group-hover:text-[#16A34A] transition-colors">Transferencia</p>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
+                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Transferencia</p>
                        <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
                     </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-shadow group">
-                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2 group-hover:text-[#16A34A] transition-colors">Tarjeta (Déb/Créd)</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-shadow group">
-                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2 group-hover:text-[#16A34A] transition-colors">Código QR</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.qr.toLocaleString()}</p>
-                    </div>
                   </div>
-
-                  {byMethod.gift_card > 0 && (
-                    <div className="mt-4 p-4 border border-emerald-500/30 bg-emerald-500/10 rounded-xl flex items-center justify-between">
-                       <div className="flex items-center gap-2">
-                         <span className="text-emerald-400 font-bold text-sm">Crédito de Gift Cards consumido hoy:</span>
-                       </div>
-                       <span className="text-emerald-400 font-bold">${byMethod.gift_card.toLocaleString()}</span>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             );
-          })()}
-          {mainTab === "comisiones" && (() => {
-            const currentMonth = new Date().getMonth()
-            const salesCount = sales.reduce((total, sale) => {
-              const saleDate = new Date(sale.date)
-              if (saleDate.getMonth() !== currentMonth) return total
-              return total + sale.items.filter(item => item.soldBy === "recepcion").reduce((sum, item) => sum + item.quantity, 0)
-            }, 0)
-    
-            let currentCommission = 0
-            let nextTarget = 0
-            let nextCommission = 0
-    
-            if (salesCount >= 21) {
-              currentCommission = 20
-              nextTarget = 999
-              nextCommission = 20
-            } else if (salesCount >= 11) {
-              currentCommission = 15
-              nextTarget = 21
-              nextCommission = 20
-            } else if (salesCount >= 1) {
-              currentCommission = 10
-              nextTarget = 11
-              nextCommission = 15
-            } else {
-              currentCommission = 0
-              nextTarget = 1
-              nextCommission = 10
-            }
-    
-            const tierInfo = {
-              missing: nextTarget === 999 ? 0 : nextTarget - salesCount,
-              label: nextTarget === 999 ? "Nivel Máximo (20%)" : `${nextCommission}% de comisión`,
-              color: salesCount >= 21 ? "bg-[#B68C5C]" : (salesCount >= 11 ? "bg-emerald-400" : "bg-blue-400")
-            }
-    
-            const maxProgress = 30
-            const progressValue = Math.min((salesCount / maxProgress) * 100, 100)
-    
-            return (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-[#16A34A]">Equipo Administrativo</h2>
-                <Card className="bg-white text-foreground border border-[#16A34A]/30 overflow-hidden shadow-xl rounded-2xl">
-                  <CardHeader className="py-3 border-b border-[#16A34A]/30 bg-[#F0FDF4] text-center">
-                    <CardTitle className="text-xs font-bold text-[#14532D] uppercase tracking-wider flex items-center justify-center gap-2">
-                      <Award className="h-4 w-4 text-[#16A34A]" /> Objetivo de Ventas (Recepción)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-5 space-y-5">
-                    <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#16A34A]/20">
-                      <div className="space-y-1">
-                        <p className="text-[10px] text-gray-500 uppercase font-medium">Unidades Vendidas</p>
-                        <p className="text-4xl font-extrabold text-foreground tracking-tighter">{salesCount}</p>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión Actual</p>
-                        <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5 border-none">
-                          {currentCommission}%
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-600 font-medium">Progreso al siguiente nivel</span>
-                        {tierInfo.missing > 0 && (
-                          <span className="text-foreground font-bold flex items-center gap-1.5">
-                            <Star className="h-3 w-3 text-green-500 fill-green-500" />
-                            ¡Faltan {tierInfo.missing} para el {tierInfo.label}!
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative">
-                        <Progress value={progressValue} className="h-3 bg-[#DCFCE7]" />
-                        <div className="absolute top-0 left-[32%] h-3 w-0.5 bg-black/40"></div>
-                        <div className="absolute top-0 left-[67%] h-3 w-0.5 bg-black/40"></div>
-                      </div>
-                      <p className="text-[10px] text-gray-400 italic">Las comisiones representan las ventas de insumos de toda el área de Caja y Mostrador agrupadas bajo este mes.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )
           })()}
         </div>
       </div>
