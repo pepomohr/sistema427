@@ -302,23 +302,31 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   resetProfessionalPin: async (id) => {
-    // 1. Limpiar en Supabase
-    const { error } = await supabase
-      .from('professionals')
-      .update({ pin: null })
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error reseteando PIN en Supabase:', error);
-    }
-
-    // 2. Limpiar en el estado local
+    // 1. Limpieza Local Inmediata (Para que Nico vea el cambio aunque falle la red)
     set(state => ({
-      professionals: state.professionals.map(p => p.id === id ? { ...p, pin: null } : p)
+      professionals: state.professionals.map(p => 
+        p.id === id ? { ...p, pin: null } : p
+      )
     }));
 
-    // 3. Tip importante: Como el PIN se guarda en localStorage del dispositivo de la profesional,
-    // esto servirá cuando ella intente entrar y el sistema vea que en la DB el PIN es null.
+    // 2. Limpieza de LocalStorage del Administrador (Por si las moscas)
+    localStorage.removeItem(`c427_pins_${id}`);
+
+    // 3. Intento de Update en Supabase con Error Handling Detallado
+    try {
+      const { error } = await supabase
+        .from('professionals')
+        .update({ pin: null })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error de Supabase resetProfessionalPin:', error.message, '| Detalle:', error.details);
+      } else {
+        console.log(`PIN de profesional ${id} reseteado en la nube.`);
+      }
+    } catch (err) {
+      console.error('Fallo crítico de conexión al resetear PIN:', err);
+    }
   },
 
   addProfessional: async (prof) => {
@@ -526,6 +534,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
       if (updates.priceList !== undefined) up.price_list = updates.priceList
       if (updates.stock !== undefined) up.stock = updates.stock
+      if (updates.category !== undefined) up.category = updates.category
       const { error } = await supabase.from('products').update(up).eq('id', id)
       if (!error) set(state => ({ products: state.products.map(p => p.id === id ? { ...p, ...updates } : p) }))
     } catch (err) { console.error(err) }
