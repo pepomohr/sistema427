@@ -92,6 +92,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     fetchProducts,
     fetchAppointments,
     fetchProfessionals,
+    fetchOffers,
     getProfessionalsForService,
     startAttention,
     cancelAppointment,
@@ -158,7 +159,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     if (typeof fetchProducts === 'function') fetchProducts()
     if (typeof fetchAppointments === 'function') fetchAppointments()
     if (typeof fetchProfessionals === 'function') fetchProfessionals()
-  }, [fetchPatients, fetchServices, fetchProducts, fetchAppointments, fetchProfessionals])
+    if (typeof fetchOffers === 'function') fetchOffers()
+  }, [fetchPatients, fetchServices, fetchProducts, fetchAppointments, fetchProfessionals, fetchOffers])
 
   useEffect(() => {
     let active = true;
@@ -1081,6 +1083,20 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="pt-2 flex flex-col gap-2 relative z-10">
+                          <Label>Aplicar Oferta</Label>
+                          <Select value={checkoutOfferId || "none"} onValueChange={(val) => setCheckoutOfferId(val === "none" ? "" : val)}>
+                            <SelectTrigger className="bg-input border-[#16A34A]/40 h-10"><SelectValue placeholder="Sin oferta" /></SelectTrigger>
+                            <SelectContent className="bg-card border-gray-200 z-[100]">
+                              <SelectItem value="none">Sin Descuento</SelectItem>
+                              {offers.map(o => (
+                                <SelectItem key={o.id} value={o.id}>
+                                  {o.name} (-{o.discountPercentage}%)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                       <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col justify-between h-full">
                         <div className="space-y-1 text-right">
@@ -1165,6 +1181,23 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Aplicar Oferta</Label>
+                  <Select value={directSaleOfferId || "none"} onValueChange={(val) => setDirectSaleOfferId(val === "none" ? "" : val)}>
+                    <SelectTrigger className="bg-input border-gray-200 text-foreground h-10">
+                      <SelectValue placeholder="Sin oferta" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[90]">
+                      <SelectItem value="none">Sin Descuento</SelectItem>
+                      {offers.map(o => (
+                        <SelectItem key={o.id} value={o.id}>
+                          {o.name} (-{o.discountPercentage}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {directSaleCart.length > 0 && (

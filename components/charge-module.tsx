@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useClinicStore, type Sale, type SaleItem } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -47,6 +47,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     completeAppointment,
     addSale,
     updatePatientGiftCardBalance,
+    fetchOffers,
   } = useClinicStore()
 
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
@@ -67,6 +68,8 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   const [directSaleProductMenuOpen, setDirectSaleProductMenuOpen] = useState(false)
   const [profSearch, setProfSearch] = useState<Record<number, string>>({})
   const [profMenuOpen, setProfMenuOpen] = useState<Record<number, boolean>>({})
+  const [directSaleOfferId, setDirectSaleOfferId] = useState<string>("")
+  const [directSalePaymentMethod, setDirectSalePaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
 
   const isGiftCardGeneralItem = (item: any) => ((item?.itemName || "").toLowerCase().includes("gift card general"))
   const getDirectSaleUnitPrice = (item: any, method: "efectivo" | "tarjeta" | "transferencia") => {
@@ -76,9 +79,23 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     return method === "efectivo" ? (item.priceCashReference || item.price) : item.price
   }
 
+  const directSaleDisplayTotal = useMemo(() => {
+    if (directSaleItems.length === 0) return 0
+    const methodForPreview = directSalePaymentMethod || "efectivo"
+    const subtotal = directSaleItems.reduce((sum, i) => sum + (getDirectSaleUnitPrice(i, methodForPreview) * i.quantity), 0)
+    if (!directSaleOfferId) return subtotal
+    const offer = offers.find(o => o.id === directSaleOfferId)
+    if (!offer) return subtotal
+    return Math.max(0, Math.round(subtotal * (1 - offer.discountPercentage / 100)))
+  }, [directSaleItems, directSalePaymentMethod, directSaleOfferId, offers])
+
   const pendingCharges = (appointments || []).filter(
     (a) => a.status === "pendiente_cobro" || a.status === "pending_payment"
   )
+
+  useEffect(() => {
+    if (typeof fetchOffers === "function") fetchOffers()
+  }, [fetchOffers])
 
   const handleOpenCheckout = (apt: any) => {
     setActiveApt(apt)
@@ -160,12 +177,17 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
         return;
       }
 
-      const total = saleItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
+      const subtotal = saleItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
+      let total = subtotal
+      if (directSaleOfferId && directSaleOfferId !== "none") {
+        const offer = offers.find(o => o.id === directSaleOfferId)
+        if (offer) total = Math.max(0, Math.round(subtotal * (1 - offer.discountPercentage / 100)))
+      }
       await addSale({ type: "direct", items: saleItems as any, total, paymentMethod: method, processedBy: "Recepción" })
       if (giftCardAmount > 0 && directSalePatient) {
         await updatePatientGiftCardBalance(directSalePatient, giftCardAmount)
       }
-      setDirectSaleItems([]); setDirectSalePatient(""); setShowDirectSaleModal(false);
+      setDirectSaleItems([]); setDirectSalePatient(""); setDirectSaleOfferId(""); setShowDirectSaleModal(false);
     }
   }
 
@@ -385,12 +407,45 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
               ))}
             </div>
             {directSaleItems.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-black font-bold">Aplicar Oferta</Label>
+                <Select value={directSaleOfferId || "none"} onValueChange={(val) => setDirectSaleOfferId(val === "none" ? "" : val)}>
+                  <SelectTrigger className="bg-input border-gray-200 text-black font-bold">
+                    <SelectValue placeholder="Sin oferta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin Descuento</SelectItem>
+                    {offers.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name} (-{o.discountPercentage}%)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {directSaleItems.length > 0 && (
               <div className="pt-4 border-t border-gray-200 space-y-3">
-                <div className="flex justify-between text-xl font-black text-black"><span>Total:</span><span className="text-[#16A34A]">${directSaleItems.reduce((s, i) => s + (isGiftCardGeneralItem(i) ? ((i.customUnitPrice || 0) * i.quantity) : ((i.priceCashReference || i.price || 0) * i.quantity)), 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-xl font-black text-black"><span>Total:</span><span className="text-[#16A34A]">${directSaleDisplayTotal.toLocaleString()}</span></div>
                 <div className="grid grid-cols-3 gap-2">
-                  <Button onClick={() => handleProcessDirectSale("efectivo")} className="bg-green-600 font-black">EFECTIVO</Button>
-                  <Button onClick={() => handleProcessDirectSale("tarjeta")} className="bg-blue-600 font-black">TARJETA</Button>
-                  <Button onClick={() => handleProcessDirectSale("transferencia")} className="bg-purple-600 font-black">TRANSF.</Button>
+                  <Button
+                    onClick={() => { setDirectSalePaymentMethod("efectivo"); handleProcessDirectSale("efectivo") }}
+                    className="bg-green-600 font-black"
+                  >
+                    EFECTIVO
+                  </Button>
+                  <Button
+                    onClick={() => { setDirectSalePaymentMethod("tarjeta"); handleProcessDirectSale("tarjeta") }}
+                    className="bg-blue-600 font-black"
+                  >
+                    TARJETA
+                  </Button>
+                  <Button
+                    onClick={() => { setDirectSalePaymentMethod("transferencia"); handleProcessDirectSale("transferencia") }}
+                    className="bg-purple-600 font-black"
+                  >
+                    TRANSF.
+                  </Button>
                 </div>
               </div>
             )}

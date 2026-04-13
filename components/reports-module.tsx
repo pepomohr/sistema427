@@ -43,6 +43,14 @@ export function ReportsModule() {
   const [newExpenseDesc, setNewExpenseDesc] = useState("")
   const [newExpenseAmount, setNewExpenseAmount] = useState("")
 
+  const getAppointmentCommissionBase = (apt: any) => {
+    if (!Array.isArray(apt?.services)) return 0
+    return apt.services.reduce((sum: number, svc: any) => {
+      if (!svc || typeof svc === "string") return sum
+      return sum + Number(svc.priceCash ?? svc.price ?? 0)
+    }, 0)
+  }
+
   const handleAddExpense = () => {
     if(newExpenseDesc && newExpenseAmount) {
       addExpense({ description: newExpenseDesc, amount: parseFloat(newExpenseAmount) })
@@ -58,7 +66,7 @@ export function ReportsModule() {
       const profAppointments = appointments.filter(
         (a) => a.professionalId === prof.id && a.status === "completado"
       )
-      const totalBilled = profAppointments.reduce((sum, a) => sum + a.totalAmount, 0)
+      const totalBilled = profAppointments.reduce((sum, a) => sum + getAppointmentCommissionBase(a), 0)
       const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
       totalCommissions += totalBilled * (commissionPercent / 100)
     })
@@ -94,7 +102,7 @@ export function ReportsModule() {
         const prof = professionals.find((p) => p.id === apt.professionalId)
         if (prof) {
           const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
-          dayCommissions += apt.totalAmount * (commissionPercent / 100)
+          dayCommissions += getAppointmentCommissionBase(apt) * (commissionPercent / 100)
         }
       })
       
@@ -138,7 +146,7 @@ export function ReportsModule() {
       const profAppointments = appointments.filter(
         (a) => a.professionalId === prof.id && a.status === "completado"
       )
-      const totalBilled = profAppointments.reduce((sum, a) => sum + a.totalAmount, 0)
+      const totalBilled = profAppointments.reduce((sum, a) => sum + getAppointmentCommissionBase(a), 0)
       const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
       const commission = totalBilled * (commissionPercent / 100)
       return {
