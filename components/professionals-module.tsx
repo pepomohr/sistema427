@@ -188,7 +188,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       time: schedulingTime,
       services: [{ serviceId: service?.id, serviceName: service?.name, price: service?.price, priceCash: (service as any)?.priceCash || service?.price }],
       products: [],
-      status: Number(schedulingPaidAmount) > 0 ? "confirmado" : "programado",
+      status: "programado",
       totalAmount: service?.price || 0,
       paidAmount: Number(schedulingPaidAmount) || 0,
     })

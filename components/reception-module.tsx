@@ -557,7 +557,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           time: schedulingTime,
           services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
           products: [],
-          status: Number(schedulingPaidAmount) > 0 ? "confirmado" : "programado",
+          status: "programado",
           totalAmount: service.price,
           paidAmount: Number(schedulingPaidAmount) || 0,
         })
@@ -583,6 +583,19 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     })
     return grouped
   }, [services])
+
+  const productCategories = useMemo(() => {
+    const cats = Array.from(new Set((products || []).map((p: any) => p.category).filter(Boolean)))
+    return cats.sort((a, b) => a.localeCompare(b))
+  }, [products])
+
+  const filteredDirectSaleProducts = useMemo(() => {
+    return (products || []).filter((p: any) => {
+      const matchesCategory = !directSaleProdCat || p.category === directSaleProdCat
+      const matchesSearch = !directSaleProdSearch || p.name.toLowerCase().includes(directSaleProdSearch.toLowerCase())
+      return matchesCategory && matchesSearch
+    })
+  }, [products, directSaleProdCat, directSaleProdSearch])
 
   return (
     <div className="space-y-6">
@@ -1080,9 +1093,23 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <Label className="text-[#16A34A] uppercase text-xs font-bold tracking-wider">Vender Producto</Label>
                 <div className="bg-secondary/10 p-3 rounded-lg border border-dashed border-gray-200 space-y-2">
                   <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide scroll-smooth snap-x">
-                    <Badge variant={directSaleProdCat === 'COMBOS' ? "default" : "outline"} onClick={() => { setDirectSaleProdCat('COMBOS'); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start ${directSaleProdCat === 'COMBOS' ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
-                      Combos
+                    <Badge
+                      variant={!directSaleProdCat ? "default" : "outline"}
+                      onClick={() => { setDirectSaleProdCat(""); setDirectSaleProdSearch(""); }}
+                      className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start ${!directSaleProdCat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                    >
+                      Todas
                     </Badge>
+                    {productCategories.map(cat => (
+                      <Badge
+                        key={cat}
+                        variant={directSaleProdCat === cat ? "default" : "outline"}
+                        onClick={() => { setDirectSaleProdCat(cat); setDirectSaleProdSearch(""); }}
+                        className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start ${directSaleProdCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}
+                      >
+                        {cat}
+                      </Badge>
+                    ))}
                   </div>
                   <div className="relative">
                     <Input
@@ -1090,8 +1117,32 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       value={directSaleProdSearch}
                       onChange={(e) => { setDirectSaleProdSearch(e.target.value); setDirectSaleProdMenuOpen(true) }}
                       onFocus={() => setDirectSaleProdMenuOpen(true)}
+                      onBlur={() => setTimeout(() => setDirectSaleProdMenuOpen(false), 180)}
                       className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 h-10 text-sm"
                     />
+                    {directSaleProdMenuOpen && (
+                      <div className="absolute bottom-[42px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[220px] overflow-y-auto z-[80]">
+                        {filteredDirectSaleProducts.length === 0 ? (
+                          <p className="px-3 py-3 text-sm text-gray-500">No hay productos para ese filtro.</p>
+                        ) : (
+                          filteredDirectSaleProducts.map((p: any) => (
+                            <button
+                              key={`reception-direct-${p.id}`}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-secondary hover:text-white text-black font-semibold border-b border-gray-100 last:border-b-0 flex justify-between"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                handleAddProductToDirectSale(p.id, 'product')
+                                setDirectSaleProdSearch("")
+                                setDirectSaleProdMenuOpen(false)
+                              }}
+                            >
+                              <span className="truncate mr-3">{p.name}</span>
+                              <span className="text-[#16A34A] font-bold">${p.priceCash}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1137,8 +1188,13 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     </div>
                     <p className="text-sm text-emerald-100 uppercase tracking-widest">Total a cobrar</p>
                     <p className="text-4xl font-extrabold text-white">${Math.round(directSaleTotal).toLocaleString()}</p>
-                    <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold" onClick={() => {
-                      addSale({
+                    <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold" onClick={async () => {
+                      const giftCardCredit = directSaleCart.reduce((acc, item) => {
+                        if (!isGeneralGiftCardProduct(item)) return acc
+                        return acc + (getDirectSaleUnitPrice(item) * item.quantity)
+                      }, 0)
+
+                      await addSale({
                         type: 'direct',
                         items: directSaleCart.map(i => ({
                           type: i.type,
@@ -1153,6 +1209,15 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         paymentMethod: directSalePaymentMethod as any,
                         processedBy: "Recepción"
                       })
+
+                      if (selectedPatient && giftCardCredit > 0) {
+                        await updatePatientGiftCardBalance(selectedPatient.id, giftCardCredit)
+                        setSelectedPatient((prev: any) => prev ? {
+                          ...prev,
+                          giftCardBalance: (prev.giftCardBalance || 0) + giftCardCredit
+                        } : prev)
+                      }
+
                       setDirectSaleCart([])
                     }}>
                       Confirmar Venta

@@ -45,7 +45,8 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     products = [],
     offers = [],
     completeAppointment,
-    addSale, 
+    addSale,
+    updatePatientGiftCardBalance,
   } = useClinicStore()
 
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
@@ -66,6 +67,14 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   const [directSaleProductMenuOpen, setDirectSaleProductMenuOpen] = useState(false)
   const [profSearch, setProfSearch] = useState<Record<number, string>>({})
   const [profMenuOpen, setProfMenuOpen] = useState<Record<number, boolean>>({})
+
+  const isGiftCardGeneralItem = (item: any) => ((item?.itemName || "").toLowerCase().includes("gift card general"))
+  const getDirectSaleUnitPrice = (item: any, method: "efectivo" | "tarjeta" | "transferencia") => {
+    if (isGiftCardGeneralItem(item) && typeof item.customUnitPrice === "number" && item.customUnitPrice > 0) {
+      return item.customUnitPrice
+    }
+    return method === "efectivo" ? (item.priceCashReference || item.price) : item.price
+  }
 
   const pendingCharges = (appointments || []).filter(
     (a) => a.status === "pendiente_cobro" || a.status === "pending_payment"
@@ -127,12 +136,35 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     }
   }
 
-  const handleProcessDirectSale = (method: "efectivo" | "tarjeta" | "transferencia") => {
+  const handleProcessDirectSale = async (method: "efectivo" | "tarjeta" | "transferencia") => {
     const missingSeller = directSaleItems.some(i => i.type === 'product' && !i.soldBy)
     if (missingSeller) { alert("Por favor, selecciona qué profesional vendió cada producto."); return; }
     if (directSaleItems.length > 0) {
-      const total = directSaleItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
-      addSale({ type: "direct", items: directSaleItems, total, paymentMethod: method, processedBy: "Recepción" })
+      const hasInvalidGiftCardAmount = directSaleItems.some(i => isGiftCardGeneralItem(i) && !(typeof i.customUnitPrice === "number" && i.customUnitPrice > 0))
+      if (hasInvalidGiftCardAmount) {
+        alert("Ingresá un monto válido para la Gift Card General.");
+        return;
+      }
+
+      const saleItems = directSaleItems.map(i => ({
+        ...i,
+        price: getDirectSaleUnitPrice(i, method),
+        priceCashReference: getDirectSaleUnitPrice(i, method),
+      }))
+
+      const giftCardAmount = directSaleItems.reduce((sum, i) => {
+        return isGiftCardGeneralItem(i) ? sum + (getDirectSaleUnitPrice(i, method) * i.quantity) : sum
+      }, 0)
+      if (giftCardAmount > 0 && !directSalePatient) {
+        alert("Para acreditar una Gift Card, seleccioná el paciente.");
+        return;
+      }
+
+      const total = saleItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
+      await addSale({ type: "direct", items: saleItems as any, total, paymentMethod: method, processedBy: "Recepción" })
+      if (giftCardAmount > 0 && directSalePatient) {
+        await updatePatientGiftCardBalance(directSalePatient, giftCardAmount)
+      }
       setDirectSaleItems([]); setDirectSalePatient(""); setShowDirectSaleModal(false);
     }
   }
@@ -227,7 +259,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-black" />
                   <Input placeholder="Escribir producto..." className="pl-9 bg-white border-gray-300 text-black font-bold" value={prodSearch} onChange={(e) => { setProdSearch(e.target.value); setShowProdMenu(true); }} onFocus={() => setShowProdMenu(true)} />
                   {showProdMenu && prodSearch.length > 0 && (
-                    <div className="absolute top-full left-0 w-full bg-white border border-gray-300 shadow-2xl rounded-md z-[100] max-h-48 overflow-y-auto">
+                    <div className="absolute bottom-full mb-1 left-0 w-full bg-white border border-gray-300 shadow-2xl rounded-md z-[100] max-h-48 overflow-y-auto">
                       {products.filter(p => p.name.toLowerCase().includes(prodSearch.toLowerCase())).map(p => (
                         <div key={p.id} className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-0 flex justify-between font-black text-black" onClick={() => { setExtraProducts([...extraProducts, { ...p, quantity: 1 }]); setProdSearch(""); setShowProdMenu(false); }}>
                           <span>{p.name}</span>
@@ -284,11 +316,26 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
         <DialogContent className="bg-card border-gray-200 text-foreground max-w-lg">
           <DialogHeader><DialogTitle className="text-[#16A34A]">Venta Directa de Productos</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label className="text-black font-bold">Paciente (solo si incluye Gift Card)</Label>
+              <Select value={directSalePatient} onValueChange={setDirectSalePatient}>
+                <SelectTrigger className="bg-input border-gray-200 text-black font-bold">
+                  <SelectValue placeholder="Seleccionar paciente (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} {p.dni ? `- DNI ${p.dni}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Label className="text-black font-bold">Seleccionar Producto</Label>
             <div className="relative">
               <Input placeholder="Escribir producto..." value={directSaleProductSearch} onChange={(e) => { setDirectSaleProductSearch(e.target.value); setDirectSaleProductMenuOpen(true) }} onFocus={() => setDirectSaleProductMenuOpen(true)} onBlur={() => setTimeout(() => setDirectSaleProductMenuOpen(false), 200)} className="bg-input border-gray-200 text-black font-bold" />
               {directSaleProductMenuOpen && (
-                <div className="absolute top-[45px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[200px] overflow-y-auto z-[60]">
+                <div className="absolute bottom-[45px] left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-[200px] overflow-y-auto z-[60]">
                   {products.filter(p => !directSaleProductSearch || p.name.toLowerCase().includes(directSaleProductSearch.toLowerCase())).map(p => (
                       <button key={`charge-prod-${p.id}`} className="w-full text-left px-3 py-2 text-sm hover:bg-secondary hover:text-white text-black font-bold border-b border-gray-100 flex justify-between" onClick={() => { handleAddProductToDirectSale(p.id); setDirectSaleProductSearch(""); setDirectSaleProductMenuOpen(false) }}>
                         <span>{p.name}</span> <span className="text-[#16A34A]">${p.priceCash}</span>
@@ -301,6 +348,25 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
               {directSaleItems.map((item, idx) => (
                 <div key={idx} className="p-3 bg-secondary/15 rounded-lg space-y-3">
                   <div className="flex justify-between items-center text-black font-bold"><span>{item.itemName}</span><Button variant="ghost" size="sm" onClick={() => setDirectSaleItems(directSaleItems.filter((_, i) => i !== idx))}><X className="h-4 w-4"/></Button></div>
+                  {isGiftCardGeneralItem(item) && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-black text-[#16A34A]">Monto Gift Card</p>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Ej: 50000"
+                        value={item.customUnitPrice ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          setDirectSaleItems(prev => prev.map((it, i) => i === idx ? {
+                            ...it,
+                            customUnitPrice: val === "" ? undefined : Number(val)
+                          } : it))
+                        }}
+                        className="h-8 text-xs bg-input border-gray-200 text-black font-bold"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase font-black text-[#16A34A]">¿Quién lo vendió?</p>
                     <div className="relative">
@@ -320,7 +386,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
             </div>
             {directSaleItems.length > 0 && (
               <div className="pt-4 border-t border-gray-200 space-y-3">
-                <div className="flex justify-between text-xl font-black text-black"><span>Total:</span><span className="text-[#16A34A]">${directSaleItems.reduce((s, i) => s + (i.priceCashReference * i.quantity), 0).toLocaleString()}</span></div>
+                <div className="flex justify-between text-xl font-black text-black"><span>Total:</span><span className="text-[#16A34A]">${directSaleItems.reduce((s, i) => s + (isGiftCardGeneralItem(i) ? ((i.customUnitPrice || 0) * i.quantity) : ((i.priceCashReference || i.price || 0) * i.quantity)), 0).toLocaleString()}</span></div>
                 <div className="grid grid-cols-3 gap-2">
                   <Button onClick={() => handleProcessDirectSale("efectivo")} className="bg-green-600 font-black">EFECTIVO</Button>
                   <Button onClick={() => handleProcessDirectSale("tarjeta")} className="bg-blue-600 font-black">TARJETA</Button>
