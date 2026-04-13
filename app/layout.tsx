@@ -12,7 +12,11 @@ const lato = Lato({
 export const metadata: Metadata = {
   title: 'Consultorio C427 - Sistema de Gestión',
   description: 'Sistema de gestión avanzada para Consultorio C427',
-  generator: 'v0.app'
+  icons: {
+    icon: '/images/favicon.png',
+    shortcut: '/images/icon-192x192.png',
+    apple: '/images/apple-touch-icon.png',
+  }
 }
 
 export default function RootLayout({

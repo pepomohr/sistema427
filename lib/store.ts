@@ -193,7 +193,8 @@ interface ClinicStore {
   addSale: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>
   fetchSales: () => Promise<void>
   updateHourlyRate: (id: string, rate: number) => void
-  updateProfessional: (id: string, updates: Partial<Professional>) => void
+  updateProfessional: (id: string, updates: Partial<Professional>) => Promise<void>
+  setProfessionalPin: (id: string, pin: string) => Promise<boolean> // <-- EL FRANCOTIRADOR
   resetProfessionalPin: (id: string) => Promise<void>
   toggleProfessionalActive: (id: string) => void
   startAttention: (id: string) => void
@@ -228,6 +229,8 @@ interface ClinicStore {
   addCombo: (combo: Omit<Combo, 'id'>) => Promise<void>
   updateCombo: (id: string, updates: Partial<Combo>) => Promise<void>
   deleteCombo: (id: string) => Promise<void>
+  
+  subscribeToAppointments: () => () => void
 }
 
 export const useClinicStore = create<ClinicStore>((set, get) => ({
@@ -248,7 +251,6 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     set(state => ({ expenses: [...state.expenses, newExpense] }))
   },
 
-  // --- VENTAS CONECTADAS A SUPABASE ---
   fetchSales: async () => {
     try {
       const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false });
@@ -335,13 +337,50 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     });
   },
 
-  updateProfessional: (id, updates) => {
-    set(state => ({
-      professionals: state.professionals.map(p => p.id === id ? { ...p, ...updates } : p)
-    }));
-    supabase.from('professionals').update(updates).eq('id', id).then(({error}) => {
-       if(error) console.error('updateProfessional error:', error);
-    });
+  // LA FUNCIÓN FRANCOTIRADOR SOLO PARA EL PIN
+  setProfessionalPin: async (id, pin) => {
+    try {
+      console.log(`Guardando PIN para profesional ${id}...`);
+      const { error } = await supabase
+        .from('professionals')
+        .update({ pin: pin }) 
+        .eq('id', id);
+
+      if (error) {
+        console.error('[Supabase ERROR al guardar PIN]:', error.message);
+        return false;
+      }
+
+      set(state => ({
+        professionals: state.professionals.map(p => 
+          p.id === id ? { ...p, pin: pin } : p
+        )
+      }));
+      
+      console.log('¡PIN guardado con éxito en Supabase!');
+      return true;
+    } catch (err) {
+      console.error('[Error de red al guardar PIN]:', err);
+      return false;
+    }
+  },
+
+  updateProfessional: async (id, updates) => {
+    try {
+      const { error } = await supabase
+        .from('professionals')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set(state => ({
+        professionals: state.professionals.map(p => p.id === id ? { ...p, ...updates } : p)
+      }));
+      console.log('[updateProfessional] Guardado exitoso:', updates);
+    } catch (error) {
+      console.error('[updateProfessional] Error en Supabase:', error);
+    }
   },
 
   resetProfessionalPin: async (id) => {
@@ -515,8 +554,19 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   fetchServices: async () => {
     try {
-      const { data } = await supabase.from('services').select('*').limit(500);
-      if (data) set({ services: data.map((s: any) => ({ id: s.id, name: s.name, price: s.price, priceCash: s.price_cash || s.price, duration: s.duration || 60, category: s.category })) });
+      const { data, error } = await supabase.from('services').select('*').limit(500);
+      if (error) {
+        console.error('[fetchServices] Error:', error.message)
+        return
+      }
+      if (data) set({ services: data.map((s: any) => ({ 
+        id: s.id, 
+        name: s.name, 
+        price: s.price, 
+        priceCash: s.price_cash ?? s.price, 
+        duration: s.duration ?? 60, 
+        category: s.category 
+      })) });
     } catch (err) { console.error(err); }
   },
 
@@ -529,8 +579,31 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   addService: async (service) => {
     try {
-      const { data, error } = await supabase.from('services').insert([{ name: service.name, price: service.price, price_cash: service.priceCash, duration: service.duration, category: service.category }]).select().single()
-      if (!error && data) set(state => ({ services: [...state.services, { id: data.id, name: data.name, price: data.price, priceCash: data.price_cash || data.price, duration: data.duration || 60, category: data.category }]}))
+      const { data, error } = await supabase
+        .from('services')
+        .insert([{ 
+          name: service.name, 
+          price: service.price, 
+          price_cash: service.priceCash, 
+          duration: service.duration, 
+          category: service.category 
+        }])
+        .select()
+        .single()
+      if (error) {
+        console.error('[addService] Error Supabase:', error.message)
+        return
+      }
+      if (data) set(state => ({ 
+        services: [...state.services, { 
+          id: data.id, 
+          name: data.name, 
+          price: data.price, 
+          priceCash: data.price_cash ?? data.price, 
+          duration: data.duration ?? 60, 
+          category: data.category 
+        }]
+      }))
     } catch (err) { console.error(err) }
   },
 
@@ -541,9 +614,25 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       if (updates.price !== undefined) up.price = updates.price
       if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
       if (updates.category !== undefined) up.category = updates.category
+      if (updates.duration !== undefined) up.duration = Number(updates.duration)
+
+      console.log('[updateService] Mandando a Supabase:', { id, payload: up })
+
       const { error } = await supabase.from('services').update(up).eq('id', id)
-      if (!error) set(state => ({ services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) }))
-    } catch (err) { console.error(err) }
+
+      if (error) {
+        console.error('[updateService] Error Supabase:', error.message, error.details)
+        return
+      }
+
+      set(state => ({ 
+        services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) 
+      }))
+
+      console.log('[updateService] OK — duración guardada:', up.duration)
+    } catch (err) { 
+      console.error('[updateService] Fallo crítico:', err) 
+    }
   },
 
   deleteService: async (id) => {
@@ -581,15 +670,23 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   startAttention: (id) => {
-    set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'en_atencion' } : a) }))
+    supabase.from('appointments').update({ status: 'en_atencion' }).eq('id', id).then(() => {
+       set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'en_atencion' } : a) }))
+    })
   },
 
   finishAttention: (id, finalServices, finalProducts) => {
-    set((state) => {
-      let calcTotal = 0;
-      finalServices.forEach(s => calcTotal += s.price);
-      finalProducts.forEach(p => calcTotal += (p.price * p.quantity));
-      return { appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal } : a) };
+    let calcTotal = 0;
+    finalServices.forEach(s => calcTotal += s.price);
+    finalProducts.forEach(p => calcTotal += (p.price * p.quantity));
+    
+    supabase.from('appointments').update({ 
+      status: 'pendiente_cobro', 
+      services: finalServices, 
+      products: finalProducts, 
+      totalAmount: calcTotal 
+    }).eq('id', id).then(() => {
+      set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal } : a) }));
     })
   },
 
@@ -602,18 +699,19 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     apt.products?.forEach(p => saleItems.push({ type: 'product', itemId: p.productId, itemName: p.productName, price: method === 'efectivo' ? (p.priceCashReference || p.price) : p.price, priceCashReference: p.priceCashReference || p.price, quantity: p.quantity, soldBy: apt.professionalId }));
     extraProducts.forEach(p => saleItems.push({ type: 'product', itemId: p.product.id, itemName: p.product.name, price: method === 'efectivo' ? p.product.priceCash : p.product.priceList, priceCashReference: p.product.priceCash, quantity: p.quantity, soldBy: extraSoldBy || apt.professionalId }));
     
-    // Llamamos a addSale que ya está conectada a Supabase
     get().addSale({
       type: 'appointment',
       items: saleItems,
       total: finalTotal,
       paymentMethod: method,
       processedBy: "Recepción"
-    });
-
-    set((state) => ({
-      appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'completado', paidAmount: a.totalAmount } : a)
-    }));
+    }).then(() => {
+      supabase.from('appointments').update({ status: 'completado', paidAmount: finalTotal }).eq('id', id).then(() => {
+        set((state) => ({
+          appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'completado', paidAmount: finalTotal } : a)
+        }));
+      })
+    })
 
     if (method === 'gift_card') get().updatePatientGiftCardBalance(apt.patientId, -finalTotal);
   },
@@ -652,7 +750,6 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     } catch (err) { console.error(err); }
   },
 
-  // --- OFERTAS (SUPABASE) ---
   fetchOffers: async () => {
     try {
       const { data, error } = await supabase.from('offers').select('*');
@@ -688,7 +785,6 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     } catch (err) { console.error(err); }
   },
 
-  // --- COMBOS (SUPABASE) ---
   fetchCombos: async () => {
     try {
       const { data, error } = await supabase.from('combos').select('*');
@@ -726,4 +822,45 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     } catch (err) { console.error(err); }
   },
 
+  subscribeToAppointments: () => {
+    const channelName = `appointments-realtime-${Date.now()}`
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments' },
+        (payload) => {
+          console.log('[Realtime] Cambio recibido:', payload.eventType)
+
+          if (payload.eventType === 'INSERT') {
+            const newApt = { ...payload.new, date: new Date(payload.new.date) }
+            set(state => {
+              if (state.appointments.find(a => a.id === newApt.id)) return state
+              return { appointments: [...state.appointments, newApt] }
+            })
+          }
+
+          if (payload.eventType === 'UPDATE') {
+            const updated = { ...payload.new, date: new Date(payload.new.date) }
+            set(state => ({
+              appointments: state.appointments.map(a => a.id === updated.id ? updated : a)
+            }))
+          }
+
+          if (payload.eventType === 'DELETE') {
+            set(state => ({
+              appointments: state.appointments.filter(a => a.id !== payload.old.id)
+            }))
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] Estado de suscripción:', status)
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  },
 }))

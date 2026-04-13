@@ -85,7 +85,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     addPatient,
     updatePatient,
     addAppointment,
-    addSale,
+    updateAppointment,
     searchPatients,
     fetchPatients,
     fetchServices,
@@ -95,8 +95,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     getProfessionalsForService,
     startAttention,
     cancelAppointment,
-    updateAppointment,
-    updatePatientGiftCardBalance
+    updatePatientGiftCardBalance,
+    addSale
   } = useClinicStore()
 
   const mainTab = activeView
@@ -371,51 +371,121 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     return getProfessionalsForService(schedulingService) || []
   }, [schedulingService, getProfessionalsForService])
 
+  // ============================================
+  // HELPER: Obtiene la duración de un servicio
+  // Soporta dos formatos:
+  // NUEVO: { serviceId: "SER-070", serviceName: "...", price, priceCash }
+  // MEDIO: "MiradaPerfecta120" (string comprimido sin espacios)
+  // ============================================
+  const compressName = (s: string): string =>
+    s.toLowerCase().replace(/[\s\-_()&+.,\/]/g, '')
+
+  const getServiceDuration = (aptServiceInfo: any): number => {
+    if (!aptServiceInfo || !services || services.length === 0) return 30
+
+    // FORMATO NUEVO: objeto con serviceId — búsqueda directa por ID
+    if (typeof aptServiceInfo === 'object' && aptServiceInfo.serviceId) {
+      const byId = services.find(
+        s => s.id?.toLowerCase() === String(aptServiceInfo.serviceId).toLowerCase()
+      )
+      if (byId?.duration) return Number(byId.duration) || 30
+
+      // Fallback por nombre exacto
+      if (aptServiceInfo.serviceName) {
+        const byName = services.find(
+          s => s.name?.trim().toLowerCase() === aptServiceInfo.serviceName.trim().toLowerCase()
+        )
+        if (byName?.duration) return Number(byName.duration) || 30
+      }
+    }
+
+    // FORMATO MEDIO: string comprimido como "MiradaPerfecta120" o "Facial/Escote"
+    if (typeof aptServiceInfo === 'string') {
+      const compressed = compressName(aptServiceInfo)
+      const found = services.find(s => {
+        if (!s.name) return false
+        const compressedService = compressName(s.name)
+        return compressedService.includes(compressed) || compressed.includes(compressedService)
+      })
+      if (found?.duration) return Number(found.duration) || 30
+    }
+
+    return 30
+  }
+
+  // ============================================
+  // LOGICA DISPONIBILIDAD: VERSIÓN CORREGIDA
+  // ============================================
   const availableSlots = useMemo(() => {
-    if (!schedulingProfessional || !schedulingDate || !professionals) return []
+    if (!schedulingProfessional || !schedulingDate || !professionals || !appointments || !services) return []
     
     const professional = professionals.find((p) => p.id === schedulingProfessional)
     if (!professional) return []
     
-    let intervals = [];
-    const exceptionSchedules = professional.exceptions?.[schedulingDate];
-    if (exceptionSchedules !== undefined) {
-      intervals = exceptionSchedules;
-    } else {
-      const defaultSchedule = { start: "09:00", end: "20:00" }
-      const date = new Date(schedulingDate + 'T12:00:00')
-      const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
-      
-      const daySchedules = (professional.schedule as any)?.[dayName]
-      intervals = Array.isArray(daySchedules) ? daySchedules : (daySchedules ? [daySchedules] : [defaultSchedule])
+    // 1. Crear todos los slots posibles de 30 min (9:00 a 20:30)
+    const allPossibleSlots: string[] = []
+    for (let h = 9; h < 21; h++) {
+      allPossibleSlots.push(`${h.toString().padStart(2, "0")}:00`)
+      allPossibleSlots.push(`${h.toString().padStart(2, "0")}:30`)
     }
     
-    const allSlots: string[] = []
-    
-    intervals.forEach((interval: any) => {
-      if(!interval || !interval.start || !interval.end) return;
-      const startHour = parseInt(interval.start.split(":")[0])
-      const endHour = parseInt(interval.end.split(":")[0])
-      
-      for (let h = startHour; h < endHour; h++) {
-        allSlots.push(`${h.toString().padStart(2, "0")}:00`)
-        allSlots.push(`${h.toString().padStart(2, "0")}:30`)
+    // 2. Filtrar turnos del día para ese profesional (excluyendo cancelados)
+    const dateForFilter = (
+      schedulingDate.includes('T')
+        ? new Date(schedulingDate)
+        : new Date(schedulingDate + 'T12:00:00')
+    ).toDateString()
+
+    const bookedAppointments = appointments.filter(a =>
+      a.professionalId === schedulingProfessional &&
+      new Date(a.date).toDateString() === dateForFilter &&
+      normalizeStatus(a.status as string) !== "cancelado" &&
+      normalizeStatus(a.status as string) !== "cancelled"
+    )
+
+    // 3. Para cada turno reservado, calcular qué slots bloquea
+    const blockedTimes = new Set<string>()
+
+    bookedAppointments.forEach(apt => {
+      // Parsear la hora de inicio del turno
+      const timeParts = apt.time.split(':')
+      const startH = parseInt(timeParts[0], 10)
+      const startM = parseInt(timeParts[1], 10)
+      const startInMinutes = startH * 60 + startM
+
+      // Obtener duración real usando el helper mejorado
+      let duration = 30
+      if (Array.isArray(apt.services) && apt.services.length > 0) {
+        // Usamos el primer servicio para calcular la duración
+        // (si en el futuro hay múltiples servicios, sumar sus duraciones)
+        duration = getServiceDuration(apt.services[0])
+      } else if (apt.serviceId) {
+        // Compatibilidad con turnos guardados con serviceId directo
+        duration = getServiceDuration(apt.serviceId)
       }
+
+      const endInMinutes = startInMinutes + duration
+
+      // DEBUG: descomentar para verificar en consola
+      // console.log(`[Turno bloqueado] ${apt.time} | duración: ${duration}min | bloquea hasta: ${Math.floor(endInMinutes/60)}:${String(endInMinutes%60).padStart(2,'0')}`)
+
+      // Bloquear cada slot que caiga DENTRO del rango del turno
+      allPossibleSlots.forEach(slot => {
+        const slotParts = slot.split(':')
+        const slotH = parseInt(slotParts[0], 10)
+        const slotM = parseInt(slotParts[1], 10)
+        const slotInMinutes = slotH * 60 + slotM
+
+        // Un slot está bloqueado si empieza antes de que termine el turno reservado
+        // y después (o igual) de que empieza
+        if (slotInMinutes >= startInMinutes && slotInMinutes < endInMinutes) {
+          blockedTimes.add(slot)
+        }
+      })
     })
     
-    const dateForFilter = new Date(schedulingDate + 'T12:00:00')
-    const bookedSlots = (appointments || [])
-      .filter(
-        (a) =>
-          a.professionalId === schedulingProfessional &&
-          new Date(a.date).toDateString() === dateForFilter.toDateString() &&
-          normalizeStatus(a.status as string) !== "cancelado" &&
-          normalizeStatus(a.status as string) !== "cancelled"
-      )
-      .map((a) => a.time)
-    
-    return allSlots.filter((slot) => !bookedSlots.includes(slot)).sort()
-  }, [schedulingProfessional, schedulingDate, professionals, appointments])
+    return allPossibleSlots.filter((slot) => !blockedTimes.has(slot)).sort()
+  }, [schedulingProfessional, schedulingDate, professionals, appointments, services])
 
   const handleScheduleAppointment = () => {
     if (!selectedPatient || !schedulingProfessional || !schedulingService || !schedulingTime) return
@@ -1226,7 +1296,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             );
           })()}
 
-          {/* SECCIÓN RESTAURADA Y ADAPTADA: COMISIONES DE RECEPCIÓN */}
           {mainTab === "comisiones" && (() => {
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();

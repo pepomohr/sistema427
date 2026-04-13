@@ -10,17 +10,49 @@ import Loader from "@/components/loader"
 const STORAGE_KEY = "c427_professional_session"
 
 export default function Home() {
-  const { currentUser, setCurrentUser, professionals } = useClinicStore()
+  const { currentUser, setCurrentUser } = useClinicStore()
   const [showProfessionalSelect, setShowProfessionalSelect] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   
+  // EFECTO 1: Carga de datos y Realtime (Array vacío para que corra UNA sola vez y no haga bucle)
   useEffect(() => {
-    // 1. Recuperar sesión del localStorage
+    const store = useClinicStore.getState()
+    
+    // Traemos los datos de Supabase
+    store.fetchSales()
+    store.fetchOffers()
+    store.fetchCombos()
+    store.fetchAppointments()
+    store.fetchProfessionals()
+    store.fetchServices()
+    store.fetchProducts()
+
+    // Activamos Realtime de Claude
+    const unsubscribe = store.subscribeToAppointments()
+
+    // Sacamos el loader a los 3 segundos
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 3000)
+
+    // Limpieza
+    return () => {
+      clearTimeout(timer)
+      if (typeof unsubscribe === 'function') {
+        unsubscribe()
+      }
+    }
+  }, []) // <-- ESTE ARRAY VACÍO ES LA CLAVE QUE FALTABA
+
+  // EFECTO 2: Recuperar sesión guardada
+  useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
         const session = JSON.parse(stored)
-        const professional = professionals.find(p => p.id === session.professionalId)
+        const profs = useClinicStore.getState().professionals
+        const professional = profs.find(p => p.id === session.professionalId)
+        
         if (professional && professional.isActive) {
           setCurrentUser({
             id: session.professionalId,
@@ -28,36 +60,32 @@ export default function Home() {
             role: session.role,
             professionalId: session.professionalId,
           })
+        } else if (session.role === 'admin' || session.role === 'recepcion') {
+           setCurrentUser({
+            id: session.id || Date.now().toString(),
+            name: session.name,
+            role: session.role,
+          })
         }
       } catch {
         localStorage.removeItem(STORAGE_KEY)
       }
     }
-
-    // 2. CARGA DE DATOS DE SUPABASE (Ventas, Ofertas y Combos)
-    const { fetchSales, fetchOffers, fetchCombos } = useClinicStore.getState()
-    fetchSales()
-    fetchOffers()
-    fetchCombos()
-
-    // 3. Tiempo mínimo de carga para que luzca el logo (3 segs)
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 3000)
-
-    return () => clearTimeout(timer)
-  }, [professionals, setCurrentUser])
+  }, [setCurrentUser])
   
   const handleLogin = (role: UserRole, name: string) => {
     if (role === "profesional") {
       setShowProfessionalSelect(true)
     } else {
-      setCurrentUser({ id: Date.now().toString(), name, role })
+      const newSession = { id: Date.now().toString(), name, role }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession))
+      setCurrentUser(newSession)
     }
   }
   
   const handleProfessionalSelect = (professionalId: string) => {
-    const professional = professionals.find(p => p.id === professionalId)
+    const profs = useClinicStore.getState().professionals
+    const professional = profs.find(p => p.id === professionalId)
     if (!professional) return
     
     const session = { professionalId, name: professional.name, role: "profesional" as UserRole }

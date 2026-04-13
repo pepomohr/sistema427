@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { useConfirm } from "@/hooks/use-confirm"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Clock, Plus, KeyRound, Trash2, X } from "lucide-react"
+import { Clock, Plus, KeyRound, Trash2, X, Loader2 } from "lucide-react"
 
 const ALL_SPECIALTIES: ServiceCategory[] = ['Facial', 'Corporales', 'CyP', 'Uñas', 'Maderoterapia', 'Capilar', 'Depilación', 'Planes']
 const DAYS_OF_WEEK = [
@@ -44,6 +44,7 @@ const calculateWeeklyHours = (schedule?: WeekSchedule | any) => {
 export function HRModule() {
   const { professionals, updateProfessional, resetProfessionalPin, toggleProfessionalActive, updateHourlyRate, appointments, fetchProfessionals, addProfessional } = useClinicStore()
   const { confirm, ConfirmDialog } = useConfirm()
+  const [resettingPinId, setResettingPinId] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof fetchProfessionals === 'function') fetchProfessionals()
@@ -79,6 +80,24 @@ export function HRModule() {
     }))
   }
 
+  const handleResetPin = (p: Professional) => {
+    confirm({ 
+      title: "¿Resetear PIN?", 
+      description: `Se borrará el PIN de ${p.shortName}. La próxima vez que inicie sesión, el sistema le pedirá crear uno nuevo.`, 
+      onConfirm: async () => { 
+        setResettingPinId(p.id);
+        try {
+          await resetProfessionalPin(p.id); 
+          confirm({title: "PIN Borrado", description: "El acceso ha sido reseteado exitosamente.", actionType:"success", onConfirm:()=>{}}) 
+        } catch (error) {
+          alert("Error al resetear el PIN. Verificá la conexión.");
+        } finally {
+          setResettingPinId(null);
+        }
+      }
+    })
+  }
+
   // --- LÓGICA DE LIQUIDACIÓN ---
   const handleLiquidarSemana = (p: Professional) => {
     const weeklyHours = calculateWeeklyHours(p.schedule);
@@ -88,16 +107,16 @@ export function HRModule() {
     let detailContent: React.ReactNode = null;
 
     if (isCommission) {
-      const profAppointments = appointments?.filter(a => a.profId === p.id) || [];
-      const totalSales = profAppointments.reduce((acc, a) => acc + (a.price || a.total || a.amount || 0), 0);
+      const profAppointments = appointments?.filter(a => a.professionalId === p.id) || []; // CORRECCIÓN: a.profId no existe, es professionalId
+      const totalSales = profAppointments.reduce((acc, a) => acc + (a.totalAmount || a.paidAmount || 0), 0); // CORRECCIÓN: price no existe en appointment root
       totalPay = totalSales * (p.hourlyRate! / 100);
 
       detailContent = (
         <span className="block space-y-1 mt-2">
           <span className="block text-gray-600">Turnos atendidos: {profAppointments.length}</span>
-          <span className="block text-gray-600">Facturación: ${totalSales}</span>
+          <span className="block text-gray-600">Facturación Total: ${totalSales}</span>
           <span className="block text-lg font-black text-gray-900 mt-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
-            Comisión ({p.hourlyRate}%): ${totalPay}
+            Comisión ({p.hourlyRate}%): ${totalPay.toFixed(2)}
           </span>
         </span>
       );
@@ -114,7 +133,8 @@ export function HRModule() {
       const hasBothRates = p.hourlyRateFacial !== null && p.hourlyRateFacial !== undefined && rateFacial !== rateCorporal;
 
       if (hasBothRates) {
-          const corporalAppointments = appointments?.filter(a => a.profId === p.id && a.category === 'Corporales') || [];
+          // CORRECCIÓN: Lógica adaptada para buscar categorías dentro del array services de Appointment
+          const corporalAppointments = appointments?.filter(a => a.professionalId === p.id && a.services?.some(s => s.category === 'Corporales')) || [];
           const corporalHours = corporalAppointments.length; 
           const normalHours = Math.max(0, weeklyHours - corporalHours);
           
@@ -187,7 +207,7 @@ export function HRModule() {
                   <div className="flex flex-col gap-4 w-full lg:max-w-md">
                     <div className="flex items-center gap-4">
                         <div className="h-16 w-16 rounded-full flex shrink-0 items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: p.color || '#16A34A' }}>
-                          {p.shortName?.substring(0, 2).toUpperCase()}
+                          {p.shortName?.substring(0, 2).toUpperCase() || p.name.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -268,8 +288,18 @@ export function HRModule() {
                     </div>
 
                     <div className="flex items-center justify-between w-full lg:w-auto gap-4">
-                      <Button onClick={() => confirm({ title: "Reset PIN?", description: `Se borrará el acceso de ${p.shortName}`, onConfirm: async () => { await resetProfessionalPin(p.id); confirm({title:"Listo", actionType:"success", onConfirm:()=>{}}) }})} variant="outline" className="text-blue-500 rounded-md h-10 px-4 border-gray-300 hover:bg-blue-50">
-                        <KeyRound size={16} className="mr-2"/> Reset PIN
+                      <Button 
+                        onClick={() => handleResetPin(p)} 
+                        variant="outline" 
+                        disabled={resettingPinId === p.id}
+                        className="text-blue-500 rounded-md h-10 px-4 border-gray-300 hover:bg-blue-50 w-full lg:w-auto"
+                      >
+                        {resettingPinId === p.id ? (
+                          <Loader2 size={16} className="mr-2 animate-spin" />
+                        ) : (
+                          <KeyRound size={16} className="mr-2" />
+                        )}
+                        Reset PIN
                       </Button>
                       
                       <Switch checked={p.isActive} onCheckedChange={() => toggleProfessionalActive(p.id)} />
@@ -405,7 +435,6 @@ export function HRModule() {
                         finalData.hourlyRateCorporal = null;
                     } else {
                         if (!finalData.hourlyRateCorporal) {
-                            // Si dejó el corporal vacío, lo guardamos como tarifa única pura
                             finalData.hourlyRate = finalData.hourlyRateFacial; 
                             finalData.hourlyRateFacial = null;
                         } else {

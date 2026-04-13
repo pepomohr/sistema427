@@ -11,61 +11,91 @@ interface ProfessionalSelectScreenProps {
 }
 
 export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelectScreenProps) {
-  const { professionals = [], fetchProfessionals } = useClinicStore()
+  // ACA agregamos el setProfessionalPin del store
+  const { professionals = [], fetchProfessionals, setProfessionalPin } = useClinicStore()
   const [selectedProfId, setSelectedProfId] = useState<string | null>(null)
   const [pin, setPin] = useState<string>("")
   const [isCreating, setIsCreating] = useState(false)
   const [errorShake, setErrorShake] = useState(false)
+  const [isSaving, setIsSaving] = useState(false) // Para evitar doble tap
 
   useEffect(() => {
     const load = async () => { if (typeof fetchProfessionals === 'function') await fetchProfessionals() }
     load()
   }, [fetchProfessionals])
 
-  const validatePin = useCallback((enteredPin: string, profId: string, creating: boolean) => {
+  const validatePin = useCallback(async (enteredPin: string, profId: string, creating: boolean) => {
+    setIsSaving(true);
+    
     if (creating) {
-      localStorage.setItem(`c427_pins_${profId}`, enteredPin)
-      onSelect(profId)
-    } else {
-      const existingPin = localStorage.getItem(`c427_pins_${profId}`)
-      if (enteredPin === existingPin) {
-        onSelect(profId)
+      // 1. EL FRANCOTIRADOR EN ACCIÓN: Guardamos en Supabase
+      const exito = await setProfessionalPin(profId, enteredPin);
+      
+      if (exito) {
+        // Guardamos copia de respaldo en el navegador por las dudas
+        localStorage.setItem(`c427_pins_${profId}`, enteredPin);
+        setIsSaving(false);
+        onSelect(profId);
       } else {
-        setErrorShake(true)
-        setTimeout(() => { setPin(""); setErrorShake(false) }, 700)
+        // Falló internet o la base de datos
+        setIsSaving(false);
+        setErrorShake(true);
+        setTimeout(() => { setPin(""); setErrorShake(false) }, 700);
+      }
+    } else {
+      // ESTAMOS VALIDANDO UN PIN EXISTENTE
+      const prof = useClinicStore.getState().professionals.find(p => p.id === profId);
+      const serverPin = prof?.pin;
+      const localPin = localStorage.getItem(`c427_pins_${profId}`);
+      
+      // Chequeamos contra el servidor (ideal) o contra el local (respaldo)
+      if (enteredPin === serverPin || enteredPin === localPin) {
+        setIsSaving(false);
+        onSelect(profId);
+      } else {
+        setIsSaving(false);
+        setErrorShake(true);
+        setTimeout(() => { setPin(""); setErrorShake(false) }, 700);
       }
     }
-  }, [onSelect])
+  }, [onSelect, setProfessionalPin])
 
   const handleKeyPress = useCallback((num: string) => {
-    if (pin.length >= 4) return
+    if (pin.length >= 4 || isSaving) return
     const newPin = pin + num
     setPin(newPin)
     if (newPin.length === 4 && selectedProfId) {
       setTimeout(() => validatePin(newPin, selectedProfId, isCreating), 150)
     }
-  }, [pin, selectedProfId, isCreating, validatePin])
+  }, [pin, selectedProfId, isCreating, validatePin, isSaving])
 
   const handleDelete = useCallback(() => {
+    if (isSaving) return;
     setPin(prev => prev.slice(0, -1))
-  }, [])
+  }, [isSaving])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedProfId) return
+      if (!selectedProfId || isSaving) return
       if (e.key >= "0" && e.key <= "9") handleKeyPress(e.key)
       if (e.key === "Backspace") handleDelete()
       if (e.key === "Escape") setSelectedProfId(null)
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [selectedProfId, handleKeyPress, handleDelete])
+  }, [selectedProfId, handleKeyPress, handleDelete, isSaving])
 
   const handleProfClick = (id: string) => {
-    setSelectedProfId(id)
-    setPin("")
-    setErrorShake(false)
-    setIsCreating(!localStorage.getItem(`c427_pins_${id}`))
+    const prof = professionals.find(p => p.id === id);
+    const hasPinInServer = !!prof?.pin;
+    const hasPinLocal = !!localStorage.getItem(`c427_pins_${id}`);
+    
+    setSelectedProfId(id);
+    setPin("");
+    setErrorShake(false);
+    
+    // Si no tiene PIN ni en el server ni en la compu, está creando uno nuevo
+    setIsCreating(!hasPinInServer && !hasPinLocal);
   }
 
   return (
@@ -96,7 +126,6 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
             <div className="w-8 h-8 border-4 border-[#16A34A]/20 border-t-[#16A34A] rounded-full animate-spin" />
           </div>
         ) : (
-          // 🏆 DISEÑO ORIGINAL DE CARDS RESTAURADO, AHORA CON 2 COLUMNAS EN MOBILE
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-x-10 sm:gap-y-12 max-w-[1400px]">
             {professionals.map(prof => (
               <button key={prof.id} onClick={() => handleProfClick(prof.id)} className="group flex flex-col items-center outline-none transition-transform hover:-translate-y-2">
@@ -123,7 +152,6 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
         )}
       </div>
 
-      {/* OVERLAY DE PIN - Ajustado para que entre en la pantalla */}
       {selectedProfId && (
         <div className="fixed inset-0 bg-white/98 backdrop-blur-md z-50 flex flex-col items-center justify-center animate-in fade-in duration-200">
           <button onClick={() => setSelectedProfId(null)} className="absolute top-6 left-6 text-gray-400 hover:text-[#16A34A] p-2 transition-colors">
@@ -131,26 +159,22 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
           </button>
           
           <div className="w-full max-w-[320px] flex flex-col items-center">
-            {/* Logo más compacto */}
             <div className="relative w-[180px] h-[60px] mb-4">
               <Image src="/images/c427logodorado.png" alt="C427 Logo" fill priority className="object-contain" />
             </div>
             
-            {/* Textos más compactos */}
             <div className="text-center mb-6">
               <h3 className="text-lg font-bold text-gray-800 tracking-tight">{isCreating ? 'Creá tu PIN de acceso' : 'Ingresá tu PIN'}</h3>
               <p className="text-sm font-bold text-[#16A34A]">{professionals.find(p => p.id === selectedProfId)?.name}</p>
             </div>
             
-            {/* PIN Dots más compactos */}
             <div className={`flex gap-4 mb-8 ${errorShake ? 'animate-custom-shake' : ''}`}>
               {[0, 1, 2, 3].map(i => (
                 <div key={i} className={`w-3.5 h-3.5 rounded-full transition-all border-2 ${i < pin.length ? (errorShake ? 'bg-red-500 border-red-500' : 'bg-[#16A34A] border-[#16A34A] scale-110') : 'bg-transparent border-gray-300'}`} />
               ))}
             </div>
             
-            {/* Teclado Numérico más compacto (w-16 h-16) */}
-            <div className="grid grid-cols-3 gap-x-4 gap-y-3 w-full">
+            <div className={`grid grid-cols-3 gap-x-4 gap-y-3 w-full transition-opacity ${isSaving ? 'opacity-50 pointer-events-none' : ''}`}>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                 <button key={num} onClick={() => handleKeyPress(num.toString())} className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-medium text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors mx-auto">
                   {num}
@@ -163,6 +187,7 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
               </button>
             </div>
             
+            {isSaving && <p className="text-[#16A34A] text-xs font-bold mt-4 animate-pulse">Guardando PIN...</p>}
             {errorShake && <p className="text-red-600 text-xs font-bold mt-4 animate-in fade-in">PIN INCORRECTO</p>}
           </div>
         </div>

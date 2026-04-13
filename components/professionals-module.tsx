@@ -121,14 +121,13 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     if (!selectedDate || !currentProfessional) return []
     return appointments.filter(a => 
       a.professionalId === currentProfessional.id &&
-      a.date.toDateString() === selectedDate.toDateString()
+      new Date(a.date).toDateString() === selectedDate.toDateString()
     ).sort((a, b) => a.time.localeCompare(b.time))
   }, [appointments, currentProfessional, selectedDate])
 
   const salesCount = currentProfessional?.monthlySalesCount || 0
   const currentCommission = calculateCommissionTab(salesCount)
   
-  // Lógica de Tiers (Niveles) con NextLabel
   const tInfo = (count: number) => {
     if (count < 10) return { next: 10, label: "5%", nextLabel: "7.5%" }
     if (count < 21) return { next: 21, label: "7.5%", nextLabel: "10%" }
@@ -156,19 +155,54 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
   const getPatientName = (id: string) => patients.find(p => p.id === id)?.name || 'Desconocido'
 
+  // LÓGICA DE HORARIOS OCUPADOS SEGÚN DURACIÓN
   const availableSlots = useMemo(() => {
-    if (!currentProfessional || !schedulingDate) return []
+    if (!currentProfessional || !schedulingDate || !appointments || !services) return []
+    
     const intervals = currentProfessional.exceptions?.[schedulingDate] || 
                      (currentProfessional.schedule as any)?.[new Date(schedulingDate + 'T12:00:00').toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()] || 
                      [{ start: "09:00", end: "20:00" }];
-    const allSlots: string[] = []
+    
+    const allPossibleSlots: string[] = []
     intervals.forEach((interval: any) => {
       const start = parseInt(interval.start.split(":")[0]), end = parseInt(interval.end.split(":")[0]);
-      for (let h = start; h < end; h++) { allSlots.push(`${h.toString().padStart(2, "0")}:00`); allSlots.push(`${h.toString().padStart(2, "0")}:30`); }
+      for (let h = start; h < end; h++) { 
+        allPossibleSlots.push(`${h.toString().padStart(2, "0")}:00`); 
+        allPossibleSlots.push(`${h.toString().padStart(2, "0")}:30`); 
+      }
     })
-    const booked = appointments.filter(a => a.professionalId === currentProfessional.id && new Date(a.date).toDateString() === new Date(schedulingDate + 'T12:00:00').toDateString() && normalizeStatus(a.status) !== "cancelado" && normalizeStatus(a.status) !== "cancelled").map(a => a.time)
-    return allSlots.filter(s => !booked.includes(s)).sort()
-  }, [currentProfessional, schedulingDate, appointments])
+
+    const dateForFilter = new Date(schedulingDate + 'T12:00:00').toDateString()
+    const bookedAppointments = appointments.filter(a => 
+      a.professionalId === currentProfessional.id && 
+      new Date(a.date).toDateString() === dateForFilter && 
+      normalizeStatus(a.status) !== "cancelado" &&
+      normalizeStatus(a.status) !== "cancelled"
+    )
+
+    const blockedTimes = new Set<string>()
+
+    bookedAppointments.forEach(apt => {
+      const startTime = apt.time
+      const serviceId = apt.services[0]?.serviceId
+      const serviceDef = services.find(s => s.id === serviceId)
+      const duration = serviceDef?.duration || 30
+
+      const [startH, startM] = startTime.split(':').map(Number)
+      const startInMinutes = startH * 60 + startM
+      const endInMinutes = startInMinutes + duration
+
+      allPossibleSlots.forEach(slot => {
+        const [slotH, slotM] = slot.split(':').map(Number)
+        const slotTotalM = slotH * 60 + slotM
+        if (slotTotalM >= startInMinutes && slotTotalM < endInMinutes) {
+          blockedTimes.add(slot)
+        }
+      })
+    })
+
+    return allPossibleSlots.filter(s => !blockedTimes.has(s)).sort()
+  }, [currentProfessional, schedulingDate, appointments, services])
 
   const handleScheduleAppointment = () => {
     if (!schedulingPatientId || !currentProfessional || !schedulingService || !schedulingTime) return
@@ -219,7 +253,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
               </div>
             </div>
             
-            {/* PROGRESS BAR ADICIONADA */}
             <div className="space-y-2 mt-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                <div className="flex justify-between text-xs font-medium text-gray-500">
                  <span>Progreso actual</span>
@@ -240,7 +273,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                   </p>
                )}
             </div>
-
           </CardContent>
         </Card>
       )}
@@ -262,7 +294,11 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         <p className="text-[10px] text-[#16A34A]">{typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</p>
                       </div>
                     </div>
-                    {normalizeStatus(apt.status) === 'confirmado' ? <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-white font-bold">LLAMAR</Button> : <Badge className="bg-emerald-500 text-white animate-pulse border-none">ATENDIENDO</Badge>}
+                    {normalizeStatus(apt.status) === 'confirmado' ? (
+                      <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-white font-bold">LLAMAR</Button>
+                    ) : (
+                      <Badge className="bg-emerald-500 text-white animate-pulse border-none px-4 py-2">ATENDIENDO</Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -297,6 +333,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         </div>
       )}
 
+      {/* DIÁLOGOS Y MODALES SE MANTIENEN IGUAL PERO CON LA LÓGICA DE DISPONIBILIDAD MEJORADA ABAJO */}
       <Dialog open={showNewPatientDialog} onOpenChange={setShowNewPatientDialog}>
         <DialogContent className="bg-white text-foreground">
           <DialogHeader><DialogTitle className="text-[#16A34A]">Registrar Nuevo Paciente</DialogTitle></DialogHeader>
