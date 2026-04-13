@@ -39,15 +39,16 @@ interface Tab {
   roles: UserRole[]
 }
 
+// ACÁ ESTÁ LA MAGIA: Le sacamos "admin" a los módulos individuales para limpiar su sidebar
 const allTabs: Tab[] = [
   { id: "recepcion-busqueda", label: "Búsqueda Pacientes", icon: Users, roles: ["recepción", "admin"] },
   { id: "recepcion-agenda", label: "Agenda General", icon: Calendar, roles: ["recepción", "admin"] },
   { id: "recepcion-caja", label: "Cierre de Caja", icon: Wallet, roles: ["recepción", "admin"] },
-  { id: "recepcion-comisiones", label: "Objetivos y Ventas", icon: Award, roles: ["recepción", "admin"] },
-  { id: "agenda", label: "Mi Agenda", icon: Calendar, roles: ["profesional", "admin"] },
-  { id: "atencion", label: "Atención", icon: Stethoscope, roles: ["profesional", "admin"] },
-  { id: "comisiones", label: "Comisiones", icon: Award, roles: ["profesional", "admin"] },
-  { id: "cobrar", label: "Cobrar", icon: CreditCard, roles: ["recepción", "admin"] },
+  { id: "recepcion-comisiones", label: "Objetivos y Ventas", icon: Award, roles: ["recepción"] }, // Solo recepción
+  { id: "agenda", label: "Mi Agenda", icon: Calendar, roles: ["profesional"] }, // Solo profesionales
+  { id: "atencion", label: "Atención", icon: Stethoscope, roles: ["profesional"] }, // Solo profesionales
+  { id: "comisiones", label: "Comisiones", icon: Award, roles: ["profesional"] }, // Solo profesionales
+  { id: "cobrar", label: "Cobrar", icon: CreditCard, roles: ["recepción"] }, // Solo recepción
   { id: "rrhh", label: "RRHH", icon: UserCog, roles: ["admin"] },
   { id: "reportes", label: "Reportes", icon: BarChart3, roles: ["admin"] },
   { id: "config", label: "Configuración", icon: Settings, roles: ["admin"] }

@@ -96,25 +96,25 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
             <div className="w-8 h-8 border-4 border-[#16A34A]/20 border-t-[#16A34A] rounded-full animate-spin" />
           </div>
         ) : (
-          // 🏆 DISEÑO ORIGINAL DE CARDS RESTAURADO
-          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-10 gap-y-12 max-w-[1400px]">
+          // 🏆 DISEÑO ORIGINAL DE CARDS RESTAURADO, AHORA CON 2 COLUMNAS EN MOBILE
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-x-10 sm:gap-y-12 max-w-[1400px]">
             {professionals.map(prof => (
               <button key={prof.id} onClick={() => handleProfClick(prof.id)} className="group flex flex-col items-center outline-none transition-transform hover:-translate-y-2">
-                <div className="w-[230px] h-[330px] rounded-3xl bg-white shadow-lg group-hover:shadow-2xl transition-all overflow-hidden border border-gray-100 flex flex-col relative">
-                    <div className="h-[140px] w-full p-6 flex flex-col justify-end relative" style={{ backgroundColor: prof.color || '#16A34A' }}>
-                        <p className="text-[10px] text-white/80 font-medium italic tracking-widest uppercase">Staff Oficial C427</p>
-                        <h3 className="text-2xl font-black text-white leading-tight truncate">{prof.shortName || prof.name.split(' ')[0]}</h3>
+                <div className="w-full max-w-[230px] h-[280px] sm:h-[330px] rounded-3xl bg-white shadow-lg group-hover:shadow-2xl transition-all overflow-hidden border border-gray-100 flex flex-col relative">
+                    <div className="h-[120px] sm:h-[140px] w-full p-4 sm:p-6 flex flex-col justify-end relative" style={{ backgroundColor: prof.color || '#16A34A' }}>
+                        <p className="text-[9px] sm:text-[10px] text-white/80 font-medium italic tracking-widest uppercase">Staff Oficial C427</p>
+                        <h3 className="text-xl sm:text-2xl font-black text-white leading-tight truncate">{prof.shortName || prof.name.split(' ')[0]}</h3>
                     </div>
-                    <div className="flex-1 p-6 flex flex-col justify-between text-left">
-                        <div className="space-y-4">
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Especialidad</p>
-                            <p className="text-xs text-gray-700 font-semibold line-clamp-2">{prof.specialties?.map(s => getCategoryDisplayName(s)).join(", ") || 'General'}</p>
-                            <div className="flex items-center gap-2 text-gray-500">
-                                <MapPin size={14} className="text-[#B68C5C]" />
-                                <span className="text-[11px] font-medium">Sede Temperley</span>
+                    <div className="flex-1 p-4 sm:p-6 flex flex-col justify-between text-left">
+                        <div className="space-y-2 sm:space-y-4">
+                            <p className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-widest">Especialidad</p>
+                            <p className="text-[11px] sm:text-xs text-gray-700 font-semibold line-clamp-2">{prof.specialties?.map(s => getCategoryDisplayName(s)).join(", ") || 'General'}</p>
+                            <div className="flex items-center gap-1 sm:gap-2 text-gray-500">
+                                <MapPin size={12} className="text-[#B68C5C] sm:w-[14px] sm:h-[14px]" />
+                                <span className="text-[10px] sm:text-[11px] font-medium">Sede Banfield</span>
                             </div>
                         </div>
-                        <div className="relative w-full h-[35px] opacity-70"><Image src="/images/c427logodorado.png" alt="Logo" fill className="object-contain" /></div>
+                        <div className="relative w-full h-[25px] sm:h-[35px] opacity-70"><Image src="/images/c427logodorado.png" alt="Logo" fill className="object-contain" /></div>
                     </div>
                 </div>
               </button>

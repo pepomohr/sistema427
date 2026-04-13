@@ -252,7 +252,7 @@ export function ChargeModule() {
                                setProfMenuOpen({...profMenuOpen, [idx]: false})
                              }}
                            >
-                             🏦 Recepción
+                              Recepción
                            </button>
                           {professionals
                             .filter(p => !(profSearch[idx] && profSearch[idx] !== "Recepción" && profSearch[idx] !== "recepcion") || p.shortName.toLowerCase().includes(profSearch[idx].toLowerCase()))

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
 import { 
   BarChart3, 
   TrendingUp, 
@@ -19,7 +20,8 @@ import {
   Stethoscope,
   Minus,
   ArrowDownRight,
-  ArrowUpRight
+  ArrowUpRight,
+  Target
 } from "lucide-react"
 import {
   BarChart,
@@ -32,8 +34,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   Legend,
 } from "recharts"
 
@@ -115,7 +115,7 @@ export function ReportsModule() {
       })
     }
     return data
-  }, [sales, appointments, professionals])
+  }, [sales, appointments, professionals, fixedCosts])
 
   // Calculate services vs products breakdown
   const servicesVsProducts = useMemo(() => {
@@ -142,7 +142,7 @@ export function ReportsModule() {
       const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
       const commission = totalBilled * (commissionPercent / 100)
       return {
-        name: prof.name.split(" ").slice(1).join(" "),
+        name: prof.name.split(" ").slice(1).join(" ") || prof.shortName,
         facturado: totalBilled,
         comision: commission,
         turnos: profAppointments.length,
@@ -202,7 +202,7 @@ export function ReportsModule() {
     .filter((s) => {
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
-      return s.date >= weekAgo && s.paymentMethod !== 'gift_card'
+      return new Date(s.date) >= weekAgo && s.paymentMethod !== 'gift_card'
     })
     .reduce((sum, s) => sum + s.total, 0)
 
@@ -210,7 +210,7 @@ export function ReportsModule() {
     .filter((s) => {
       const monthAgo = new Date()
       monthAgo.setMonth(monthAgo.getMonth() - 1)
-      return s.date >= monthAgo && s.paymentMethod !== 'gift_card'
+      return new Date(s.date) >= monthAgo && s.paymentMethod !== 'gift_card'
     })
     .reduce((sum, s) => sum + s.total, 0)
 
@@ -220,11 +220,11 @@ export function ReportsModule() {
   const monthSalesNeto = monthSalesBruto - calculateCommissions - fixedCosts
 
   const todayAppointments = appointments.filter(
-    (a) => a.date.toDateString() === new Date().toDateString() && a.status !== "cancelado"
+    (a) => new Date(a.date).toDateString() === new Date().toDateString() && a.status !== "cancelado"
   ).length
 
   const completedToday = appointments.filter(
-    (a) => a.date.toDateString() === new Date().toDateString() && a.status === "completado"
+    (a) => new Date(a.date).toDateString() === new Date().toDateString() && a.status === "completado"
   ).length
 
   // Valores a mostrar segun switch
@@ -392,7 +392,10 @@ export function ReportsModule() {
             Servicios vs Productos
           </TabsTrigger>
           <TabsTrigger value="comisiones" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
-            Comisiones
+            Liquidación
+          </TabsTrigger>
+          <TabsTrigger value="objetivos" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
+            Objetivos Staff
           </TabsTrigger>
           <TabsTrigger value="egresos" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
             Gastos Fijos
@@ -508,7 +511,7 @@ export function ReportsModule() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card border-gray-200">
+            <Card className="bg-card border-gray-200 lg:col-span-2">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
                   <Package className="h-5 w-5 text-[#16A34A]" />
@@ -529,7 +532,7 @@ export function ReportsModule() {
                             #{index + 1}
                           </span>
                           <div>
-                            <p className="text-foreground font-medium truncate max-w-[150px]">{product.name}</p>
+                            <p className="text-foreground font-medium truncate max-w-[150px] md:max-w-[300px]">{product.name}</p>
                             <p className="text-sm text-muted-foreground">
                               {product.quantity} unidades
                             </p>
@@ -545,7 +548,7 @@ export function ReportsModule() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card border-gray-200">
+            <Card className="bg-card border-gray-200 lg:col-span-3">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
                   <Stethoscope className="h-5 w-5 text-[#16A34A]" />
@@ -558,15 +561,15 @@ export function ReportsModule() {
                     No hay servicios registrados
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {topServices.map((service, index) => (
-                      <div key={index} className="flex items-center justify-between">
+                      <div key={index} className="flex items-center justify-between p-3 bg-secondary/10 rounded-lg border border-gray-100">
                         <div className="flex items-center gap-3">
                           <span className="text-lg font-bold text-[#16A34A]">
                             #{index + 1}
                           </span>
                           <div>
-                            <p className="text-foreground font-medium truncate max-w-[150px]">{service.name}</p>
+                            <p className="text-foreground font-medium truncate max-w-[200px]">{service.name}</p>
                             <p className="text-sm text-muted-foreground">
                               {service.quantity} realizados
                             </p>
@@ -589,7 +592,7 @@ export function ReportsModule() {
             <CardHeader>
               <CardTitle className="text-foreground flex items-center gap-2">
                 <Award className="h-5 w-5 text-[#16A34A]" />
-                Ranking de Comisiones
+                Ranking de Comisiones (Monto)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -659,6 +662,60 @@ export function ReportsModule() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* NUEVA PESTAÑA PARA ADMIN: VER OBJETIVOS DE TODAS */}
+        <TabsContent value="objetivos">
+          <div className="space-y-6">
+            <h3 className="text-xl font-bold text-[#16A34A] flex items-center gap-2">
+              <Target className="h-6 w-6" /> Panel Global de Objetivos del Staff
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {professionals.map(prof => {
+                const salesCount = prof.monthlySalesCount || 0;
+                
+                const tInfo = (count: number) => {
+                  if (count < 10) return { next: 10, label: "5%" }
+                  if (count < 21) return { next: 21, label: "7.5%" }
+                  return { next: 31, label: "10%" }
+                }
+                
+                const info = tInfo(salesCount);
+                const progressValue = Math.min((salesCount / info.next) * 100, 100);
+                
+                return (
+                  <Card key={prof.id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-5">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg" style={{ backgroundColor: prof.color || '#16A34A' }}>
+                            {prof.shortName?.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900">{prof.shortName}</p>
+                            <p className="text-xs text-gray-500 font-medium">Ventas del mes: <span className="font-bold text-gray-800">{salesCount}</span></p>
+                          </div>
+                        </div>
+                        <Badge className="bg-emerald-100/50 text-emerald-700 border-none px-3 py-1">Nivel {info.label}</Badge>
+                      </div>
+                      
+                      <div className="space-y-2 mt-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                        <div className="flex justify-between text-xs font-medium text-gray-500">
+                          <span>Progreso actual</span>
+                          <span className="font-bold text-emerald-600">{salesCount} / {info.next} ventas</span>
+                        </div>
+                        <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-[#16A34A]" />
+                        <p className="text-[10px] text-gray-400 text-center mt-1 uppercase tracking-wider font-bold">
+                          Faltan {info.next - salesCount} para subir al próximo nivel
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          </div>
+        </TabsContent>
+
         <TabsContent value="egresos">
           <Card className="bg-card border-gray-200">
             <CardHeader className="flex flex-row items-center justify-between">

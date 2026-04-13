@@ -27,6 +27,20 @@ import {
   UserPlus
 } from "lucide-react"
 
+// Función auxiliar para traducir estados en ProfessionalsModule
+const normalizeStatus = (s: string) => s?.toLowerCase() || '';
+const getStatusText = (status: string) => {
+  const norm = normalizeStatus(status);
+  return { 
+      scheduled: "Programado", programado: "Programado", 
+      completed: "Completado", completado: "Completado", 
+      cancelled: "Cancelado", cancelado: "Cancelado", 
+      confirmado: "Confirmado", 
+      en_atencion: "En Atención", 
+      pendiente_cobro: "A Cobrar" 
+  }[norm] || status;
+}
+
 export function ProfessionalsModule({ view = "atencion", professionalId }: { view?: "atencion" | "agenda" | "comisiones", professionalId?: string }) {
   const {
     currentUser,
@@ -88,7 +102,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const cabinetQueue = useMemo(() => {
     return appointments.filter(a => 
       a.professionalId === currentProfessional?.id && 
-      (a.status === 'confirmado' || a.status === 'en_atencion')
+      (normalizeStatus(a.status) === 'confirmado' || normalizeStatus(a.status) === 'en_atencion')
     )
   }, [appointments, currentProfessional])
 
@@ -113,12 +127,15 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
   const salesCount = currentProfessional?.monthlySalesCount || 0
   const currentCommission = calculateCommissionTab(salesCount)
+  
+  // Lógica de Tiers (Niveles) con NextLabel
   const tInfo = (count: number) => {
-    if (count < 10) return { next: 10, label: "5%" }
-    if (count < 21) return { next: 21, label: "7.5%" }
-    return { next: 31, label: "10%" }
+    if (count < 10) return { next: 10, label: "5%", nextLabel: "7.5%" }
+    if (count < 21) return { next: 21, label: "7.5%", nextLabel: "10%" }
+    return { next: count, label: "10%", nextLabel: "MÁXIMO" }
   }
-  const progressValue = (salesCount / tInfo(salesCount).next) * 100
+  const info = tInfo(salesCount)
+  const progressValue = Math.min((salesCount / (info.next === salesCount && info.next > 0 ? info.next : info.next || 1)) * 100, 100)
 
   const handleFinishAttention = (aptId: string, svcs: any[], prods: any[]) => {
     confirm({
@@ -149,7 +166,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       const start = parseInt(interval.start.split(":")[0]), end = parseInt(interval.end.split(":")[0]);
       for (let h = start; h < end; h++) { allSlots.push(`${h.toString().padStart(2, "0")}:00`); allSlots.push(`${h.toString().padStart(2, "0")}:30`); }
     })
-    const booked = appointments.filter(a => a.professionalId === currentProfessional.id && new Date(a.date).toDateString() === new Date(schedulingDate + 'T12:00:00').toDateString() && a.status !== "cancelado").map(a => a.time)
+    const booked = appointments.filter(a => a.professionalId === currentProfessional.id && new Date(a.date).toDateString() === new Date(schedulingDate + 'T12:00:00').toDateString() && normalizeStatus(a.status) !== "cancelado" && normalizeStatus(a.status) !== "cancelled").map(a => a.time)
     return allSlots.filter(s => !booked.includes(s)).sort()
   }, [currentProfessional, schedulingDate, appointments])
 
@@ -201,7 +218,29 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                 <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5">{currentCommission}%</Badge>
               </div>
             </div>
-            <Progress value={progressValue} className="h-3 bg-[#DCFCE7]" />
+            
+            {/* PROGRESS BAR ADICIONADA */}
+            <div className="space-y-2 mt-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+               <div className="flex justify-between text-xs font-medium text-gray-500">
+                 <span>Progreso actual</span>
+                 {info.nextLabel !== "MÁXIMO" ? (
+                    <span className="font-bold text-emerald-600">{salesCount} / {info.next} ventas</span>
+                 ) : (
+                    <span className="font-bold text-emerald-600">¡Alcanzado!</span>
+                 )}
+               </div>
+               <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-[#16A34A]" />
+               {info.nextLabel !== "MÁXIMO" ? (
+                  <p className="text-[10px] text-gray-400 text-center mt-1 uppercase tracking-wider font-bold">
+                    Faltan <span className="text-orange-500">{info.next - salesCount}</span> para subir al {info.nextLabel}
+                  </p>
+               ) : (
+                  <p className="text-[10px] text-emerald-600 text-center mt-1 uppercase tracking-wider font-bold">
+                    ¡Nivel máximo de comisiones alcanzado!
+                  </p>
+               )}
+            </div>
+
           </CardContent>
         </Card>
       )}
@@ -213,7 +252,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
             <Card className="bg-transparent border-dashed border-gray-200"><CardContent className="py-10 text-center text-gray-400 italic text-sm">Sin pacientes en espera.</CardContent></Card>
           ) : (
             cabinetQueue.map(apt => (
-              <Card key={apt.id} className={`bg-white border border-gray-200 shadow-lg rounded-2xl ${apt.status === 'en_atencion' ? 'ring-2 ring-emerald-500' : ''}`}>
+              <Card key={apt.id} className={`bg-white border border-gray-200 shadow-lg rounded-2xl ${normalizeStatus(apt.status) === 'en_atencion' ? 'ring-2 ring-emerald-500' : ''}`}>
                 <CardContent className="pt-6 space-y-4 text-foreground">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
@@ -223,7 +262,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         <p className="text-[10px] text-[#16A34A]">{typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</p>
                       </div>
                     </div>
-                    {apt.status === 'confirmado' ? <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-white font-bold">LLAMAR</Button> : <Badge className="bg-emerald-500 text-white animate-pulse border-none">ATENDIENDO</Badge>}
+                    {normalizeStatus(apt.status) === 'confirmado' ? <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-white font-bold">LLAMAR</Button> : <Badge className="bg-emerald-500 text-white animate-pulse border-none">ATENDIENDO</Badge>}
                   </div>
                 </CardContent>
               </Card>
@@ -236,7 +275,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         <div className="space-y-6">
           <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} className="bg-white rounded-xl shadow-lg border p-4 mx-auto" />
           
-          {/* SECCIÓN DE BOTONES SEPARADA */}
           <div className="flex flex-col gap-2">
              <Button onClick={() => setShowNewPatientDialog(true)} className="bg-white border-2 border-[#16A34A] text-[#16A34A] hover:bg-emerald-50 font-bold w-full h-12 shadow-sm">
                 <UserPlus className="h-5 w-5 mr-2" /> REGISTRAR PACIENTE NUEVO
@@ -252,14 +290,13 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                <div key={apt.id} className="bg-white border p-3 rounded-xl flex justify-between items-center shadow-sm">
                  <span className="font-bold text-[#16A34A] text-sm">{apt.time?.substring(0, 5)}</span>
                  <div className="flex-1 px-3 border-l ml-3"><p className="font-bold text-xs text-foreground">{apt.patientName || getPatientName(apt.patientId)}</p></div>
-                 <Badge className="text-[8px] bg-secondary text-gray-500 border-none">{apt.status.toUpperCase()}</Badge>
+                 <Badge className="text-[9px] bg-secondary text-gray-500 border-none font-bold tracking-wider">{getStatusText(apt.status as string).toUpperCase()}</Badge>
                </div>
              ))}
           </div>
         </div>
       )}
 
-      {/* DIALOG REGISTRAR NUEVO PACIENTE (Completo pero flexible) */}
       <Dialog open={showNewPatientDialog} onOpenChange={setShowNewPatientDialog}>
         <DialogContent className="bg-white text-foreground">
           <DialogHeader><DialogTitle className="text-[#16A34A]">Registrar Nuevo Paciente</DialogTitle></DialogHeader>
@@ -293,7 +330,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG AGENDAR TURNO (Con buscador inteligente) */}
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
         <DialogContent className="bg-white text-foreground sm:max-w-[450px]">
           <DialogHeader><DialogTitle className="text-[#16A34A]">Agendar Turno Personal</DialogTitle></DialogHeader>

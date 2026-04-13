@@ -5,7 +5,7 @@ import { useClinicStore, type User, type UserRole } from "@/lib/store"
 import { LoginScreen } from "@/components/login-screen"
 import { ProfessionalSelectScreen } from "@/components/professional-select-screen"
 import { MainLayout } from "@/components/main-layout"
-import Loader from "@/components/loader" // Asegurate de haber creado este archivo
+import Loader from "@/components/loader"
 
 const STORAGE_KEY = "c427_professional_session"
 
@@ -34,7 +34,13 @@ export default function Home() {
       }
     }
 
-    // 2. Tiempo mínimo de carga para que luzca el logo (3 segs)
+    // 2. CARGA DE DATOS DE SUPABASE (Ventas, Ofertas y Combos)
+    const { fetchSales, fetchOffers, fetchCombos } = useClinicStore.getState()
+    fetchSales()
+    fetchOffers()
+    fetchCombos()
+
+    // 3. Tiempo mínimo de carga para que luzca el logo (3 segs)
     const timer = setTimeout(() => {
       setIsLoading(false)
     }, 3000)
@@ -67,7 +73,6 @@ export default function Home() {
     setShowProfessionalSelect(false)
   }
   
-  // Reemplazamos el div de "Cargando..." por tu nuevo Loader pro
   if (isLoading) return <Loader />
   
   if (!currentUser && !showProfessionalSelect) {

@@ -78,13 +78,13 @@ export interface Combo {
 }
 
 export interface WeekSchedule {
-  monday?: { start: string, end: string }
-  tuesday?: { start: string, end: string }
-  wednesday?: { start: string, end: string }
-  thursday?: { start: string, end: string }
-  friday?: { start: string, end: string }
-  saturday?: { start: string, end: string }
-  sunday?: { start: string, end: string }
+  monday?: { start: string, end: string }[]
+  tuesday?: { start: string, end: string }[]
+  wednesday?: { start: string, end: string }[]
+  thursday?: { start: string, end: string }[]
+  friday?: { start: string, end: string }[]
+  saturday?: { start: string, end: string }[]
+  sunday?: { start: string, end: string }[]
 }
 
 export interface Professional {
@@ -190,7 +190,8 @@ interface ClinicStore {
   combos: Combo[]
   
   addExpense: (expense: Omit<Expense, 'id' | 'date'>) => void
-  addSale: (sale: Omit<Sale, 'id' | 'date'>) => void
+  addSale: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>
+  fetchSales: () => Promise<void>
   updateHourlyRate: (id: string, rate: number) => void
   updateProfessional: (id: string, updates: Partial<Professional>) => void
   resetProfessionalPin: (id: string) => Promise<void>
@@ -218,12 +219,15 @@ interface ClinicStore {
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>
   deleteProduct: (id: string) => Promise<void>
-  addOffer: (offer: Omit<Offer, 'id'>) => void
-  updateOffer: (id: string, updates: Partial<Offer>) => void
-  deleteOffer: (id: string) => void
-  addCombo: (combo: Omit<Combo, 'id'>) => void
-  updateCombo: (id: string, updates: Partial<Combo>) => void
-  deleteCombo: (id: string) => void
+  
+  fetchOffers: () => Promise<void>
+  addOffer: (offer: Omit<Offer, 'id'>) => Promise<void>
+  updateOffer: (id: string, updates: Partial<Offer>) => Promise<void>
+  deleteOffer: (id: string) => Promise<void>
+  fetchCombos: () => Promise<void>
+  addCombo: (combo: Omit<Combo, 'id'>) => Promise<void>
+  updateCombo: (id: string, updates: Partial<Combo>) => Promise<void>
+  deleteCombo: (id: string) => Promise<void>
 }
 
 export const useClinicStore = create<ClinicStore>((set, get) => ({
@@ -244,43 +248,82 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     set(state => ({ expenses: [...state.expenses, newExpense] }))
   },
 
-  addSale: (saleData) => {
-    const { professionals } = get()
-    const newSale = { ...saleData, id: Date.now().toString(), date: new Date() }
-    
-    const updatedProfessionals = professionals.map(prof => {
-      const soldItems = saleData.items.filter(item => item.type === 'product' && item.soldBy === prof.id)
-      const totalQty = soldItems.reduce((acc, item) => acc + item.quantity, 0)
-      return totalQty > 0 ? { ...prof, monthlySalesCount: prof.monthlySalesCount + totalQty } : prof
-    })
-
-    set((state) => {
-      let currentProducts = [...state.products]
-      const deductStock = (prodId: string, qtyToDeduct: number) => {
-        currentProducts = currentProducts.map(p => 
-          p.id === prodId ? { ...p, stock: Math.max(0, p.stock - qtyToDeduct) } : p
-        )
+  // --- VENTAS CONECTADAS A SUPABASE ---
+  fetchSales: async () => {
+    try {
+      const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false });
+      if (!error && data) {
+        set({ sales: data.map((s: any) => ({
+          id: s.id,
+          items: s.items,
+          total: s.total,
+          paymentMethod: s.payment_method,
+          processedBy: s.processed_by,
+          type: s.type,
+          date: new Date(s.date)
+        })) });
       }
+    } catch (err) { console.error(err); }
+  },
 
-      saleData.items.forEach(item => {
-        if (item.type === 'product') {
-          deductStock(item.itemId, item.quantity)
-        } else if (item.type === 'combo') {
-          const comboDef = state.combos.find(c => c.id === item.itemId)
-          if (comboDef) {
-            comboDef.items.forEach(i => {
+  addSale: async (saleData) => {
+    const { professionals } = get()
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .insert([{
+          items: saleData.items,
+          total: saleData.total,
+          payment_method: saleData.paymentMethod,
+          processed_by: saleData.processedBy,
+          type: saleData.type || 'direct'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newSale: Sale = { 
+        id: data.id, 
+        items: data.items,
+        total: data.total,
+        paymentMethod: data.payment_method,
+        processedBy: data.processed_by,
+        type: data.type,
+        date: new Date(data.date)
+      };
+
+      const updatedProfessionals = professionals.map(prof => {
+        const soldItems = saleData.items.filter(item => item.type === 'product' && item.soldBy === prof.id)
+        const totalQty = soldItems.reduce((acc, item) => acc + item.quantity, 0)
+        return totalQty > 0 ? { ...prof, monthlySalesCount: prof.monthlySalesCount + totalQty } : prof
+      })
+
+      set((state) => {
+        let currentProducts = [...state.products]
+        const deductStock = (prodId: string, qtyToDeduct: number) => {
+          currentProducts = currentProducts.map(p => 
+            p.id === prodId ? { ...p, stock: Math.max(0, p.stock - qtyToDeduct) } : p
+          )
+        }
+
+        saleData.items.forEach(item => {
+          if (item.type === 'product') deductStock(item.itemId, item.quantity)
+          else if (item.type === 'combo') {
+            const comboDef = state.combos.find(c => c.id === item.itemId)
+            if (comboDef) comboDef.items.forEach(i => {
               if (i.type === 'product') deductStock(i.itemId, i.quantity * item.quantity)
             })
           }
+        })
+
+        return { 
+          sales: [...state.sales, newSale],
+          professionals: updatedProfessionals,
+          products: currentProducts
         }
       })
-
-      return { 
-        sales: [...state.sales, newSale],
-        professionals: updatedProfessionals,
-        products: currentProducts
-      }
-    })
+    } catch (err) { console.error("Error al guardar venta:", err); }
   },
 
   updateHourlyRate: (id, rate) => {
@@ -302,31 +345,14 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   resetProfessionalPin: async (id) => {
-    // 1. Limpieza Local Inmediata (Para que Nico vea el cambio aunque falle la red)
     set(state => ({
-      professionals: state.professionals.map(p => 
-        p.id === id ? { ...p, pin: null } : p
-      )
+      professionals: state.professionals.map(p => p.id === id ? { ...p, pin: null } : p)
     }));
-
-    // 2. Limpieza de LocalStorage del Administrador (Por si las moscas)
     localStorage.removeItem(`c427_pins_${id}`);
-
-    // 3. Intento de Update en Supabase con Error Handling Detallado
     try {
-      const { error } = await supabase
-        .from('professionals')
-        .update({ pin: null })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error de Supabase resetProfessionalPin:', error.message, '| Detalle:', error.details);
-      } else {
-        console.log(`PIN de profesional ${id} reseteado en la nube.`);
-      }
-    } catch (err) {
-      console.error('Fallo crítico de conexión al resetear PIN:', err);
-    }
+      const { error } = await supabase.from('professionals').update({ pin: null }).eq('id', id);
+      if (error) console.error('Error Supabase PIN:', error.message);
+    } catch (err) { console.error('Fallo crítico PIN:', err); }
   },
 
   addProfessional: async (prof) => {
@@ -334,23 +360,30 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       const { data, error } = await supabase
         .from('professionals')
         .insert([{
+          id: crypto.randomUUID(),
           name: prof.name,
           shortName: prof.shortName,
           specialties: prof.specialties,
           isActive: prof.isActive,
           hourlyRate: prof.hourlyRate,
-          hourlyRateFacial: prof.hourlyRateFacial,
-          hourlyRateCorporal: prof.hourlyRateCorporal,
+          hourlyRateFacial: prof.hourlyRateFacial || 0,
+          hourlyRateCorporal: prof.hourlyRateCorporal || 0,
           monthlySalesCount: 0,
-          color: prof.color
+          color: prof.color,
+          pin: null
         }])
         .select()
         .single();
         
-      if (!error && data) {
-        set(state => ({ professionals: [...state.professionals, data] }))
+      if (error) {
+        console.error('Error Supabase addProfessional:', error.message);
+        return;
       }
-    } catch(err) { console.error(err) }
+
+      if (data) {
+        set(state => ({ professionals: [...state.professionals, data] }));
+      }
+    } catch(err) { console.error('Fallo crítico addProfessional:', err) }
   },
 
   toggleProfessionalActive: (id) => {
@@ -561,23 +594,28 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   completeAppointment: (id, method, finalTotal, extraProducts: any[] = [], extraSoldBy = "") => {
-    set((state) => {
-      const apt = state.appointments.find(a => a.id === id);
-      if(!apt) return state;
-      const saleItems: SaleItem[] = [];
-      apt.services.forEach(s => saleItems.push({ type: 'service', itemId: s.serviceId, itemName: s.serviceName, price: method === 'efectivo' ? (s.priceCash || s.price) : s.price, priceCashReference: s.priceCash || s.price, quantity: 1, soldBy: apt.professionalId }));
-      apt.products?.forEach(p => saleItems.push({ type: 'product', itemId: p.productId, itemName: p.productName, price: method === 'efectivo' ? (p.priceCashReference || p.price) : p.price, priceCashReference: p.priceCashReference || p.price, quantity: p.quantity, soldBy: apt.professionalId }));
-      extraProducts.forEach(p => saleItems.push({ type: 'product', itemId: p.product.id, itemName: p.product.name, price: method === 'efectivo' ? p.product.priceCash : p.product.priceList, priceCashReference: p.product.priceCash, quantity: p.quantity, soldBy: extraSoldBy || apt.professionalId }));
-      const newSale: Sale = { id: Date.now().toString(), type: 'appointment', items: saleItems, total: finalTotal, paymentMethod: method, date: new Date(), processedBy: "Recepción" };
-      let prodQty = apt.products?.reduce((acc, p) => acc + p.quantity, 0) || 0;
-      let extraProdQtyByProf = extraSoldBy !== "recepcion" ? extraProducts.reduce((acc, item) => acc + item.quantity, 0) : 0;
-      let currentProducts = [...state.products]
-      const deductStock = (pId: string, q: number) => { currentProducts = currentProducts.map(p => p.id === pId ? { ...p, stock: Math.max(0, p.stock - q) } : p) }
-      saleItems.forEach(item => { if (item.type === 'product') deductStock(item.itemId, item.quantity); else if (item.type === 'combo') { const c = state.combos.find(x => x.id === item.itemId); if (c) c.items.forEach(i => { if (i.type === 'product') deductStock(i.itemId, i.quantity * item.quantity) }) } })
-      return { appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'completado', paidAmount: a.totalAmount } : a), sales: [...state.sales, newSale], products: currentProducts, professionals: state.professionals.map(prof => { if (prof.id === apt.professionalId && prodQty > 0) prof.monthlySalesCount += prodQty; if (prof.id === extraSoldBy && extraProdQtyByProf > 0) prof.monthlySalesCount += extraProdQtyByProf; return prof; }) };
+    const apt = get().appointments.find(a => a.id === id);
+    if(!apt) return;
+
+    const saleItems: SaleItem[] = [];
+    apt.services.forEach(s => saleItems.push({ type: 'service', itemId: s.serviceId, itemName: s.serviceName, price: method === 'efectivo' ? (s.priceCash || s.price) : s.price, priceCashReference: s.priceCash || s.price, quantity: 1, soldBy: apt.professionalId }));
+    apt.products?.forEach(p => saleItems.push({ type: 'product', itemId: p.productId, itemName: p.productName, price: method === 'efectivo' ? (p.priceCashReference || p.price) : p.price, priceCashReference: p.priceCashReference || p.price, quantity: p.quantity, soldBy: apt.professionalId }));
+    extraProducts.forEach(p => saleItems.push({ type: 'product', itemId: p.product.id, itemName: p.product.name, price: method === 'efectivo' ? p.product.priceCash : p.product.priceList, priceCashReference: p.product.priceCash, quantity: p.quantity, soldBy: extraSoldBy || apt.professionalId }));
+    
+    // Llamamos a addSale que ya está conectada a Supabase
+    get().addSale({
+      type: 'appointment',
+      items: saleItems,
+      total: finalTotal,
+      paymentMethod: method,
+      processedBy: "Recepción"
     });
-    const aptFound = get().appointments.find(a => a.id === id);
-    if (method === 'gift_card' && aptFound) get().updatePatientGiftCardBalance(aptFound.patientId, -finalTotal);
+
+    set((state) => ({
+      appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'completado', paidAmount: a.totalAmount } : a)
+    }));
+
+    if (method === 'gift_card') get().updatePatientGiftCardBalance(apt.patientId, -finalTotal);
   },
 
   cancelAppointment: async (id) => {
@@ -614,11 +652,78 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     } catch (err) { console.error(err); }
   },
 
-  addOffer: (offer) => set(state => ({ offers: [...state.offers, { id: Date.now().toString(), ...offer }] })),
-  updateOffer: (id, updates) => set(state => ({ offers: state.offers.map(o => o.id === id ? { ...o, ...updates } : o) })),
-  deleteOffer: (id) => set(state => ({ offers: state.offers.filter(o => o.id !== id) })),
-  addCombo: (combo) => set(state => ({ combos: [...state.combos, { id: Date.now().toString(), ...combo }] })),
-  updateCombo: (id, updates) => set(state => ({ combos: state.combos.map(c => c.id === id ? { ...c, ...updates } : c) })),
-  deleteCombo: (id) => set(state => ({ combos: state.combos.filter(c => c.id !== id) })),
+  // --- OFERTAS (SUPABASE) ---
+  fetchOffers: async () => {
+    try {
+      const { data, error } = await supabase.from('offers').select('*');
+      if (!error && data) {
+        set({ offers: data.map((o: any) => ({ id: o.id, name: o.name, discountPercentage: o.discount_percentage })) });
+      }
+    } catch (err) { console.error(err); }
+  },
+
+  addOffer: async (offer) => {
+    try {
+      const { data, error } = await supabase.from('offers').insert([{ name: offer.name, discount_percentage: offer.discountPercentage }]).select().single();
+      if (!error && data) {
+        set(state => ({ offers: [...state.offers, { id: data.id, name: data.name, discountPercentage: data.discount_percentage }] }));
+      }
+    } catch (err) { console.error(err); }
+  },
+
+  updateOffer: async (id, updates) => {
+    try {
+      const up: any = {}
+      if (updates.name !== undefined) up.name = updates.name
+      if (updates.discountPercentage !== undefined) up.discount_percentage = updates.discountPercentage
+      const { error } = await supabase.from('offers').update(up).eq('id', id);
+      if (!error) set(state => ({ offers: state.offers.map(o => o.id === id ? { ...o, ...updates } : o) }));
+    } catch (err) { console.error(err); }
+  },
+
+  deleteOffer: async (id) => {
+    try {
+      const { error } = await supabase.from('offers').delete().eq('id', id);
+      if (!error) set(state => ({ offers: state.offers.filter(o => o.id !== id) }));
+    } catch (err) { console.error(err); }
+  },
+
+  // --- COMBOS (SUPABASE) ---
+  fetchCombos: async () => {
+    try {
+      const { data, error } = await supabase.from('combos').select('*');
+      if (!error && data) {
+        set({ combos: data.map((c: any) => ({ id: c.id, name: c.name, items: c.items, priceCash: c.price_cash, priceList: c.price_list })) });
+      }
+    } catch (err) { console.error(err); }
+  },
+
+  addCombo: async (combo) => {
+    try {
+      const { data, error } = await supabase.from('combos').insert([{ name: combo.name, items: combo.items, price_cash: combo.priceCash, price_list: combo.priceList }]).select().single();
+      if (!error && data) {
+        set(state => ({ combos: [...state.combos, { id: data.id, name: data.name, items: data.items, priceCash: data.price_cash, priceList: data.price_list }] }));
+      }
+    } catch (err) { console.error(err); }
+  },
+
+  updateCombo: async (id, updates) => {
+    try {
+      const up: any = {}
+      if (updates.name !== undefined) up.name = updates.name
+      if (updates.items !== undefined) up.items = updates.items
+      if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
+      if (updates.priceList !== undefined) up.price_list = updates.priceList
+      const { error } = await supabase.from('combos').update(up).eq('id', id);
+      if (!error) set(state => ({ combos: state.combos.map(c => c.id === id ? { ...c, ...updates } : c) }));
+    } catch (err) { console.error(err); }
+  },
+
+  deleteCombo: async (id) => {
+    try {
+      const { error } = await supabase.from('combos').delete().eq('id', id);
+      if (!error) set(state => ({ combos: state.combos.filter(c => c.id !== id) }));
+    } catch (err) { console.error(err); }
+  },
 
 }))

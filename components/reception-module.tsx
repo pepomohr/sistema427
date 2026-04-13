@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { format } from "date-fns"
-import { useClinicStore, getCategoryDisplayName } from "@/lib/store"
+import { useClinicStore, getCategoryDisplayName, calculateCommissionTab } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -52,6 +52,25 @@ import {
   Award,
   Star
 } from "lucide-react"
+
+const normalizeStatus = (s: string) => s?.toLowerCase() || '';
+const getStatusText = (status: string) => {
+  const norm = normalizeStatus(status);
+  return { 
+      scheduled: "Programado", programado: "Programado", 
+      completed: "Completado", completado: "Completado", 
+      cancelled: "Cancelado", cancelado: "Cancelado", 
+      confirmado: "Confirmado", 
+      en_atencion: "En Atención", 
+      pendiente_cobro: "A Cobrar" 
+  }[norm] || status;
+}
+const getStatusColor = (status: string) => {
+  const s = normalizeStatus(status);
+  if (s === 'completado' || s === 'completed') return 'bg-emerald-100/50 text-emerald-600 border-emerald-200';
+  if (s === 'cancelado' || s === 'cancelled') return 'bg-red-100/50 text-red-600 border-red-200';
+  return 'bg-sky-100/50 text-sky-600 border-sky-200';
+}
 
 export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pacientes" | "agenda" | "caja" | "comisiones" }) {
   const {
@@ -162,7 +181,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     };
   }, [searchQuery, searchPatients])
 
-  // LÓGICA FLEXIBLE: Solo Nombre y Teléfono obligatorios
   const handleAddPatient = async () => {
     if (newPatient.name && newPatient.phone) {
       await addPatient(newPatient)
@@ -178,7 +196,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     }
   }
 
-  // LÓGICA FLEXIBLE: Solo Nombre y Teléfono obligatorios
   const handleUpdatePatient = async () => {
     if (editPatientData?.name && editPatientData?.phone) {
       await updatePatient(editPatientData.id, editPatientData)
@@ -392,7 +409,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         (a) =>
           a.professionalId === schedulingProfessional &&
           new Date(a.date).toDateString() === dateForFilter.toDateString() &&
-          a.status !== "cancelado"
+          normalizeStatus(a.status as string) !== "cancelado" &&
+          normalizeStatus(a.status as string) !== "cancelled"
       )
       .map((a) => a.time)
     
@@ -509,7 +527,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   <Input type="email" value={newPatient.email} onChange={(e) => setNewPatient({ ...newPatient, email: e.target.value })} className="bg-input border-gray-200" />
                 </div>
               </div>
-              {/* BOTÓN FLEXIBLE: Solo requiere Nombre y Teléfono */}
               <Button onClick={handleAddPatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!newPatient.name || !newPatient.phone}>
                 Registrar Paciente
               </Button>
@@ -681,19 +698,15 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                <div className="flex items-center gap-2 mb-1">
-                                  <Badge className={`text-[10px] border ${
-                                    apt.status === 'completado' || (apt.status as string) === 'completed' ? 'bg-emerald-100/50 text-emerald-600 border-emerald-200' : 
-                                    apt.status === 'cancelado' || (apt.status as string) === 'cancelled' ? 'bg-red-100/50 text-red-600 border-red-200' : 
-                                    'bg-sky-100/50 text-sky-600 border-sky-200'
-                                  }`}>
-                                    {{ scheduled: "Programado", programado: "Programado", completed: "Completado", completado: "Completado", cancelled: "Cancelado", cancelado: "Cancelado", confirmado: "Confirmado", en_atencion: "En Atención", pendiente_cobro: "A Cobrar" }[apt.status as string] || apt.status}
+                                  <Badge className={`text-[10px] border ${getStatusColor(apt.status as string)}`}>
+                                    {getStatusText(apt.status as string)}
                                   </Badge>
                                   <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time ? apt.time.substring(0, 5) : apt.time}</span>
                                </div>
                                <p className="font-bold text-foreground">{apt.services.map((s:any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
                                <p className="text-sm text-[#16A34A]">con {prof?.name || 'Profesional no encontrado'}</p>
                             </div>
-                            {['programado', 'confirmado', 'scheduled'].includes(apt.status as string) && (
+                            {['programado', 'confirmado', 'scheduled'].includes(normalizeStatus(apt.status as string)) && (
                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                                  <Button variant="outline" size="sm" onClick={() => {
                                     setSchedulingDate(new Date(apt.date).toISOString().split('T')[0])
@@ -850,21 +863,17 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 {!checkoutAptId ? (
                   <div className="space-y-4">
                     <Label className="text-[#16A34A] uppercase text-xs font-bold tracking-wider">Cobro de Turnos</Label>
-                    {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro'].includes(a.status)).length === 0 ? (
+                    {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro', 'scheduled'].includes(normalizeStatus(a.status))).length === 0 ? (
                       <p className="text-sm text-gray-500 italic text-center py-4 rounded bg-gray-50 mt-2">No hay turnos pendientes para cobrar.</p>
                     ) : (
                       <div className="space-y-2 mt-4">
                         <Label className="text-xs text-gray-500 uppercase block mb-2">Turnos Pendientes:</Label>
-                        {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro'].includes(a.status)).map(apt => (
+                        {getPatientHistory(selectedPatient.id).filter(a => ['programado', 'confirmado', 'pendiente_cobro', 'scheduled'].includes(normalizeStatus(a.status))).map(apt => (
                           <div key={apt.id} className="p-4 bg-secondary/10 rounded-xl border border-gray-100 flex justify-between items-center cursor-pointer hover:bg-secondary/15 transition-colors" onClick={() => setCheckoutAptId(apt.id)}>
                             <div>
                               <div className="flex items-center gap-2 mb-1">
-                                <Badge className={`text-[10px] border ${
-                                  apt.status === 'completado' || (apt.status as string) === 'completed' ? 'bg-emerald-100/50 text-emerald-600 border-emerald-200' : 
-                                  apt.status === 'cancelado' || (apt.status as string) === 'cancelled' ? 'bg-red-100/50 text-red-600 border-red-200' : 
-                                  'bg-sky-100/50 text-sky-600 border-sky-200'
-                                }`}>
-                                  {{ scheduled: "Programado", programado: "Programado", completed: "Completado", completado: "Completado", cancelled: "Cancelado", cancelado: "Cancelado", confirmado: "Confirmado", en_atencion: "En Atención", pendiente_cobro: "A Cobrar" }[apt.status as string] || apt.status}
+                                <Badge className={`text-[10px] border ${getStatusColor(apt.status as string)}`}>
+                                  {getStatusText(apt.status as string)}
                                 </Badge>
                                 <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time ? apt.time.substring(0,5) : apt.time}</span>
                               </div>
@@ -929,6 +938,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                               <SelectItem value="efectivo">💵 Efectivo (Promo)</SelectItem>
                               <SelectItem value="transferencia">🏦 Transferencia (Lista)</SelectItem>
                               <SelectItem value="tarjeta">💳 Tarjeta (Lista)</SelectItem>
+                              <SelectItem value="qr">📱 Código QR</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -1012,7 +1022,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         </Card>
       )}
 
-      {/* DIÁLOGO DE EDICIÓN FLEXIBLE: Solo Nombre y Teléfono obligatorios */}
+      {/* DIÁLOGO DE EDICIÓN FLEXIBLE */}
       <Dialog open={showEditPatient} onOpenChange={setShowEditPatient}>
         <DialogContent className="bg-card border-gray-200 text-foreground">
           <DialogHeader>
@@ -1041,7 +1051,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <Input type="email" value={editPatientData?.email || ""} onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })} className="bg-input border-gray-200" />
               </div>
             </div>
-            {/* BOTÓN FLEXIBLE: Solo requiere Nombre y Teléfono */}
             <Button onClick={handleUpdatePatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!editPatientData?.name || !editPatientData?.phone}>
               Guardar Cambios
             </Button>
@@ -1101,7 +1110,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 {agendaAppointments.map(apt => {
                   const prof = professionals.find(p => p.id === apt.professionalId);
                   const pat = patients.find(p => p.id === apt.patientId);
-                  const isAttended = apt.status === 'en_atencion' || apt.status === 'completado' || apt.status === 'pendiente_cobro';
+                  const sNorm = normalizeStatus(apt.status as string);
+                  const isAttended = sNorm === 'en_atencion' || sNorm === 'completado' || sNorm === 'pendiente_cobro' || sNorm === 'completed';
                   
                   return (
                     <div 
@@ -1135,17 +1145,17 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                             if (isAttended) {
                               return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase">Ya Asistió</Badge>;
                             }
-                            if (apt.status === 'programado' || (apt.status as string) === 'scheduled') {
+                            if (sNorm === 'programado' || sNorm === 'scheduled') {
                               return <Badge className="bg-sky-100/80 text-sky-600 border-sky-200 font-bold text-[10px] uppercase">Programado</Badge>;
                             }
-                            if (apt.status === 'confirmado') {
+                            if (sNorm === 'confirmado') {
                               return <Badge className="bg-emerald-500 text-white font-bold text-[10px] uppercase">Confirmado</Badge>;
                             }
-                            return <Badge variant="outline">{apt.status}</Badge>;
+                            return <Badge variant="outline">{getStatusText(apt.status as string)}</Badge>;
                           })()}
                         </div>
                         
-                        {!isAttended && apt.status !== 'cancelado' && (
+                        {!isAttended && sNorm !== 'cancelado' && sNorm !== 'cancelled' && (
                           <Button 
                             onClick={() => startAttention(apt.id)}
                             className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"
@@ -1202,11 +1212,86 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                        <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Transferencia</p>
                        <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
                     </div>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
+                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Tarjeta</p>
+                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
+                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">QR</p>
+                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.qr.toLocaleString()}</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             );
           })()}
+
+          {/* SECCIÓN RESTAURADA Y ADAPTADA: COMISIONES DE RECEPCIÓN */}
+          {mainTab === "comisiones" && (() => {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            const receptionSalesCount = sales.filter(s => {
+              const saleDate = new Date(s.date);
+              return saleDate.getMonth() === currentMonth && 
+                     saleDate.getFullYear() === currentYear && 
+                     s.processedBy === "Recepción";
+            }).length;
+
+            const tInfo = (count: number) => {
+              if (count < 10) return { next: 10, label: "5%", nextLabel: "7.5%" }
+              if (count < 21) return { next: 21, label: "7.5%", nextLabel: "10%" }
+              return { next: count, label: "10%", nextLabel: "MÁXIMO" }
+            }
+            
+            const info = tInfo(receptionSalesCount);
+            const progressValue = Math.min((receptionSalesCount / (info.next === receptionSalesCount && info.next > 0 ? info.next : info.next || 1)) * 100, 100);
+
+            return (
+              <div className="space-y-6 mt-4">
+                <Card className="bg-white border border-[#16A34A]/30 overflow-hidden shadow-xl rounded-2xl w-full">
+                  <CardHeader className="py-3 border-b border-[#16A34A]/30 bg-[#F0FDF4] text-center">
+                    <CardTitle className="text-xs font-bold text-[#14532D] uppercase tracking-wider flex items-center justify-center gap-2">
+                      <Award className="h-4 w-4 text-[#16A34A]" /> Objetivo Mensual - Recepción
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-5 space-y-5">
+                    <div className="flex justify-between items-center p-4 rounded-xl border border-[#16A34A]/20">
+                      <div className="space-y-1">
+                        <p className="text-[10px] text-gray-500 uppercase font-medium">Ventas</p>
+                        <p className="text-4xl font-extrabold text-foreground">{receptionSalesCount}</p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión</p>
+                        <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5">{info.label}</Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 mt-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                       <div className="flex justify-between text-xs font-medium text-gray-500">
+                         <span>Progreso actual</span>
+                         {info.nextLabel !== "MÁXIMO" ? (
+                            <span className="font-bold text-emerald-600">{receptionSalesCount} / {info.next} ventas</span>
+                         ) : (
+                            <span className="font-bold text-emerald-600">¡Alcanzado!</span>
+                         )}
+                       </div>
+                       <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-[#16A34A]" />
+                       {info.nextLabel !== "MÁXIMO" ? (
+                          <p className="text-[10px] text-gray-400 text-center mt-1 uppercase tracking-wider font-bold">
+                            Faltan <span className="text-orange-500">{info.next - receptionSalesCount}</span> para subir al {info.nextLabel}
+                          </p>
+                       ) : (
+                          <p className="text-[10px] text-emerald-600 text-center mt-1 uppercase tracking-wider font-bold">
+                            ¡Nivel máximo de comisiones alcanzado!
+                          </p>
+                       )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )
+          })()}
+
         </div>
       </div>
       <ConfirmDialog />
