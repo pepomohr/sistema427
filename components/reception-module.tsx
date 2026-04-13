@@ -257,6 +257,27 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }
 
+  const compressServiceName = (value: string) => value.toLowerCase().replace(/[\s\-_()&+.,\/]/g, "")
+  const getAppointmentServiceNames = (apt: any) => {
+    if (!Array.isArray(apt?.services)) return "Sin servicio"
+    const names = apt.services.map((s: any) => {
+      if (typeof s === "string") {
+        const compressed = compressServiceName(s)
+        const canonical = services.find((svc) => {
+          const svcCompressed = compressServiceName(svc.name || "")
+          return svcCompressed.includes(compressed) || compressed.includes(svcCompressed)
+        })?.name
+        return canonical || s
+      }
+      if (s?.serviceId) {
+        const canonical = services.find((svc) => svc.id === s.serviceId)?.name
+        if (canonical) return canonical
+      }
+      return s?.serviceName || s?.name || ""
+    }).filter(Boolean)
+    return names.length > 0 ? names.join(", ") : "Sin servicio"
+  }
+
   const agendaAppointments = useMemo(() => {
     if (!agendaDate || !appointments) return []
     const filtered = appointments.filter(a => {
@@ -1354,7 +1375,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="text-gray-600">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span>
                             <span className="text-gray-400">•</span>
-                            <span className="text-[#16A34A] max-w-[150px] truncate">{typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</span>
+                            <span className="text-[#16A34A] break-words">{getAppointmentServiceNames(apt)}</span>
                           </div>
                         </div>
                       </div>

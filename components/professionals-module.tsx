@@ -134,6 +134,26 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   }
 
   const getPatientName = (id: string) => patients.find(p => p.id === id)?.name || 'Desconocido'
+  const compressServiceName = (value: string) => value.toLowerCase().replace(/[\s\-_()&+.,\/]/g, "")
+  const getAppointmentServiceNames = (apt: any) => {
+    if (!Array.isArray(apt?.services)) return "Sin servicio"
+    const names = apt.services.map((s: any) => {
+      if (typeof s === "string") {
+        const compressed = compressServiceName(s)
+        const canonical = services.find((svc) => {
+          const svcCompressed = compressServiceName(svc.name || "")
+          return svcCompressed.includes(compressed) || compressed.includes(svcCompressed)
+        })?.name
+        return canonical || s
+      }
+      if (s?.serviceId) {
+        const canonical = services.find((svc) => svc.id === s.serviceId)?.name
+        if (canonical) return canonical
+      }
+      return s?.serviceName || s?.name || ""
+    }).filter(Boolean)
+    return names.length > 0 ? names.join(", ") : "Sin servicio"
+  }
 
   const availableSlots = useMemo(() => {
     if (!currentProfessional || !schedulingDate || !appointments || !services) return []
@@ -355,7 +375,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                       </div>
                       <div>
                         <p className="font-bold text-lg">{apt.patientName || getPatientName(apt.patientId)}</p>
-                        <p className="text-xs text-gray-500">Servicio inicial: {apt.services[0]?.serviceName}</p>
+                        <p className="text-xs text-gray-500">Servicio inicial: {getAppointmentServiceNames(apt)}</p>
                       </div>
                     </div>
                     {normalizeStatus(apt.status) === 'confirmado' ? (
@@ -399,11 +419,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                   <p className="text-xs text-gray-600 mt-0.5">
                     Prof: <span className="font-semibold">{currentProfessional?.shortName || "-"}</span>
                     <span className="text-gray-400 mx-1">•</span>
-                    <span className="text-[#16A34A]">
-                      {Array.isArray(apt.services)
-                        ? apt.services.map((s: any) => typeof s === "string" ? s : (s.serviceName || s.name)).filter(Boolean).join(", ")
-                        : "Sin servicio"}
-                    </span>
+                    <span className="text-[#16A34A]">{getAppointmentServiceNames(apt)}</span>
                   </p>
                  </div>
                  <Badge className="text-[9px] bg-secondary text-gray-500 border-none font-bold tracking-wider">{getStatusText(apt.status as string).toUpperCase()}</Badge>
