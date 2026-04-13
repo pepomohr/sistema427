@@ -703,6 +703,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   completeAppointment: (id, method, finalTotal, extraProducts: any[] = [], extraSoldBy = "") => {
     const apt = get().appointments.find(a => a.id === id);
     if(!apt) return;
+    const accumulatedPaid = (apt.paidAmount || 0) + finalTotal;
 
     const saleItems: SaleItem[] = [];
     apt.services.forEach(s => saleItems.push({ type: 'service', itemId: s.serviceId, itemName: s.serviceName, price: method === 'efectivo' ? (s.priceCash || s.price) : s.price, priceCashReference: s.priceCash || s.price, quantity: 1, soldBy: apt.professionalId }));
@@ -716,9 +717,9 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       paymentMethod: method,
       processedBy: "Recepción"
     }).then(() => {
-      supabase.from('appointments').update({ status: 'completado', paidAmount: finalTotal }).eq('id', id).then(() => {
+      supabase.from('appointments').update({ status: 'completado', paidAmount: accumulatedPaid }).eq('id', id).then(() => {
         set((state) => ({
-          appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'completado', paidAmount: finalTotal } : a)
+          appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'completado', paidAmount: accumulatedPaid } : a)
         }));
       })
     })

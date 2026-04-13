@@ -97,7 +97,9 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
       const offer = offers.find(o => o.id === selectedOfferId)
       if (offer) finalTotal = subtotal * (1 - offer.discountPercentage / 100)
     }
-    return { subtotal, total: Math.round(finalTotal) }
+    const alreadyPaid = activeApt.paidAmount || 0
+    const pending = Math.max(0, Math.round(finalTotal) - alreadyPaid)
+    return { subtotal, total: pending, alreadyPaid }
   }, [activeApt, extraProducts, selectedOfferId, paymentMethod, offers])
 
   const handleFinalizePayment = () => {
@@ -257,6 +259,11 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   <Button variant={paymentMethod === 'qr' ? 'default' : 'outline'} onClick={() => setPaymentMethod('qr')} className={`h-12 font-black ${paymentMethod === 'qr' ? 'bg-orange-500' : 'text-black border-gray-300'}`}>QR</Button>
                 </div>
                 <div className="pt-6 border-t border-gray-200 mt-6 text-center space-y-1 text-black">
+                  {!!totals.alreadyPaid && (
+                    <p className="text-xs font-bold text-emerald-700">
+                      Seña registrada: ${totals.alreadyPaid.toLocaleString()}
+                    </p>
+                  )}
                   <p className="text-sm font-black uppercase">Total a Cobrar</p>
                   <p className="text-5xl font-black">${totals.total.toLocaleString()}</p>
                 </div>

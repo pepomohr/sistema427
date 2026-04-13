@@ -101,6 +101,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   const mainTab = activeView
   const [agendaDate, setAgendaDate] = useState<Date | undefined>(new Date())
+  const [agendaSortBy, setAgendaSortBy] = useState<'time' | 'professional'>('time')
   const [searchQuery, setSearchQuery] = useState("")
   const [showNewPatient, setShowNewPatient] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null)
@@ -131,7 +132,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const [editPatientData, setEditPatientData] = useState<any>(null)
 
   // Estados para Venta Directa
-  const [directSaleCart, setDirectSaleCart] = useState<{product: any, quantity: number, type: 'product'|'combo'}[]>([])
+  type DirectSaleCartItem = { product: any, quantity: number, type: 'product'|'combo', customUnitPrice?: number }
+  const [directSaleCart, setDirectSaleCart] = useState<DirectSaleCartItem[]>([])
   const [directSaleProf, setDirectSaleProf] = useState("")
   const [directSalePaymentMethod, setDirectSalePaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
   const [directSaleOfferId, setDirectSaleOfferId] = useState<string>("")
@@ -257,10 +259,20 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   const agendaAppointments = useMemo(() => {
     if (!agendaDate || !appointments) return []
-    return appointments.filter(a => {
+    const filtered = appointments.filter(a => {
       return new Date(a.date).toDateString() === agendaDate.toDateString()
-    }).sort((a, b) => a.time.localeCompare(b.time))
-  }, [appointments, agendaDate])
+    })
+
+    return filtered.sort((a, b) => {
+      if (agendaSortBy === 'professional') {
+        const profA = professionals.find(p => p.id === a.professionalId)?.name || ''
+        const profB = professionals.find(p => p.id === b.professionalId)?.name || ''
+        const profCompare = profA.localeCompare(profB)
+        if (profCompare !== 0) return profCompare
+      }
+      return a.time.localeCompare(b.time)
+    })
+  }, [appointments, agendaDate, agendaSortBy, professionals])
 
   const generatePDF = async (sortBy: 'time' | 'professional' = 'time') => {
     if (typeof window === 'undefined') return;
@@ -350,9 +362,20 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     setDirectSaleCart(prev => prev.filter(item => !(item.product.id === id && item.type === type)))
   }
 
+  const isGeneralGiftCardProduct = (item: DirectSaleCartItem) => {
+    if (item.type !== 'product') return false
+    const productName = (item.product?.name || '').toLowerCase()
+    return productName.includes('gift card general')
+  }
+
+  const getDirectSaleUnitPrice = (item: DirectSaleCartItem) => {
+    if (typeof item.customUnitPrice === 'number' && item.customUnitPrice > 0) return item.customUnitPrice
+    return directSalePaymentMethod === 'efectivo' ? item.product.priceCash : item.product.priceList
+  }
+
   const directSaleTotal = useMemo(() => {
     const rawTotal = directSaleCart.reduce((acc, item) => {
-      const price = directSalePaymentMethod === 'efectivo' ? item.product.priceCash : item.product.priceList
+      const price = getDirectSaleUnitPrice(item)
       return acc + (price * item.quantity)
     }, 0)
     
@@ -416,7 +439,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   // ============================================
   // LOGICA DISPONIBILIDAD: VERSIÓN CORREGIDA
   // ============================================
-  const availableSlots = useMemo(() => {
+  const scheduleSlots = useMemo(() => {
     if (!schedulingProfessional || !schedulingDate || !professionals || !appointments || !services) return []
     
     const professional = professionals.find((p) => p.id === schedulingProfessional)
@@ -484,7 +507,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       })
     })
     
-    return allPossibleSlots.filter((slot) => !blockedTimes.has(slot)).sort()
+    return allPossibleSlots
+      .sort()
+      .map((slot) => ({ slot, blocked: blockedTimes.has(slot) }))
   }, [schedulingProfessional, schedulingDate, professionals, appointments, services])
 
   const handleScheduleAppointment = () => {
@@ -896,11 +921,21 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   </div>
                 )}
 
-                {schedulingProfessional && availableSlots.length > 0 && (
+                {schedulingProfessional && scheduleSlots.length > 0 && (
                   <>
+                    <p className="text-xs text-gray-500">
+                      Los horarios ocupados se muestran tachados para identificar rápido disponibilidad.
+                    </p>
                     <div className="grid grid-cols-4 gap-2">
-                      {availableSlots.map(slot => (
-                        <Button key={slot} variant={schedulingTime === slot ? "default" : "outline"} size="sm" onClick={() => setSchedulingTime(slot)}>
+                      {scheduleSlots.map(({ slot, blocked }) => (
+                        <Button
+                          key={slot}
+                          variant={schedulingTime === slot ? "default" : "outline"}
+                          size="sm"
+                          disabled={blocked}
+                          onClick={() => setSchedulingTime(slot)}
+                          className={blocked ? "line-through opacity-60 cursor-not-allowed" : ""}
+                        >
                           {slot}
                         </Button>
                       ))}
@@ -1062,6 +1097,44 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
                 {directSaleCart.length > 0 && (
                   <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col gap-4">
+                    <div className="space-y-2">
+                      {directSaleCart.map(item => (
+                        <div key={`${item.type}-${item.product.id}`} className="rounded-lg bg-white/10 p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm text-white font-semibold">
+                              {item.product.name} x{item.quantity}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-100 hover:text-white hover:bg-red-500/30"
+                              onClick={() => handleRemoveProductFromDirectSale(item.product.id, item.type)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          {isGeneralGiftCardProduct(item) && (
+                            <div className="mt-2">
+                              <Label className="text-xs text-emerald-100">Precio manual Gift Card General</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={item.customUnitPrice ?? ""}
+                                placeholder="Ingresar importe"
+                                onChange={(e) => {
+                                  const value = e.target.value
+                                  setDirectSaleCart(prev => prev.map(cartItem => {
+                                    if (cartItem.product.id !== item.product.id || cartItem.type !== item.type) return cartItem
+                                    return { ...cartItem, customUnitPrice: value === "" ? undefined : Number(value) }
+                                  }))
+                                }}
+                                className="mt-1 bg-white border-emerald-200 text-foreground"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                     <p className="text-sm text-emerald-100 uppercase tracking-widest">Total a cobrar</p>
                     <p className="text-4xl font-extrabold text-white">${Math.round(directSaleTotal).toLocaleString()}</p>
                     <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold" onClick={() => {
@@ -1071,8 +1144,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           type: i.type,
                           itemId: i.product.id,
                           itemName: i.product.name,
-                          price: directSalePaymentMethod === 'efectivo' ? i.product.priceCash : i.product.priceList,
-                          priceCashReference: i.product.priceCash,
+                          price: getDirectSaleUnitPrice(i),
+                          priceCashReference: getDirectSaleUnitPrice(i),
                           quantity: i.quantity,
                           soldBy: directSaleProf || "recepcion"
                         })),
@@ -1149,24 +1222,36 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <CalendarIcon className="h-5 w-5" /> 
                 Agenda del {agendaDate?.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
               </h3>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    className="bg-[#B68C5C] hover:bg-[#a07840] text-white font-bold w-full sm:w-auto"
-                    disabled={agendaAppointments.length === 0}
-                  >
-                    Descargar Turnos (PDF)
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => generatePDF('time')} className="cursor-pointer">
-                    Ordenados solo por Hora
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => generatePDF('professional')} className="cursor-pointer">
-                    Ordenados agrupados por Profesional
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Select value={agendaSortBy} onValueChange={(v: 'time' | 'professional') => setAgendaSortBy(v)}>
+                  <SelectTrigger className="bg-input border-gray-200 w-full sm:w-[240px]">
+                    <SelectValue placeholder="Ordenar agenda..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="time">Ver agenda ordenada por horario</SelectItem>
+                    <SelectItem value="professional">Ver agenda ordenada por profesional</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      className="bg-[#B68C5C] hover:bg-[#a07840] text-white font-bold w-full sm:w-auto"
+                      disabled={agendaAppointments.length === 0}
+                    >
+                      Descargar Turnos (PDF)
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => generatePDF('time')} className="cursor-pointer">
+                      Ordenados solo por Hora
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => generatePDF('professional')} className="cursor-pointer">
+                      Ordenados agrupados por Profesional
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             {agendaAppointments.length === 0 ? (
