@@ -8,26 +8,21 @@ import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import { useConfirm } from "@/hooks/use-confirm"
 import { 
   Clock, 
   Award,
-  Star,
-  Play,
-  ArrowRightCircle,
-  CalendarDays,
-  X,
+  UserPlus,
   Plus,
   Trash2,
-  Edit2,
-  UserPlus
+  CheckCircle2,
+  Search
 } from "lucide-react"
 
-// Función auxiliar para traducir estados en ProfessionalsModule
+// Función auxiliar para traducir estados
 const normalizeStatus = (s: string) => s?.toLowerCase() || '';
 const getStatusText = (status: string) => {
   const norm = normalizeStatus(status);
@@ -56,38 +51,35 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     fetchProducts,
     fetchAppointments,
     addAppointment,
-    cancelAppointment
   } = useClinicStore()
 
   const activeTab = view
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  
-  const [aptServices, setAptServices] = useState<Record<string, any[]>>({})
-  const [aptProducts, setAptProducts] = useState<Record<string, any[]>>({})
-  const [svcMenuOpen, setSvcMenuOpen] = useState<Record<string, boolean>>({})
 
   // Scheduling local state
   const [showScheduleDialog, setShowScheduleDialog] = useState(false)
   const [schedulingDate, setSchedulingDate] = useState(new Date().toISOString().split("T")[0])
-  const [schedulingServiceCat, setSchedulingServiceCat] = useState<string>("")
   const [schedulingService, setSchedulingService] = useState("")
   const [schedulingTime, setSchedulingTime] = useState("")
   const [schedulingPatientId, setSchedulingPatientId] = useState("")
   const [schedulingPaidAmount, setSchedulingPaidAmount] = useState<number | "">("")
   const [schedulingPatientSearch, setSchedulingPatientSearch] = useState("")
   const [schedulingPatientMenuOpen, setSchedulingPatientMenuOpen] = useState(false)
-  const [schedulingServiceSearch, setSchedulingServiceSearch] = useState("")
-  const [schedulingServiceMenuOpen, setSchedulingServiceMenuOpen] = useState(false)
 
-  // Nuevo Paciente State (Separado)
+  // Nuevo Paciente State
   const [showNewPatientDialog, setShowNewPatientDialog] = useState(false)
-  const [newPatientData, setNewPatientData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    dni: "",
-    birthdate: "",
-  })
+  const [newPatientData, setNewPatientData] = useState({ name: "", phone: "", email: "", dni: "", birthdate: "" })
+
+  // --- ESTADOS PARA FINALIZAR ATENCIÓN (EL NUEVO PANEL) ---
+  const [finishingApt, setFinishingApt] = useState<any>(null)
+  const [finishingServices, setFinishingServices] = useState<any[]>([])
+  const [finishingProducts, setFinishingProducts] = useState<any[]>([])
+  
+  const [searchSvc, setSearchSvc] = useState("")
+  const [showSvcDrop, setShowSvcDrop] = useState(false)
+  
+  const [searchProd, setSearchProd] = useState("")
+  const [showProdDrop, setShowProdDrop] = useState(false)
 
   const { confirm, ConfirmDialog } = useConfirm()
 
@@ -105,17 +97,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       (normalizeStatus(a.status) === 'confirmado' || normalizeStatus(a.status) === 'en_atencion')
     )
   }, [appointments, currentProfessional])
-
-  const servicesByCategory = useMemo(() => {
-    const grouped: Record<string, any[]> = {}
-    if (!services || !currentProfessional) return grouped
-    const allowedServices = services.filter(s => currentProfessional.specialties.includes(s.category))
-    allowedServices.forEach((service) => {
-      if (!grouped[service.category]) grouped[service.category] = []
-      grouped[service.category].push(service)
-    })
-    return grouped
-  }, [services, currentProfessional])
 
   const agendaAppointments = useMemo(() => {
     if (!selectedDate || !currentProfessional) return []
@@ -136,15 +117,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const info = tInfo(salesCount)
   const progressValue = Math.min((salesCount / (info.next === salesCount && info.next > 0 ? info.next : info.next || 1)) * 100, 100)
 
-  const handleFinishAttention = (aptId: string, svcs: any[], prods: any[]) => {
-    confirm({
-      title: "¿Finalizar Sesión?",
-      description: "¿Confirmás que querés enviar este paciente a Recepción para cobrar?",
-      actionType: "success",
-      onConfirm: () => finishAttention(aptId, svcs, prods)
-    })
-  }
-
   const handleAddPatientSubmit = async () => {
     if (newPatientData.name && newPatientData.phone) {
       await addPatient(newPatientData)
@@ -155,10 +127,8 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
   const getPatientName = (id: string) => patients.find(p => p.id === id)?.name || 'Desconocido'
 
-  // LÓGICA DE HORARIOS OCUPADOS SEGÚN DURACIÓN
   const availableSlots = useMemo(() => {
     if (!currentProfessional || !schedulingDate || !appointments || !services) return []
-    
     const intervals = currentProfessional.exceptions?.[schedulingDate] || 
                      (currentProfessional.schedule as any)?.[new Date(schedulingDate + 'T12:00:00').toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()] || 
                      [{ start: "09:00", end: "20:00" }];
@@ -176,8 +146,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     const bookedAppointments = appointments.filter(a => 
       a.professionalId === currentProfessional.id && 
       new Date(a.date).toDateString() === dateForFilter && 
-      normalizeStatus(a.status) !== "cancelado" &&
-      normalizeStatus(a.status) !== "cancelled"
+      normalizeStatus(a.status) !== "cancelado"
     )
 
     const blockedTimes = new Set<string>()
@@ -226,6 +195,39 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     setSchedulingPatientId("")
   }
 
+  // --- FUNCIONES DEL PANEL DE FINALIZACIÓN ---
+  const openFinishModal = (apt: any) => {
+    setFinishingApt(apt);
+    setFinishingServices([...(apt.services || [])]);
+    setFinishingProducts([...(apt.products || [])]);
+  }
+
+  const handleConfirmFinish = () => {
+    if (finishingServices.length === 0) {
+      alert("Debes dejar al menos un servicio cargado.");
+      return;
+    }
+    confirm({
+      title: "¿Enviar a Recepción?",
+      description: `El paciente ${finishingApt.patientName || getPatientName(finishingApt.patientId)} pasará a la cola de cobros. ¿Confirmás los servicios y productos cargados?`,
+      actionType: "success",
+      confirmText: "Sí, Enviar",
+      onConfirm: () => {
+        finishAttention(finishingApt.id, finishingServices, finishingProducts);
+        setFinishingApt(null);
+      }
+    })
+  }
+
+  const filteredServices = services.filter(s => 
+    currentProfessional?.specialties.includes(s.category) && 
+    s.name.toLowerCase().includes(searchSvc.toLowerCase())
+  );
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchProd.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <ConfirmDialog />
@@ -234,6 +236,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         <Badge className="bg-[#829177] text-white border-none text-[10px] font-bold px-3">GABINETE</Badge>
       </div>
 
+      {/* TABS (Comisiones, Atención, Agenda) */}
       {activeTab === "comisiones" && (
         <Card className="bg-white border border-[#16A34A]/30 overflow-hidden shadow-xl rounded-2xl">
           <CardHeader className="py-3 border-b border-[#16A34A]/30 bg-[#F0FDF4] text-center">
@@ -284,20 +287,31 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
             <Card className="bg-transparent border-dashed border-gray-200"><CardContent className="py-10 text-center text-gray-400 italic text-sm">Sin pacientes en espera.</CardContent></Card>
           ) : (
             cabinetQueue.map(apt => (
-              <Card key={apt.id} className={`bg-white border border-gray-200 shadow-lg rounded-2xl ${normalizeStatus(apt.status) === 'en_atencion' ? 'ring-2 ring-emerald-500' : ''}`}>
+              <Card key={apt.id} className={`bg-white border border-gray-200 shadow-lg rounded-2xl transition-all ${normalizeStatus(apt.status) === 'en_atencion' ? 'ring-2 ring-emerald-500' : ''}`}>
                 <CardContent className="pt-6 space-y-4 text-foreground">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-[#16A34A] font-bold border border-[#16A34A]/20">{apt.time?.substring(0, 5)}</div>
+                      <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-[#16A34A] font-bold border border-[#16A34A]/20 shrink-0">
+                        {apt.time?.substring(0, 5)}
+                      </div>
                       <div>
                         <p className="font-bold text-lg">{apt.patientName || getPatientName(apt.patientId)}</p>
-                        <p className="text-[10px] text-[#16A34A]">{typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</p>
+                        <p className="text-xs text-gray-500">Servicio inicial: {apt.services[0]?.serviceName}</p>
                       </div>
                     </div>
+                    
+                    {/* ACÁ ESTÁ LA MAGIA DEL BOTÓN DE ATENDIENDO */}
                     {normalizeStatus(apt.status) === 'confirmado' ? (
-                      <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-white font-bold">LLAMAR</Button>
+                      <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-white font-bold w-full sm:w-auto h-12">
+                        LLAMAR PACIENTE
+                      </Button>
                     ) : (
-                      <Badge className="bg-emerald-500 text-white animate-pulse border-none px-4 py-2">ATENDIENDO</Badge>
+                      <Button 
+                        onClick={() => openFinishModal(apt)} 
+                        className="bg-emerald-500 text-white font-bold px-6 py-2 hover:bg-emerald-600 animate-pulse w-full sm:w-auto h-12 shadow-md border border-emerald-400"
+                      >
+                        FINALIZAR ATENCIÓN
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -333,7 +347,150 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         </div>
       )}
 
-      {/* DIÁLOGOS Y MODALES SE MANTIENEN IGUAL PERO CON LA LÓGICA DE DISPONIBILIDAD MEJORADA ABAJO */}
+      {/* ========================================================= */}
+      {/* EL MODAL DE FINALIZACIÓN DE ATENCIÓN (EDITAR SERVICIOS)   */}
+      {/* ========================================================= */}
+      <Dialog open={!!finishingApt} onOpenChange={(open) => !open && setFinishingApt(null)}>
+        <DialogContent className="bg-white text-foreground sm:max-w-[500px] overflow-visible">
+          <DialogHeader>
+            <DialogTitle className="text-[#16A34A] text-xl font-bold flex items-center gap-2">
+              <CheckCircle2 className="h-6 w-6" /> Finalizar Atención
+            </DialogTitle>
+            <p className="text-sm text-gray-500">Paciente: <span className="font-bold text-gray-900">{finishingApt?.patientName || getPatientName(finishingApt?.patientId)}</span></p>
+          </DialogHeader>
+
+          <div className="space-y-6 pt-2">
+            
+            {/* SECCIÓN 1: SERVICIOS */}
+            <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+              <Label className="font-bold text-gray-700 flex items-center justify-between">
+                Servicios Realizados
+                <Badge variant="outline" className="bg-white">{finishingServices.length}</Badge>
+              </Label>
+              
+              {/* Lista de servicios actuales */}
+              <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                {finishingServices.map((svc, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white p-2 rounded-md border text-sm shadow-sm">
+                    <span className="font-medium text-gray-800 truncate pr-2">{svc.serviceName}</span>
+                    <button onClick={() => setFinishingServices(finishingServices.filter((_, i) => i !== index))} className="text-red-400 hover:text-red-600 p-1">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Buscador Desplegable Hacia Arriba de Servicios */}
+              <div className="relative mt-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input 
+                    placeholder="Agregar servicio extra..." 
+                    value={searchSvc}
+                    onChange={(e) => { setSearchSvc(e.target.value); setShowSvcDrop(true); }}
+                    onFocus={() => setShowSvcDrop(true)}
+                    onBlur={() => setTimeout(() => setShowSvcDrop(false), 200)}
+                    className="pl-9 bg-white border-emerald-200 focus-visible:ring-emerald-500"
+                  />
+                </div>
+                {/* Desplegable Hacia Arriba (bottom-full) */}
+                {showSvcDrop && searchSvc.length > 0 && (
+                  <div className="absolute bottom-full mb-1 left-0 w-full bg-white border border-gray-200 shadow-2xl rounded-md max-h-48 overflow-y-auto z-[100]">
+                    {filteredServices.length === 0 ? (
+                       <p className="p-3 text-xs text-gray-500 text-center">No hay servicios con ese nombre en tu especialidad.</p>
+                    ) : (
+                      filteredServices.map(s => (
+                        <div 
+                          key={s.id} 
+                          onClick={() => {
+                            setFinishingServices([...finishingServices, { serviceId: s.id, serviceName: s.name, price: s.price, priceCash: s.priceCash }]);
+                            setSearchSvc("");
+                            setShowSvcDrop(false);
+                          }} 
+                          className="p-3 text-sm hover:bg-emerald-50 cursor-pointer border-b last:border-0 flex justify-between items-center"
+                        >
+                          <span className="font-medium">{s.name}</span>
+                          <Plus size={16} className="text-[#16A34A]" />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* SECCIÓN 2: PRODUCTOS (COMISIONAN) */}
+            <div className="space-y-3 bg-orange-50/50 p-4 rounded-xl border border-orange-100">
+              <Label className="font-bold text-orange-800 flex items-center justify-between">
+                Productos Vendidos (Suman a tu objetivo)
+                <Badge variant="outline" className="bg-white text-orange-600 border-orange-200">{finishingProducts.length}</Badge>
+              </Label>
+              
+              {/* Lista de productos actuales */}
+              <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
+                {finishingProducts.map((prod, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white p-2 rounded-md border border-orange-100 text-sm shadow-sm">
+                    <span className="font-medium text-gray-800 truncate pr-2 flex-1">{prod.quantity}x {prod.productName}</span>
+                    <button onClick={() => setFinishingProducts(finishingProducts.filter((_, i) => i !== index))} className="text-red-400 hover:text-red-600 p-1 shrink-0">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Buscador Desplegable Hacia Arriba de Productos */}
+              <div className="relative mt-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-400" />
+                  <Input 
+                    placeholder="Buscar producto para sumar..." 
+                    value={searchProd}
+                    onChange={(e) => { setSearchProd(e.target.value); setShowProdDrop(true); }}
+                    onFocus={() => setShowProdDrop(true)}
+                    onBlur={() => setTimeout(() => setShowProdDrop(false), 200)}
+                    className="pl-9 bg-white border-orange-200 focus-visible:ring-orange-500"
+                  />
+                </div>
+                {/* Desplegable Hacia Arriba (bottom-full) */}
+                {showProdDrop && searchProd.length > 0 && (
+                  <div className="absolute bottom-full mb-1 left-0 w-full bg-white border border-gray-200 shadow-2xl rounded-md max-h-48 overflow-y-auto z-[100]">
+                    {filteredProducts.length === 0 ? (
+                       <p className="p-3 text-xs text-gray-500 text-center">No se encontraron productos.</p>
+                    ) : (
+                      filteredProducts.map(p => (
+                        <div 
+                          key={p.id} 
+                          onClick={() => {
+                            const existing = finishingProducts.find(x => x.productId === p.id);
+                            if(existing) {
+                                setFinishingProducts(finishingProducts.map(x => x.productId === p.id ? {...x, quantity: x.quantity + 1} : x));
+                            } else {
+                                setFinishingProducts([...finishingProducts, { productId: p.id, productName: p.name, price: p.priceList, priceCashReference: p.priceCash, quantity: 1 }]);
+                            }
+                            setSearchProd("");
+                            setShowProdDrop(false);
+                          }} 
+                          className="p-3 text-sm hover:bg-orange-50 cursor-pointer border-b last:border-0 flex justify-between items-center"
+                        >
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-xs text-orange-600 font-bold bg-orange-100 px-2 py-0.5 rounded-full flex items-center gap-1"><Plus size={12}/> Agregar</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* BOTÓN FINAL DE GUARDADO */}
+            <Button onClick={handleConfirmFinish} className="w-full bg-[#16A34A] text-white hover:bg-emerald-700 font-bold h-12 text-lg shadow-lg">
+              Enviar a Recepción (A Cobrar)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGOS Y MODALES DE AGENDA (Intactos) */}
       <Dialog open={showNewPatientDialog} onOpenChange={setShowNewPatientDialog}>
         <DialogContent className="bg-white text-foreground">
           <DialogHeader><DialogTitle className="text-[#16A34A]">Registrar Nuevo Paciente</DialogTitle></DialogHeader>

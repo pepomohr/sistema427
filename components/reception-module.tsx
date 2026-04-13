@@ -69,6 +69,7 @@ const getStatusColor = (status: string) => {
   const s = normalizeStatus(status);
   if (s === 'completado' || s === 'completed') return 'bg-emerald-100/50 text-emerald-600 border-emerald-200';
   if (s === 'cancelado' || s === 'cancelled') return 'bg-red-100/50 text-red-600 border-red-200';
+  if (s === 'pendiente_cobro' || s === 'pending_payment') return 'bg-gray-100 text-black border-gray-300 font-bold shadow-sm px-3 py-1';
   return 'bg-sky-100/50 text-sky-600 border-sky-200';
 }
 
@@ -273,7 +274,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       const doc = new jsPDF()
       const dateFormatted = agendaDate ? agendaDate.toLocaleDateString('es-ES') : new Date().toLocaleDateString('es-ES')
       const title = `Reporte de Turnos - Consultorio C427`
-    
+      
       doc.setFontSize(16)
       doc.text(title, 14, 22)
       doc.setFontSize(11)
@@ -371,26 +372,18 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     return getProfessionalsForService(schedulingService) || []
   }, [schedulingService, getProfessionalsForService])
 
-  // ============================================
-  // HELPER: Obtiene la duración de un servicio
-  // Soporta dos formatos:
-  // NUEVO: { serviceId: "SER-070", serviceName: "...", price, priceCash }
-  // MEDIO: "MiradaPerfecta120" (string comprimido sin espacios)
-  // ============================================
   const compressName = (s: string): string =>
     s.toLowerCase().replace(/[\s\-_()&+.,\/]/g, '')
 
   const getServiceDuration = (aptServiceInfo: any): number => {
     if (!aptServiceInfo || !services || services.length === 0) return 30
 
-    // FORMATO NUEVO: objeto con serviceId — búsqueda directa por ID
     if (typeof aptServiceInfo === 'object' && aptServiceInfo.serviceId) {
       const byId = services.find(
         s => s.id?.toLowerCase() === String(aptServiceInfo.serviceId).toLowerCase()
       )
       if (byId?.duration) return Number(byId.duration) || 30
 
-      // Fallback por nombre exacto
       if (aptServiceInfo.serviceName) {
         const byName = services.find(
           s => s.name?.trim().toLowerCase() === aptServiceInfo.serviceName.trim().toLowerCase()
@@ -399,7 +392,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       }
     }
 
-    // FORMATO MEDIO: string comprimido como "MiradaPerfecta120" o "Facial/Escote"
     if (typeof aptServiceInfo === 'string') {
       const compressed = compressName(aptServiceInfo)
       const found = services.find(s => {
@@ -413,23 +405,18 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     return 30
   }
 
-  // ============================================
-  // LOGICA DISPONIBILIDAD: VERSIÓN CORREGIDA
-  // ============================================
   const availableSlots = useMemo(() => {
     if (!schedulingProfessional || !schedulingDate || !professionals || !appointments || !services) return []
     
     const professional = professionals.find((p) => p.id === schedulingProfessional)
     if (!professional) return []
     
-    // 1. Crear todos los slots posibles de 30 min (9:00 a 20:30)
     const allPossibleSlots: string[] = []
     for (let h = 9; h < 21; h++) {
       allPossibleSlots.push(`${h.toString().padStart(2, "0")}:00`)
       allPossibleSlots.push(`${h.toString().padStart(2, "0")}:30`)
     }
     
-    // 2. Filtrar turnos del día para ese profesional (excluyendo cancelados)
     const dateForFilter = (
       schedulingDate.includes('T')
         ? new Date(schedulingDate)
@@ -443,41 +430,29 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       normalizeStatus(a.status as string) !== "cancelled"
     )
 
-    // 3. Para cada turno reservado, calcular qué slots bloquea
     const blockedTimes = new Set<string>()
 
     bookedAppointments.forEach(apt => {
-      // Parsear la hora de inicio del turno
       const timeParts = apt.time.split(':')
       const startH = parseInt(timeParts[0], 10)
       const startM = parseInt(timeParts[1], 10)
       const startInMinutes = startH * 60 + startM
 
-      // Obtener duración real usando el helper mejorado
       let duration = 30
       if (Array.isArray(apt.services) && apt.services.length > 0) {
-        // Usamos el primer servicio para calcular la duración
-        // (si en el futuro hay múltiples servicios, sumar sus duraciones)
         duration = getServiceDuration(apt.services[0])
       } else if (apt.serviceId) {
-        // Compatibilidad con turnos guardados con serviceId directo
         duration = getServiceDuration(apt.serviceId)
       }
 
       const endInMinutes = startInMinutes + duration
 
-      // DEBUG: descomentar para verificar en consola
-      // console.log(`[Turno bloqueado] ${apt.time} | duración: ${duration}min | bloquea hasta: ${Math.floor(endInMinutes/60)}:${String(endInMinutes%60).padStart(2,'0')}`)
-
-      // Bloquear cada slot que caiga DENTRO del rango del turno
       allPossibleSlots.forEach(slot => {
         const slotParts = slot.split(':')
         const slotH = parseInt(slotParts[0], 10)
         const slotM = parseInt(slotParts[1], 10)
         const slotInMinutes = slotH * 60 + slotM
 
-        // Un slot está bloqueado si empieza antes de que termine el turno reservado
-        // y después (o igual) de que empieza
         if (slotInMinutes >= startInMinutes && slotInMinutes < endInMinutes) {
           blockedTimes.add(slot)
         }
@@ -609,8 +584,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         <div className="w-full overflow-hidden">
           {mainTab === "pacientes" && (
         <>
+      
       {todayBirthdays.length > 0 && !selectedPatient && (
-        <Card className="bg-gradient-to-r from-[#B68C5C]/10 to-transparent border-[#B68C5C]/30">
+        <Card className="bg-gradient-to-r from-[#B68C5C]/10 to-transparent border-[#B68C5C]/30 mb-6">
           <CardHeader className="pb-2">
             <CardTitle className="text-[#B68C5C] flex items-center gap-2 text-lg">
               <Gift className="h-5 w-5 animate-bounce" /> ¡Cumpleañeros de Hoy!
@@ -676,42 +652,44 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         </div>
       )}
 
-      <Card className="bg-white text-foreground border border-[#16A34A]/40 shadow-xl rounded-2xl overflow-hidden relative">
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-[#16A34A]" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                setSelectedPatient(null)
-              }}
-              placeholder="Buscar por nombre o DNI..."
-              className="pl-14 h-14 text-lg bg-input border-gray-200"
-            />
-          </div>
-          
-          {searchResults.length > 0 && !selectedPatient && (
-            <div className="mt-4 space-y-2 max-h-[300px] overflow-y-auto">
-              {searchResults.map((patient) => (
-                <div key={patient.id} className="p-4 rounded-lg bg-secondary/15 hover:bg-secondary cursor-pointer flex items-center justify-between" onClick={() => setSelectedPatient(patient)}>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-[#16A34A]/20 flex items-center justify-center"><User className="h-6 w-6 text-[#16A34A]" /></div>
-                    <div>
-                      <p className="font-medium text-lg">{patient.name}</p>
-                      <p className="text-sm text-muted-foreground">DNI: {patient.dni}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-              ))}
+      {!selectedPatient && (
+        <Card className="bg-white text-foreground border border-[#16A34A]/40 shadow-xl rounded-2xl overflow-hidden relative">
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-[#16A34A]" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setSelectedPatient(null)
+                }}
+                placeholder="Buscar paciente por nombre o DNI..."
+                className="pl-14 h-14 text-lg bg-input border-gray-200 focus-visible:ring-[#16A34A]"
+              />
             </div>
-          )}
-        </CardContent>
-      </Card>
+            
+            {searchResults.length > 0 && !selectedPatient && (
+              <div className="mt-4 space-y-2 max-h-[300px] overflow-y-auto">
+                {searchResults.map((patient) => (
+                  <div key={patient.id} className="p-4 rounded-lg bg-secondary/15 hover:bg-secondary cursor-pointer flex items-center justify-between transition-colors" onClick={() => setSelectedPatient(patient)}>
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-[#16A34A]/20 flex items-center justify-center"><User className="h-6 w-6 text-[#16A34A]" /></div>
+                      <div>
+                        <p className="font-medium text-lg text-gray-900">{patient.name}</p>
+                        <p className="text-sm text-gray-500">DNI: {patient.dni}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {selectedPatient && (
-        <Card className="bg-secondary text-secondary-foreground border border-gray-800 shadow-2xl rounded-2xl overflow-hidden relative">
+        <Card className="bg-secondary text-secondary-foreground border border-gray-800 shadow-2xl rounded-2xl overflow-hidden relative mt-6">
           <CardHeader className="pb-4 relative pt-6 sm:pt-6">
             <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 sm:gap-0">
               <div className="flex items-center gap-3 sm:gap-4 pr-8 sm:pr-0">
@@ -747,8 +725,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               <Button variant={activePanel === "agendar" ? "default" : "outline"} className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm" onClick={() => setActivePanel("agendar")}>
                 <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" /> Agendar
               </Button>
-              <Button variant={activePanel === "cobrar" ? "default" : "outline"} className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm" onClick={() => setActivePanel("cobrar")}>
-                <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" /> Cobrar Turno
+              <Button variant={activePanel === "cobrar" ? "default" : "outline"} className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm border-emerald-500/30 hover:border-emerald-500" onClick={() => setActivePanel("cobrar")}>
+                <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-400" /> Cobrar Turno
               </Button>
               <Button variant={activePanel === "venta_directa" ? "default" : "outline"} className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-[10px] sm:text-sm text-center leading-tight" onClick={() => setActivePanel("venta_directa")}>
                 <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" /> Vender Producto
@@ -763,8 +741,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                     {getPatientHistory(selectedPatient.id).map(apt => {
                       const prof = professionals.find(p => p.id === apt.professionalId);
+                      const isPending = normalizeStatus(apt.status) === 'pendiente_cobro';
                       return (
-                        <Card key={apt.id} className="bg-secondary/10 border-gray-100">
+                        <Card key={apt.id} className={`bg-secondary/10 border-gray-100 ${isPending ? 'border-yellow-400/50 shadow-sm' : ''}`}>
                           <CardContent className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                <div className="flex items-center gap-2 mb-1">
@@ -776,6 +755,15 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                <p className="font-bold text-foreground">{apt.services.map((s:any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
                                <p className="text-sm text-[#16A34A]">con {prof?.name || 'Profesional no encontrado'}</p>
                             </div>
+                            
+                            {isPending && (
+                              <div className="flex w-full sm:w-auto mt-2 sm:mt-0">
+                                <Button size="sm" onClick={() => { setCheckoutAptId(apt.id); setActivePanel("cobrar"); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold animate-pulse">
+                                  Cobrar Ahora
+                                </Button>
+                              </div>
+                            )}
+
                             {['programado', 'confirmado', 'scheduled'].includes(normalizeStatus(apt.status as string)) && (
                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                                  <Button variant="outline" size="sm" onClick={() => {
@@ -809,20 +797,20 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             )}
 
             {activePanel === "agendar" && (
-              <div className="space-y-4 pt-4 border-t border-gray-200">
+              <div className="space-y-4 pt-4 border-t border-gray-200 text-black">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Fecha</Label>
-                    <Input type="date" value={schedulingDate} onChange={(e) => setSchedulingDate(e.target.value)} className="bg-input" />
+                    <Label className="text-black">Fecha</Label>
+                    <Input type="date" value={schedulingDate} onChange={(e) => setSchedulingDate(e.target.value)} className="bg-input text-black" />
                   </div>
                   <div className="space-y-3">
-                    <Label>Servicio</Label>
+                    <Label className="text-black">Servicio</Label>
                     <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide scroll-smooth snap-x">
                       {Object.keys(servicesByCategory).map(cat => (
                         <Badge 
                           key={cat} 
                           variant={schedulingServiceCat === cat ? "default" : "outline"}
-                          className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-3 sm:py-1.5 flex-shrink-0 snap-start min-w-max text-center flex justify-center text-sm sm:text-xs ${schedulingServiceCat === cat ? 'bg-[#16A34A] text-white' : 'text-gray-600 border-gray-300 hover:bg-white/5'}`}
+                          className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-3 sm:py-1.5 flex-shrink-0 snap-start min-w-max text-center flex justify-center text-sm sm:text-xs font-bold ${schedulingServiceCat === cat ? 'bg-[#16A34A] text-white' : 'text-black border-gray-600 hover:bg-black/5'}`}
                           onClick={() => { setSchedulingServiceCat(cat); setSchedulingService(""); }}
                         >
                           {getCategoryDisplayName(cat as any)}
@@ -842,7 +830,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                 if(e.target.value === "") setSchedulingService("")
                               }}
                               onFocus={() => setSchedulingServiceMenuOpen(true)}
-                              className="bg-input border-emerald-500/50 focus-visible:ring-emerald-500 text-foreground placeholder:text-gray-400 mt-2 service-search-input"
+                              className="bg-input border-emerald-500/50 focus-visible:ring-emerald-500 text-black placeholder:text-gray-400 mt-2 service-search-input font-medium"
                             />
                           </div>
                         </PopoverAnchor>
@@ -853,7 +841,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                               e.preventDefault()
                             }
                           }}
-                          className="w-[var(--radix-popover-trigger-width)] max-h-60 overflow-y-auto p-0 z-[100] border-emerald-500/30 shadow-xl"
+                          className="w-[var(--radix-popover-trigger-width)] max-h-60 overflow-y-auto p-0 z-[100] border-emerald-500/30 shadow-xl bg-card"
                         >
                           {servicesByCategory[schedulingServiceCat]
                             ?.filter(s => !schedulingServiceSearch || s.name.toLowerCase().includes(schedulingServiceSearch.toLowerCase()))
@@ -865,9 +853,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                 setSchedulingServiceSearch(s.name)
                                 setSchedulingServiceMenuOpen(false)
                               }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 text-[#2d3529] font-medium border-b border-black/5 transition-colors"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 text-black font-bold border-b border-black/5 transition-colors"
                             >
-                              {s.name} <span className="text-[#829177] ml-2 font-bold">${s.price}</span>
+                              {s.name} <span className="text-[#16A34A] ml-2 font-black">${s.price}</span>
                             </button>
                           ))}
                         </PopoverContent>
@@ -878,18 +866,18 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
                 {schedulingService && (
                   <div className="space-y-2">
-                    <Label className="flex justify-between">
+                    <Label className="flex justify-between text-black">
                       Profesional
-                      <Badge variant="outline" className="text-xs">{(availableProfessionals?.length || 0)} disponibles</Badge>
+                      <Badge variant="outline" className="text-xs text-black border-gray-400 font-bold">{(availableProfessionals?.length || 0)} disponibles</Badge>
                     </Label>
                     <div className="grid grid-cols-2 gap-2">
                       {availableProfessionals?.map((prof: any) => (
                         <button
                           key={prof.id}
                           onClick={() => setSchedulingProfessional(prof.id)}
-                          className={`p-3 rounded-xl border text-left transition-all ${schedulingProfessional === prof.id ? "border-[#829177] bg-[#829177]/10" : "border-gray-200"}`}
+                          className={`p-3 rounded-xl border text-left transition-all font-black ${schedulingProfessional === prof.id ? "border-[#16A34A] bg-[#16A34A]/10 text-[#16A34A]" : "border-gray-200 text-black hover:bg-gray-50"}`}
                         >
-                          <span className="text-sm font-medium">{prof.shortName}</span>
+                          <span className="text-sm">{prof.shortName}</span>
                         </button>
                       ))}
                     </div>
@@ -900,20 +888,20 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   <>
                     <div className="grid grid-cols-4 gap-2">
                       {availableSlots.map(slot => (
-                        <Button key={slot} variant={schedulingTime === slot ? "default" : "outline"} size="sm" onClick={() => setSchedulingTime(slot)}>
+                        <Button key={slot} variant={schedulingTime === slot ? "default" : "outline"} size="sm" onClick={() => setSchedulingTime(slot)} className="font-bold text-black border-gray-300">
                           {slot}
                         </Button>
                       ))}
                     </div>
                     {schedulingTime && (
-                      <div className="space-y-2 mt-4">
+                      <div className="space-y-2 mt-4 text-black">
                         <Label>Seña Abonada ($) - Opcional</Label>
                         <Input 
                           type="number" 
                           placeholder="Ej: 2000"
                           value={schedulingPaidAmount} 
                           onChange={(e) => setSchedulingPaidAmount(e.target.value === "" ? "" : Number(e.target.value))} 
-                          className="bg-input" 
+                          className="bg-input text-black font-bold" 
                         />
                       </div>
                     )}
@@ -921,7 +909,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 )}
 
                 {schedulingTime && (
-                  <Button onClick={handleScheduleAppointment} className="w-full bg-[#16A34A] text-white hover:bg-[#15803D]">
+                  <Button onClick={handleScheduleAppointment} className="w-full bg-[#16A34A] text-white hover:bg-[#15803D] font-black h-12 text-lg">
                     Confirmar Turno
                   </Button>
                 )}
@@ -947,9 +935,10 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                 </Badge>
                                 <span className="text-gray-500 text-xs">{new Date(apt.date).toLocaleDateString()} a las {apt.time ? apt.time.substring(0,5) : apt.time}</span>
                               </div>
-                              <p className="font-bold text-foreground">{apt.services.map((s:any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
+                              <p className="font-bold text-xl text-foreground mt-1 mb-1">{apt.patientName || selectedPatient.name}</p>
+                              <p className="text-sm text-gray-500">{apt.services.map((s:any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
                             </div>
-                            <Button variant="ghost" size="sm" className="bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20">Abrir Cuenta</Button>
+                            <Button variant="ghost" size="sm" className="bg-[#16A34A]/10 text-[#16A34A] hover:bg-[#16A34A]/20 font-bold">Abrir Cuenta</Button>
                           </div>
                         ))}
                       </div>
@@ -986,24 +975,30 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       <div className="space-y-4">
                         <div className="flex justify-between items-center bg-gray-100 p-3 rounded-lg border border-gray-100">
                           <span className="text-sm font-semibold">Facturación de Turno</span>
-                          <Button variant="outline" size="sm" onClick={() => {setCheckoutAptId(""); setCheckoutPaymentMethod(""); setCheckoutOfferId("");}} className="border-red-500/30 text-red-500 hover:bg-red-50 h-7 text-xs px-3">Cerrar Cuenta</Button>
+                          <Button variant="outline" size="sm" onClick={() => {setCheckoutAptId(""); setCheckoutPaymentMethod(""); setCheckoutOfferId("");}} className="border-red-500/30 text-red-500 hover:bg-red-50 h-7 text-xs px-3 font-bold">Cerrar Cuenta</Button>
                         </div>
                         <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
                           {apt.services.map((s:any, i:number) => (
                             <div key={i} className="flex justify-between text-gray-700">
-                              <span>{typeof s === 'string' ? s : s.serviceName}</span>
-                              <span>${typeof s === 'string' ? 0 : (checkoutPaymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price)}</span>
+                              <span className="font-medium">{typeof s === 'string' ? s : s.serviceName}</span>
+                              <span className="font-bold">${typeof s === 'string' ? 0 : (checkoutPaymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price)}</span>
                             </div>
                           ))}
-                          <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-foreground mt-2">
+                          {apt.products && apt.products.map((p:any, i:number) => (
+                             <div key={`p-${i}`} className="flex justify-between text-orange-700 font-bold">
+                               <span>{p.quantity}x {p.productName}</span>
+                               <span>${(checkoutPaymentMethod === 'efectivo' ? (p.priceCashReference || p.price) : p.price) * p.quantity}</span>
+                             </div>
+                          ))}
+                          <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-foreground mt-2 text-lg">
                             <span>Subtotal:</span>
                             <span>${chosenTotalOriginal}</span>
                           </div>
                         </div>
                         <div className="pt-2 flex flex-col gap-2 relative z-10">
-                          <Label>Medio de Pago</Label>
+                          <Label className="font-bold">Medio de Pago</Label>
                           <Select value={checkoutPaymentMethod} onValueChange={(val: any) => setCheckoutPaymentMethod(val)}>
-                            <SelectTrigger className="bg-input border-[#16A34A]/40 h-10"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                            <SelectTrigger className="bg-input border-[#16A34A]/40 h-10 font-bold"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                             <SelectContent className="bg-card border-gray-200 z-[100]">
                               <SelectItem value="efectivo">💵 Efectivo (Promo)</SelectItem>
                               <SelectItem value="transferencia">🏦 Transferencia (Lista)</SelectItem>
@@ -1013,13 +1008,13 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           </Select>
                         </div>
                       </div>
-                      <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col justify-between h-full">
+                      <div className="bg-emerald-900 p-6 rounded-xl border border-emerald-500/40 flex flex-col justify-between h-full shadow-lg">
                         <div className="space-y-1 text-right">
-                          <p className="text-sm text-gray-100 uppercase tracking-widest">Saldo a Pagar</p>
-                          <p className="text-5xl font-extrabold text-white">${finalToPay.toLocaleString()}</p>
+                          <p className="text-sm text-emerald-100 uppercase tracking-widest font-bold">Saldo a Pagar</p>
+                          <p className="text-5xl font-black text-white">${finalToPay.toLocaleString()}</p>
                         </div>
                         <Button
-                          className="w-full bg-[#16A34A] hover:bg-[#15803D] h-14 text-white font-bold mt-6 shadow-lg text-lg"
+                          className="w-full bg-[#16A34A] hover:bg-[#15803D] h-14 text-white font-black mt-6 shadow-xl text-xl"
                           disabled={!checkoutPaymentMethod}
                           onClick={() => {
                             if (typeof useClinicStore.getState().completeAppointment === 'function') {
@@ -1043,9 +1038,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             {activePanel === "venta_directa" && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <Label className="text-[#16A34A] uppercase text-xs font-bold tracking-wider">Vender Producto</Label>
-                <div className="bg-secondary/10 p-3 rounded-lg border border-dashed border-gray-200 space-y-2">
+                <div className="bg-secondary/10 p-3 rounded-lg border border-dashed border-gray-400 space-y-2">
                   <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide scroll-smooth snap-x">
-                    <Badge variant={directSaleProdCat === 'COMBOS' ? "default" : "outline"} onClick={() => { setDirectSaleProdCat('COMBOS'); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start ${directSaleProdCat === 'COMBOS' ? 'bg-[#16A34A] text-white' : 'text-gray-500 border-gray-200 hover:bg-white/5'}`}>
+                    <Badge variant={directSaleProdCat === 'COMBOS' ? "default" : "outline"} onClick={() => { setDirectSaleProdCat('COMBOS'); setDirectSaleProdSearch(""); }} className={`cursor-pointer whitespace-nowrap px-4 py-2 sm:px-2 sm:py-0.5 text-sm sm:text-xs flex-shrink-0 snap-start font-bold ${directSaleProdCat === 'COMBOS' ? 'bg-[#16A34A] text-white' : 'text-black border-gray-400 hover:bg-black/5'}`}>
                       Combos
                     </Badge>
                   </div>
@@ -1055,16 +1050,16 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       value={directSaleProdSearch}
                       onChange={(e) => { setDirectSaleProdSearch(e.target.value); setDirectSaleProdMenuOpen(true) }}
                       onFocus={() => setDirectSaleProdMenuOpen(true)}
-                      className="bg-input border-gray-200 text-foreground placeholder:text-gray-400 h-10 text-sm"
+                      className="bg-input border-gray-400 text-black placeholder:text-gray-500 h-10 text-sm font-medium"
                     />
                   </div>
                 </div>
 
                 {directSaleCart.length > 0 && (
-                  <div className="bg-emerald-700 p-6 rounded-xl border border-emerald-500/40 flex flex-col gap-4">
-                    <p className="text-sm text-emerald-100 uppercase tracking-widest">Total a cobrar</p>
-                    <p className="text-4xl font-extrabold text-white">${Math.round(directSaleTotal).toLocaleString()}</p>
-                    <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold" onClick={() => {
+                  <div className="bg-emerald-900 p-6 rounded-xl border border-emerald-500/40 flex flex-col gap-4 mt-4 shadow-md">
+                    <p className="text-sm text-emerald-100 uppercase tracking-widest font-bold">Total a cobrar</p>
+                    <p className="text-4xl font-black text-white">${Math.round(directSaleTotal).toLocaleString()}</p>
+                    <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-black h-12 text-lg" onClick={() => {
                       addSale({
                         type: 'direct',
                         items: directSaleCart.map(i => ({
@@ -1102,26 +1097,26 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2">
                 <Label>Apellidos y Nombres <span className="text-red-500">*</span></Label>
-                <Input value={editPatientData?.name || ""} onChange={(e) => setEditPatientData({ ...editPatientData, name: e.target.value })} className="bg-input border-gray-200" />
+                <Input value={editPatientData?.name || ""} onChange={(e) => setEditPatientData({ ...editPatientData, name: e.target.value })} className="bg-input border-gray-200 font-medium" />
               </div>
               <div className="space-y-2">
                 <Label>Teléfono <span className="text-red-500">*</span></Label>
-                <Input value={editPatientData?.phone || ""} onChange={(e) => setEditPatientData({ ...editPatientData, phone: e.target.value })} className="bg-input border-gray-200" />
+                <Input value={editPatientData?.phone || ""} onChange={(e) => setEditPatientData({ ...editPatientData, phone: e.target.value })} className="bg-input border-gray-200 font-medium" />
               </div>
               <div className="space-y-2">
                 <Label>DNI (Opcional)</Label>
-                <Input value={editPatientData?.dni || ""} onChange={(e) => setEditPatientData({ ...editPatientData, dni: e.target.value })} className="bg-input border-gray-200" />
+                <Input value={editPatientData?.dni || ""} onChange={(e) => setEditPatientData({ ...editPatientData, dni: e.target.value })} className="bg-input border-gray-200 font-medium" />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de Nac. (Opcional)</Label>
-                <Input type="date" value={editPatientData?.birthdate || ""} onChange={(e) => setEditPatientData({ ...editPatientData, birthdate: e.target.value })} className="bg-input border-gray-200 text-foreground" />
+                <Input type="date" value={editPatientData?.birthdate || ""} onChange={(e) => setEditPatientData({ ...editPatientData, birthdate: e.target.value })} className="bg-input border-gray-200 text-foreground font-medium" />
               </div>
               <div className="space-y-2">
                 <Label>Email (Opcional)</Label>
-                <Input type="email" value={editPatientData?.email || ""} onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })} className="bg-input border-gray-200" />
+                <Input type="email" value={editPatientData?.email || ""} onChange={(e) => setEditPatientData({ ...editPatientData, email: e.target.value })} className="bg-input border-gray-200 font-medium" />
               </div>
             </div>
-            <Button onClick={handleUpdatePatient} className="w-full bg-[#16A34A] text-white font-bold hover:bg-[#15803D]" disabled={!editPatientData?.name || !editPatientData?.phone}>
+            <Button onClick={handleUpdatePatient} className="w-full bg-[#16A34A] text-white font-black hover:bg-[#15803D]" disabled={!editPatientData?.name || !editPatientData?.phone}>
               Guardar Cambios
             </Button>
           </div>
@@ -1181,30 +1176,32 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   const prof = professionals.find(p => p.id === apt.professionalId);
                   const pat = patients.find(p => p.id === apt.patientId);
                   const sNorm = normalizeStatus(apt.status as string);
-                  const isAttended = sNorm === 'en_atencion' || sNorm === 'completado' || sNorm === 'pendiente_cobro' || sNorm === 'completed';
+                  const isFinished = sNorm === 'completado' || sNorm === 'completed';
+                  const isPendingPayment = sNorm === 'pendiente_cobro' || sNorm === 'pending_payment';
+                  const hideCheckButton = isFinished || isPendingPayment || sNorm === 'en_atencion' || sNorm === 'cancelado' || sNorm === 'cancelled';
                   
                   return (
                     <div 
                       key={apt.id} 
                       className={`relative bg-secondary/10 border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all ${
-                        isAttended ? 'opacity-50 grayscale border-gray-100' : 'border-gray-200 hover:border-[#16A34A]/30'
+                        isFinished ? 'opacity-50 grayscale border-gray-100' : (isPendingPayment ? 'border-yellow-400 shadow-md' : 'border-gray-200 hover:border-[#16A34A]/30')
                       }`}
                     >
-                      {isAttended && <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/20 -translate-y-1/2 rounded-full pointer-events-none z-10"></div>}
+                      {isFinished && <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/20 -translate-y-1/2 rounded-full pointer-events-none z-10"></div>}
                       
                       <div className="flex items-center gap-4 z-0">
                         <div className="flex flex-col items-center justify-center p-3 bg-gray-100 rounded-lg min-w-[70px]">
-                          <span className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-[#16A34A]'}`}>{apt.time ? apt.time.substring(0, 5) : apt.time}</span>
+                          <span className={`font-black text-lg ${isFinished ? 'text-gray-500' : 'text-[#16A34A]'}`}>{apt.time ? apt.time.substring(0, 5) : apt.time}</span>
                         </div>
                         
                         <div className="space-y-1 z-0">
-                          <p className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-foreground'}`}>
+                          <p className={`font-black text-lg ${isFinished ? 'text-gray-500' : 'text-foreground'}`}>
                             {apt.patientName || pat?.name || 'Desconocido'}
                           </p>
                           <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="text-gray-600">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span>
+                            <span className="text-gray-700 font-bold">Prof: <span className="font-black">{prof?.shortName || '-'}</span></span>
                             <span className="text-gray-400">•</span>
-                            <span className="text-[#16A34A] max-w-[150px] truncate">{typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</span>
+                            <span className="text-[#16A34A] max-w-[150px] truncate font-black">{typeof apt.services[0] === 'string' ? apt.services[0] : apt.services[0]?.serviceName}</span>
                           </div>
                         </div>
                       </div>
@@ -1212,23 +1209,19 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       <div className="flex items-center justify-between w-full md:w-auto gap-4 z-0">
                         <div className="flex flex-col items-end gap-1">
                           {(() => {
-                            if (isAttended) {
-                              return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase">Ya Asistió</Badge>;
-                            }
-                            if (sNorm === 'programado' || sNorm === 'scheduled') {
-                              return <Badge className="bg-sky-100/80 text-sky-600 border-sky-200 font-bold text-[10px] uppercase">Programado</Badge>;
-                            }
-                            if (sNorm === 'confirmado') {
-                              return <Badge className="bg-emerald-500 text-white font-bold text-[10px] uppercase">Confirmado</Badge>;
-                            }
-                            return <Badge variant="outline">{getStatusText(apt.status as string)}</Badge>;
+                            if (isFinished) return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase font-bold">Ya Asistió (Cobrado)</Badge>;
+                            if (isPendingPayment) return <Badge className="bg-gray-100 text-black border-gray-300 font-black text-[10px] uppercase px-3 py-1 shadow-sm">A Cobrar</Badge>;
+                            if (sNorm === 'en_atencion') return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 font-black text-[10px] uppercase">En Gabinete</Badge>;
+                            if (sNorm === 'programado' || sNorm === 'scheduled') return <Badge className="bg-sky-100/80 text-sky-600 border-sky-200 font-black text-[10px] uppercase">Programado</Badge>;
+                            if (sNorm === 'confirmado') return <Badge className="bg-emerald-500 text-white font-black text-[10px] uppercase">Confirmado</Badge>;
+                            return <Badge variant="outline" className="font-black">{getStatusText(apt.status as string)}</Badge>;
                           })()}
                         </div>
                         
-                        {!isAttended && sNorm !== 'cancelado' && sNorm !== 'cancelled' && (
+                        {!hideCheckButton && (
                           <Button 
                             onClick={() => startAttention(apt.id)}
-                            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"
+                            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-black h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"
                             title="Marcar como Atendido / Llegó"
                           >
                             ✓
@@ -1263,32 +1256,32 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             return (
               <Card className="bg-white text-foreground border border-gray-200 shadow-xl rounded-2xl mt-4">
                 <CardHeader>
-                  <CardTitle className="text-[#16A34A] flex items-center gap-2 text-2xl">
+                  <CardTitle className="text-[#16A34A] flex items-center gap-2 text-2xl font-black">
                     Cierre de Caja Diario
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="bg-gradient-to-br from-[#16A34A] to-[#14532D] p-8 rounded-2xl border border-emerald-500/30 text-center shadow-lg relative overflow-hidden">
-                    <p className="relative z-10 text-xs sm:text-sm text-emerald-100/90 font-bold uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
+                    <p className="relative z-10 text-xs sm:text-sm text-emerald-100/90 font-black uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
                     <p className="relative z-10 text-5xl sm:text-6xl font-black text-white drop-shadow-md">${totalIncome.toLocaleString()}</p>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
                        <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Efectivo</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.efectivo.toLocaleString()}</p>
+                       <p className="text-xl sm:text-2xl font-black text-foreground">${byMethod.efectivo.toLocaleString()}</p>
                     </div>
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
                        <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Transferencia</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
+                       <p className="text-xl sm:text-2xl font-black text-foreground">${byMethod.transferencia.toLocaleString()}</p>
                     </div>
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
                        <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Tarjeta</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
+                       <p className="text-xl sm:text-2xl font-black text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
                     </div>
                     <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
                        <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">QR</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.qr.toLocaleString()}</p>
+                       <p className="text-xl sm:text-2xl font-black text-foreground">${byMethod.qr.toLocaleString()}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1327,11 +1320,11 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     <div className="flex justify-between items-center p-4 rounded-xl border border-[#16A34A]/20">
                       <div className="space-y-1">
                         <p className="text-[10px] text-gray-500 uppercase font-medium">Ventas</p>
-                        <p className="text-4xl font-extrabold text-foreground">{receptionSalesCount}</p>
+                        <p className="text-4xl font-black text-foreground">{receptionSalesCount}</p>
                       </div>
                       <div className="text-right space-y-1">
                         <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión</p>
-                        <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5">{info.label}</Badge>
+                        <Badge className="bg-[#16A34A] text-white text-lg font-black px-4 py-1.5">{info.label}</Badge>
                       </div>
                     </div>
                     
@@ -1339,18 +1332,18 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                        <div className="flex justify-between text-xs font-medium text-gray-500">
                          <span>Progreso actual</span>
                          {info.nextLabel !== "MÁXIMO" ? (
-                            <span className="font-bold text-emerald-600">{receptionSalesCount} / {info.next} ventas</span>
+                            <span className="font-black text-emerald-600">{receptionSalesCount} / {info.next} ventas</span>
                          ) : (
-                            <span className="font-bold text-emerald-600">¡Alcanzado!</span>
+                            <span className="font-black text-emerald-600">¡Alcanzado!</span>
                          )}
                        </div>
                        <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-[#16A34A]" />
                        {info.nextLabel !== "MÁXIMO" ? (
-                          <p className="text-[10px] text-gray-400 text-center mt-1 uppercase tracking-wider font-bold">
+                          <p className="text-[10px] text-gray-400 text-center mt-1 uppercase tracking-wider font-black">
                             Faltan <span className="text-orange-500">{info.next - receptionSalesCount}</span> para subir al {info.nextLabel}
                           </p>
                        ) : (
-                          <p className="text-[10px] text-emerald-600 text-center mt-1 uppercase tracking-wider font-bold">
+                          <p className="text-[10px] text-emerald-600 text-center mt-1 uppercase tracking-wider font-black">
                             ¡Nivel máximo de comisiones alcanzado!
                           </p>
                        )}
