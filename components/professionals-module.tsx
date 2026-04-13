@@ -19,10 +19,10 @@ import {
   Plus,
   Trash2,
   CheckCircle2,
-  Search
+  Search,
+  ShoppingBag
 } from "lucide-react"
 
-// Función auxiliar para traducir estados
 const normalizeStatus = (s: string) => s?.toLowerCase() || '';
 const getStatusText = (status: string) => {
   const norm = normalizeStatus(status);
@@ -45,6 +45,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     services = [],
     products = [],
     addPatient,
+    addSale,
     startAttention,
     finishAttention,
     fetchServices,
@@ -56,7 +57,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const activeTab = view
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
 
-  // Scheduling local state
+  // Scheduling
   const [showScheduleDialog, setShowScheduleDialog] = useState(false)
   const [schedulingDate, setSchedulingDate] = useState(new Date().toISOString().split("T")[0])
   const [schedulingService, setSchedulingService] = useState("")
@@ -66,20 +67,27 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const [schedulingPatientSearch, setSchedulingPatientSearch] = useState("")
   const [schedulingPatientMenuOpen, setSchedulingPatientMenuOpen] = useState(false)
 
-  // Nuevo Paciente State
+  // Nuevo Paciente
   const [showNewPatientDialog, setShowNewPatientDialog] = useState(false)
   const [newPatientData, setNewPatientData] = useState({ name: "", phone: "", email: "", dni: "", birthdate: "" })
 
-  // --- ESTADOS PARA FINALIZAR ATENCIÓN (EL NUEVO PANEL) ---
+  // Finalizar atención
   const [finishingApt, setFinishingApt] = useState<any>(null)
   const [finishingServices, setFinishingServices] = useState<any[]>([])
   const [finishingProducts, setFinishingProducts] = useState<any[]>([])
-  
   const [searchSvc, setSearchSvc] = useState("")
   const [showSvcDrop, setShowSvcDrop] = useState(false)
-  
   const [searchProd, setSearchProd] = useState("")
   const [showProdDrop, setShowProdDrop] = useState(false)
+
+  // ============================================
+  // VENTA DIRECTA — estados
+  // ============================================
+  const [showDirectSaleDialog, setShowDirectSaleDialog] = useState(false)
+  const [directSaleCart, setDirectSaleCart] = useState<{ product: any, quantity: number }[]>([])
+  const [directSaleSearch, setDirectSaleSearch] = useState("")
+  const [directSaleMenuOpen, setDirectSaleMenuOpen] = useState(false)
+  const [directSalePaymentMethod, setDirectSalePaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
 
   const { confirm, ConfirmDialog } = useConfirm()
 
@@ -90,7 +98,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   }, [fetchServices, fetchProducts, fetchAppointments])
 
   const currentProfessional = professionals.find(p => p.id === (professionalId || currentUser?.professionalId))
-  
+
   const cabinetQueue = useMemo(() => {
     return appointments.filter(a => 
       a.professionalId === currentProfessional?.id && 
@@ -150,23 +158,17 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     )
 
     const blockedTimes = new Set<string>()
-
     bookedAppointments.forEach(apt => {
-      const startTime = apt.time
       const serviceId = apt.services[0]?.serviceId
       const serviceDef = services.find(s => s.id === serviceId)
       const duration = serviceDef?.duration || 30
-
-      const [startH, startM] = startTime.split(':').map(Number)
+      const [startH, startM] = apt.time.split(':').map(Number)
       const startInMinutes = startH * 60 + startM
       const endInMinutes = startInMinutes + duration
-
       allPossibleSlots.forEach(slot => {
         const [slotH, slotM] = slot.split(':').map(Number)
         const slotTotalM = slotH * 60 + slotM
-        if (slotTotalM >= startInMinutes && slotTotalM < endInMinutes) {
-          blockedTimes.add(slot)
-        }
+        if (slotTotalM >= startInMinutes && slotTotalM < endInMinutes) blockedTimes.add(slot)
       })
     })
 
@@ -195,17 +197,16 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     setSchedulingPatientId("")
   }
 
-  // --- FUNCIONES DEL PANEL DE FINALIZACIÓN ---
   const openFinishModal = (apt: any) => {
-    setFinishingApt(apt);
-    setFinishingServices([...(apt.services || [])]);
-    setFinishingProducts([...(apt.products || [])]);
+    setFinishingApt(apt)
+    setFinishingServices([...(apt.services || [])])
+    setFinishingProducts([...(apt.products || [])])
   }
 
   const handleConfirmFinish = () => {
     if (finishingServices.length === 0) {
-      alert("Debes dejar al menos un servicio cargado.");
-      return;
+      alert("Debes dejar al menos un servicio cargado.")
+      return
     }
     confirm({
       title: "¿Enviar a Recepción?",
@@ -213,8 +214,8 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       actionType: "success",
       confirmText: "Sí, Enviar",
       onConfirm: () => {
-        finishAttention(finishingApt.id, finishingServices, finishingProducts);
-        setFinishingApt(null);
+        finishAttention(finishingApt.id, finishingServices, finishingProducts)
+        setFinishingApt(null)
       }
     })
   }
@@ -222,11 +223,63 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const filteredServices = services.filter(s => 
     currentProfessional?.specialties.includes(s.category) && 
     s.name.toLowerCase().includes(searchSvc.toLowerCase())
-  );
+  )
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchProd.toLowerCase())
-  );
+  )
+
+  // ============================================
+  // VENTA DIRECTA — lógica
+  // ============================================
+  const directSaleFiltered = products.filter(p =>
+    p.name.toLowerCase().includes(directSaleSearch.toLowerCase())
+  )
+
+  const directSaleTotal = directSaleCart.reduce((acc, item) => {
+    const price = directSalePaymentMethod === 'efectivo' ? item.product.priceCash : item.product.priceList
+    return acc + price * item.quantity
+  }, 0)
+
+  const handleAddToDirectCart = (product: any) => {
+    setDirectSaleCart(prev => {
+      const existing = prev.find(i => i.product.id === product.id)
+      if (existing) return prev.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i)
+      return [...prev, { product, quantity: 1 }]
+    })
+    setDirectSaleSearch("")
+    setDirectSaleMenuOpen(false)
+  }
+
+  const handleConfirmDirectSale = () => {
+    if (!directSalePaymentMethod || directSaleCart.length === 0 || !currentProfessional) return
+    confirm({
+      title: "Confirmar Venta",
+      description: `Vas a registrar una venta por $${directSaleTotal.toLocaleString()}. Se sumará a tu objetivo mensual.`,
+      actionType: "success",
+      confirmText: "Confirmar",
+      onConfirm: () => {
+        addSale({
+          type: 'direct',
+          items: directSaleCart.map(i => ({
+            type: 'product' as const,
+            itemId: i.product.id,
+            itemName: i.product.name,
+            price: directSalePaymentMethod === 'efectivo' ? i.product.priceCash : i.product.priceList,
+            priceCashReference: i.product.priceCash,
+            quantity: i.quantity,
+            soldBy: currentProfessional.id, // ID real de la profesional → suma a su contador
+          })),
+          total: directSaleTotal,
+          paymentMethod: directSalePaymentMethod as any,
+          processedBy: currentProfessional.shortName,
+        })
+        setDirectSaleCart([])
+        setDirectSalePaymentMethod("")
+        setShowDirectSaleDialog(false)
+      }
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -236,7 +289,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         <Badge className="bg-[#829177] text-white border-none text-[10px] font-bold px-3">GABINETE</Badge>
       </div>
 
-      {/* TABS (Comisiones, Atención, Agenda) */}
       {activeTab === "comisiones" && (
         <Card className="bg-white border border-[#16A34A]/30 overflow-hidden shadow-xl rounded-2xl">
           <CardHeader className="py-3 border-b border-[#16A34A]/30 bg-[#F0FDF4] text-center">
@@ -255,7 +307,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                 <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5">{currentCommission}%</Badge>
               </div>
             </div>
-            
             <div className="space-y-2 mt-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                <div className="flex justify-between text-xs font-medium text-gray-500">
                  <span>Progreso actual</span>
@@ -282,6 +333,14 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
       {activeTab === "atencion" && (
         <div className="space-y-4">
+          {/* BOTÓN VENTA DIRECTA */}
+          <Button
+            onClick={() => { setShowDirectSaleDialog(true); setDirectSaleCart([]); setDirectSalePaymentMethod(""); }}
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 flex items-center justify-center gap-2 shadow-md"
+          >
+            <ShoppingBag className="h-5 w-5" /> REGISTRAR VENTA DE PRODUCTO
+          </Button>
+
           <h3 className="text-lg font-bold text-foreground flex items-center gap-2"><Clock className="h-5 w-5 text-[#16A34A]" /> Sala de Espera</h3>
           {cabinetQueue.length === 0 ? (
             <Card className="bg-transparent border-dashed border-gray-200"><CardContent className="py-10 text-center text-gray-400 italic text-sm">Sin pacientes en espera.</CardContent></Card>
@@ -299,8 +358,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                         <p className="text-xs text-gray-500">Servicio inicial: {apt.services[0]?.serviceName}</p>
                       </div>
                     </div>
-                    
-                    {/* ACÁ ESTÁ LA MAGIA DEL BOTÓN DE ATENDIENDO */}
                     {normalizeStatus(apt.status) === 'confirmado' ? (
                       <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] text-white font-bold w-full sm:w-auto h-12">
                         LLAMAR PACIENTE
@@ -324,7 +381,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       {activeTab === "agenda" && (
         <div className="space-y-6">
           <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} className="bg-white rounded-xl shadow-lg border p-4 mx-auto" />
-          
           <div className="flex flex-col gap-2">
              <Button onClick={() => setShowNewPatientDialog(true)} className="bg-white border-2 border-[#16A34A] text-[#16A34A] hover:bg-emerald-50 font-bold w-full h-12 shadow-sm">
                 <UserPlus className="h-5 w-5 mr-2" /> REGISTRAR PACIENTE NUEVO
@@ -333,7 +389,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                 <Plus className="h-5 w-5 mr-2" /> AGENDAR TURNO EN MI AGENDA
              </Button>
           </div>
-
           <div className="space-y-3">
              <h3 className="text-sm font-bold text-foreground">Turnos del día</h3>
              {agendaAppointments.length === 0 ? <p className="text-center text-gray-400 italic text-xs py-4">Sin turnos agendados.</p> : agendaAppointments.map(apt => (
@@ -347,9 +402,115 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* EL MODAL DE FINALIZACIÓN DE ATENCIÓN (EDITAR SERVICIOS)   */}
-      {/* ========================================================= */}
+      {/* ============================================ */}
+      {/* MODAL VENTA DIRECTA                          */}
+      {/* ============================================ */}
+      <Dialog open={showDirectSaleDialog} onOpenChange={(open) => !open && setShowDirectSaleDialog(false)}>
+        <DialogContent className="bg-white text-foreground sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle className="text-orange-600 text-xl font-bold flex items-center gap-2">
+              <ShoppingBag className="h-6 w-6" /> Venta de Producto
+            </DialogTitle>
+            <p className="text-sm text-gray-500">Los productos vendidos suman a tu objetivo mensual.</p>
+          </DialogHeader>
+
+          <div className="space-y-5 pt-2">
+            {/* Buscador de productos */}
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar producto..."
+                  value={directSaleSearch}
+                  onChange={(e) => { setDirectSaleSearch(e.target.value); setDirectSaleMenuOpen(true) }}
+                  onFocus={() => setDirectSaleMenuOpen(true)}
+                  onBlur={() => setTimeout(() => setDirectSaleMenuOpen(false), 200)}
+                  className="pl-9 bg-white border-orange-200 focus-visible:ring-orange-400"
+                />
+              </div>
+              {directSaleMenuOpen && directSaleSearch.length > 0 && (
+                <div className="absolute top-full left-0 w-full bg-white border border-gray-200 shadow-xl rounded-md max-h-48 overflow-y-auto z-[100]">
+                  {directSaleFiltered.length === 0 ? (
+                    <p className="p-3 text-xs text-gray-400 italic text-center">Sin resultados.</p>
+                  ) : directSaleFiltered.map(p => (
+                    <div
+                      key={p.id}
+                      onClick={() => handleAddToDirectCart(p)}
+                      className="p-3 text-sm hover:bg-orange-50 cursor-pointer border-b last:border-0 flex justify-between items-center"
+                    >
+                      <span className="font-medium">{p.name}</span>
+                      <span className="text-orange-600 font-bold text-xs bg-orange-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Plus size={12} /> Agregar
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Carrito */}
+            {directSaleCart.length > 0 && (
+              <div className="space-y-2 bg-orange-50/50 p-3 rounded-xl border border-orange-100">
+                <Label className="text-xs font-bold text-orange-700 uppercase">Productos a vender</Label>
+                {directSaleCart.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-white p-2 rounded-md border border-orange-100 text-sm shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setDirectSaleCart(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-red-400 hover:text-red-600"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                      <span className="font-medium">{item.product.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setDirectSaleCart(prev => prev.map((i, n) => n === idx && i.quantity > 1 ? { ...i, quantity: i.quantity - 1 } : i))} className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-600">-</button>
+                      <span className="font-bold w-5 text-center">{item.quantity}</span>
+                      <button onClick={() => setDirectSaleCart(prev => prev.map((i, n) => n === idx ? { ...i, quantity: i.quantity + 1 } : i))} className="w-6 h-6 rounded-full bg-orange-100 hover:bg-orange-200 flex items-center justify-center font-bold text-orange-600">+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Medio de pago */}
+            {directSaleCart.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase text-gray-700">Medio de Pago</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['efectivo', 'tarjeta', 'transferencia'] as const).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setDirectSalePaymentMethod(m)}
+                      className={`p-2 rounded-lg border text-xs font-bold uppercase transition-all ${directSalePaymentMethod === m ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-200 text-gray-600 hover:border-orange-300'}`}
+                    >
+                      {m === 'efectivo' ? '💵 Efectivo' : m === 'tarjeta' ? '💳 Tarjeta' : '🏦 Transf.'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Total y confirmar */}
+            {directSaleCart.length > 0 && directSalePaymentMethod && (
+              <div className="bg-orange-500 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-xs uppercase font-bold">Total</p>
+                  <p className="text-white text-3xl font-black">${directSaleTotal.toLocaleString()}</p>
+                </div>
+                <Button
+                  onClick={handleConfirmDirectSale}
+                  className="bg-white text-orange-600 hover:bg-orange-50 font-black h-12 px-6 shadow-md"
+                >
+                  Confirmar Venta
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL FINALIZAR ATENCIÓN */}
       <Dialog open={!!finishingApt} onOpenChange={(open) => !open && setFinishingApt(null)}>
         <DialogContent className="bg-white text-foreground sm:max-w-[500px] overflow-visible">
           <DialogHeader>
@@ -358,17 +519,13 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
             </DialogTitle>
             <p className="text-sm text-gray-500">Paciente: <span className="font-bold text-gray-900">{finishingApt?.patientName || getPatientName(finishingApt?.patientId)}</span></p>
           </DialogHeader>
-
           <div className="space-y-6 pt-2">
-            
-            {/* SECCIÓN 1: SERVICIOS */}
+            {/* SERVICIOS */}
             <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
               <Label className="font-bold text-gray-700 flex items-center justify-between">
                 Servicios Realizados
                 <Badge variant="outline" className="bg-white">{finishingServices.length}</Badge>
               </Label>
-              
-              {/* Lista de servicios actuales */}
               <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
                 {finishingServices.map((svc, index) => (
                   <div key={index} className="flex items-center justify-between bg-white p-2 rounded-md border text-sm shadow-sm">
@@ -379,8 +536,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                   </div>
                 ))}
               </div>
-
-              {/* Buscador Desplegable Hacia Arriba de Servicios */}
               <div className="relative mt-2">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -393,19 +548,17 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                     className="pl-9 bg-white border-emerald-200 focus-visible:ring-emerald-500"
                   />
                 </div>
-                {/* Desplegable Hacia Arriba (bottom-full) */}
                 {showSvcDrop && searchSvc.length > 0 && (
                   <div className="absolute bottom-full mb-1 left-0 w-full bg-white border border-gray-200 shadow-2xl rounded-md max-h-48 overflow-y-auto z-[100]">
                     {filteredServices.length === 0 ? (
-                       <p className="p-3 text-xs text-gray-500 text-center">No hay servicios con ese nombre en tu especialidad.</p>
-                    ) : (
-                      filteredServices.map(s => (
+                       <p className="p-3 text-xs text-gray-500 text-center">No hay servicios con ese nombre.</p>
+                    ) : filteredServices.map(s => (
                         <div 
                           key={s.id} 
                           onClick={() => {
-                            setFinishingServices([...finishingServices, { serviceId: s.id, serviceName: s.name, price: s.price, priceCash: s.priceCash }]);
-                            setSearchSvc("");
-                            setShowSvcDrop(false);
+                            setFinishingServices([...finishingServices, { serviceId: s.id, serviceName: s.name, price: s.price, priceCash: s.priceCash }])
+                            setSearchSvc("")
+                            setShowSvcDrop(false)
                           }} 
                           className="p-3 text-sm hover:bg-emerald-50 cursor-pointer border-b last:border-0 flex justify-between items-center"
                         >
@@ -413,20 +566,18 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                           <Plus size={16} className="text-[#16A34A]" />
                         </div>
                       ))
-                    )}
+                    }
                   </div>
                 )}
               </div>
             </div>
 
-            {/* SECCIÓN 2: PRODUCTOS (COMISIONAN) */}
+            {/* PRODUCTOS */}
             <div className="space-y-3 bg-orange-50/50 p-4 rounded-xl border border-orange-100">
               <Label className="font-bold text-orange-800 flex items-center justify-between">
                 Productos Vendidos (Suman a tu objetivo)
                 <Badge variant="outline" className="bg-white text-orange-600 border-orange-200">{finishingProducts.length}</Badge>
               </Label>
-              
-              {/* Lista de productos actuales */}
               <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
                 {finishingProducts.map((prod, index) => (
                   <div key={index} className="flex items-center justify-between bg-white p-2 rounded-md border border-orange-100 text-sm shadow-sm">
@@ -437,8 +588,6 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                   </div>
                 ))}
               </div>
-
-              {/* Buscador Desplegable Hacia Arriba de Productos */}
               <div className="relative mt-2">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-400" />
@@ -451,24 +600,22 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                     className="pl-9 bg-white border-orange-200 focus-visible:ring-orange-500"
                   />
                 </div>
-                {/* Desplegable Hacia Arriba (bottom-full) */}
                 {showProdDrop && searchProd.length > 0 && (
                   <div className="absolute bottom-full mb-1 left-0 w-full bg-white border border-gray-200 shadow-2xl rounded-md max-h-48 overflow-y-auto z-[100]">
                     {filteredProducts.length === 0 ? (
                        <p className="p-3 text-xs text-gray-500 text-center">No se encontraron productos.</p>
-                    ) : (
-                      filteredProducts.map(p => (
+                    ) : filteredProducts.map(p => (
                         <div 
                           key={p.id} 
                           onClick={() => {
-                            const existing = finishingProducts.find(x => x.productId === p.id);
-                            if(existing) {
-                                setFinishingProducts(finishingProducts.map(x => x.productId === p.id ? {...x, quantity: x.quantity + 1} : x));
+                            const existing = finishingProducts.find(x => x.productId === p.id)
+                            if (existing) {
+                              setFinishingProducts(finishingProducts.map(x => x.productId === p.id ? { ...x, quantity: x.quantity + 1 } : x))
                             } else {
-                                setFinishingProducts([...finishingProducts, { productId: p.id, productName: p.name, price: p.priceList, priceCashReference: p.priceCash, quantity: 1 }]);
+                              setFinishingProducts([...finishingProducts, { productId: p.id, productName: p.name, price: p.priceList, priceCashReference: p.priceCash, quantity: 1 }])
                             }
-                            setSearchProd("");
-                            setShowProdDrop(false);
+                            setSearchProd("")
+                            setShowProdDrop(false)
                           }} 
                           className="p-3 text-sm hover:bg-orange-50 cursor-pointer border-b last:border-0 flex justify-between items-center"
                         >
@@ -476,13 +623,12 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                           <span className="text-xs text-orange-600 font-bold bg-orange-100 px-2 py-0.5 rounded-full flex items-center gap-1"><Plus size={12}/> Agregar</span>
                         </div>
                       ))
-                    )}
+                    }
                   </div>
                 )}
               </div>
             </div>
 
-            {/* BOTÓN FINAL DE GUARDADO */}
             <Button onClick={handleConfirmFinish} className="w-full bg-[#16A34A] text-white hover:bg-emerald-700 font-bold h-12 text-lg shadow-lg">
               Enviar a Recepción (A Cobrar)
             </Button>
@@ -490,7 +636,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         </DialogContent>
       </Dialog>
 
-      {/* DIÁLOGOS Y MODALES DE AGENDA (Intactos) */}
+      {/* MODAL NUEVO PACIENTE */}
       <Dialog open={showNewPatientDialog} onOpenChange={setShowNewPatientDialog}>
         <DialogContent className="bg-white text-foreground">
           <DialogHeader><DialogTitle className="text-[#16A34A]">Registrar Nuevo Paciente</DialogTitle></DialogHeader>
@@ -524,6 +670,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
         </DialogContent>
       </Dialog>
 
+      {/* MODAL AGENDAR TURNO */}
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
         <DialogContent className="bg-white text-foreground sm:max-w-[450px]">
           <DialogHeader><DialogTitle className="text-[#16A34A]">Agendar Turno Personal</DialogTitle></DialogHeader>
@@ -533,22 +680,18 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
               <Input 
                  placeholder="Escribí para buscar..." 
                  value={schedulingPatientSearch} 
-                 onChange={(e) => {
-                    setSchedulingPatientSearch(e.target.value); 
-                    setSchedulingPatientMenuOpen(e.target.value.length > 0)
-                 }} 
+                 onChange={(e) => { setSchedulingPatientSearch(e.target.value); setSchedulingPatientMenuOpen(e.target.value.length > 0) }} 
                  className="bg-input border-gray-200" 
               />
               {schedulingPatientMenuOpen && (
                 <div className="absolute top-full left-0 w-full bg-white border shadow-xl rounded-md max-h-[150px] overflow-y-auto z-50">
                   {patients.filter(p => p.name.toLowerCase().includes(schedulingPatientSearch.toLowerCase())).map(p => (
-                    <button key={p.id} onClick={() => {setSchedulingPatientId(p.id); setSchedulingPatientSearch(p.name); setSchedulingPatientMenuOpen(false)}} className="w-full text-left p-3 text-sm border-b hover:bg-emerald-50">{p.name}</button>
+                    <button key={p.id} onClick={() => { setSchedulingPatientId(p.id); setSchedulingPatientSearch(p.name); setSchedulingPatientMenuOpen(false) }} className="w-full text-left p-3 text-sm border-b hover:bg-emerald-50">{p.name}</button>
                   ))}
                   {patients.filter(p => p.name.toLowerCase().includes(schedulingPatientSearch.toLowerCase())).length === 0 && <p className="p-3 text-xs text-gray-400 italic">No se encontraron resultados.</p>}
                 </div>
               )}
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Fecha</Label><Input type="date" value={schedulingDate} onChange={(e) => setSchedulingDate(e.target.value)} /></div>
               <div className="space-y-2">
