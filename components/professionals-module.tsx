@@ -394,7 +394,18 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
              {agendaAppointments.length === 0 ? <p className="text-center text-gray-400 italic text-xs py-4">Sin turnos agendados.</p> : agendaAppointments.map(apt => (
                <div key={apt.id} className="bg-white border p-3 rounded-xl flex justify-between items-center shadow-sm">
                  <span className="font-bold text-[#16A34A] text-sm">{apt.time?.substring(0, 5)}</span>
-                 <div className="flex-1 px-3 border-l ml-3"><p className="font-bold text-xs text-foreground">{apt.patientName || getPatientName(apt.patientId)}</p></div>
+                 <div className="flex-1 px-3 border-l ml-3">
+                  <p className="font-bold text-sm text-foreground">{apt.patientName || getPatientName(apt.patientId)}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Prof: <span className="font-semibold">{currentProfessional?.shortName || "-"}</span>
+                    <span className="text-gray-400 mx-1">•</span>
+                    <span className="text-[#16A34A]">
+                      {Array.isArray(apt.services)
+                        ? apt.services.map((s: any) => typeof s === "string" ? s : (s.serviceName || s.name)).filter(Boolean).join(", ")
+                        : "Sin servicio"}
+                    </span>
+                  </p>
+                 </div>
                  <Badge className="text-[9px] bg-secondary text-gray-500 border-none font-bold tracking-wider">{getStatusText(apt.status as string).toUpperCase()}</Badge>
                </div>
              ))}
