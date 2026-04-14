@@ -26,6 +26,8 @@ export default function Home() {
     store.fetchProfessionals()
     store.fetchServices()
     store.fetchProducts()
+    store.fetchCashClosures()
+    store.fetchExpenses()
 
     // Activamos Realtime de Claude
     const unsubscribe = store.subscribeToAppointments()

@@ -4,24 +4,26 @@ import { useState } from "react"
 import type { User, UserRole } from "@/lib/store"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { 
-  LogOut, 
-  Users, 
-  Calendar, 
-  CreditCard, 
-  Stethoscope, 
+import {
+  LogOut,
+  Users,
+  Calendar,
+  CreditCard,
+  Stethoscope,
   BarChart3,
   UserCog,
   Menu,
   X,
   Wallet,
   Award,
-  Settings
+  Settings,
+  ClipboardList
 } from "lucide-react"
 import { ReceptionModule } from "@/components/reception-module"
 import { ProfessionalsModule } from "@/components/professionals-module"
 import { ChargeModule } from "@/components/charge-module"
 import { ReportsModule } from "@/components/reports-module"
+import { SalesReportModule } from "@/components/sales-report-module"
 import { HRModule } from "@/components/hr-module"
 import { SystemConfigModule } from "@/components/system-config-module"
 
@@ -30,7 +32,7 @@ interface MainLayoutProps {
   onLogout: () => void
 }
 
-type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "reportes" | "rrhh" | "config"
+type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "ventas" | "reportes" | "rrhh" | "config"
 
 interface Tab {
   id: TabId
@@ -49,6 +51,7 @@ const allTabs: Tab[] = [
   { id: "atencion", label: "Atención", icon: Stethoscope, roles: ["profesional"] }, // Solo profesionales
   { id: "comisiones", label: "Comisiones", icon: Award, roles: ["profesional"] }, // Solo profesionales
   { id: "cobrar", label: "Cobrar", icon: CreditCard, roles: ["recepción"] }, // Solo recepción
+  { id: "ventas", label: "Ventas", icon: ClipboardList, roles: ["recepción", "admin"] }, // Recepción y admin
   { id: "rrhh", label: "RRHH", icon: UserCog, roles: ["admin"] },
   { id: "reportes", label: "Reportes", icon: BarChart3, roles: ["admin"] },
   { id: "config", label: "Configuración", icon: Settings, roles: ["admin"] }
@@ -77,6 +80,8 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
         return <ProfessionalsModule view="comisiones" professionalId={user.professionalId} />
       case "cobrar":
         return <ChargeModule />
+      case "ventas":
+        return <SalesReportModule />
       case "reportes":
         return <ReportsModule />
       case "rrhh":

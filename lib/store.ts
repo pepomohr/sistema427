@@ -130,14 +130,39 @@ export interface SaleItem {
   soldBy: string 
 }
 
+export interface PaymentSplit {
+  method: 'efectivo' | 'tarjeta' | 'transferencia' | 'qr' | 'gift_card'
+  amount: number
+}
+
 export interface Sale {
   id: string
   items: SaleItem[]
   total: number
-  paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'qr' | 'gift_card'
+  paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'qr' | 'gift_card' // principal
+  paymentSplits?: PaymentSplit[]
+  usedOfferId?: string
+  observations?: string
+  source?: 'recepcion' | 'gabinete'
+  patientId?: string
+  appointmentId?: string
   date: Date
   processedBy: string
   type?: 'direct' | 'appointment'
+}
+
+export interface CashClosure {
+  id: string
+  receptionistName: string
+  dateFrom: Date
+  dateTo: Date
+  amountEfectivo: number
+  amountTransferencia: number
+  amountTarjeta: number
+  amountQr: number
+  total: number
+  observations?: string
+  createdAt: Date
 }
 
 export interface Expense {
@@ -188,10 +213,14 @@ interface ClinicStore {
   expenses: Expense[]
   offers: Offer[]
   combos: Combo[]
+  cashClosures: CashClosure[]
   
-  addExpense: (expense: Omit<Expense, 'id' | 'date'>) => void
+  fetchExpenses: () => Promise<void>
+  addExpense: (expense: Omit<Expense, 'id' | 'date'>) => Promise<void>
   addSale: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>
+  addSaleMultipago: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>
   fetchSales: () => Promise<void>
+  
   updateHourlyRate: (id: string, rate: number) => void
   updateProfessional: (id: string, updates: Partial<Professional>) => void
   resetProfessionalPin: (id: string) => Promise<void>
@@ -199,24 +228,28 @@ interface ClinicStore {
   toggleProfessionalActive: (id: string) => void
   startAttention: (id: string) => void
   finishAttention: (id: string, finalServices: any[], finalProducts: any[]) => void
-  completeAppointment: (id: string, paymentMethod: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card", finalTotal: number, extraProducts?: any[], extraSoldBy?: string) => void
+  completeAppointment: (id: string, paymentMethod: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card", finalTotal: number, extraProducts?: any[], extraSoldBy?: string, paymentSplits?: PaymentSplit[], observations?: string) => void
   cancelAppointment: (id: string) => void
   updateAppointment: (id: string, updates: Partial<Appointment>) => void
   fetchProfessionals: () => Promise<void>
   addProfessional: (prof: Omit<Professional, 'id'>) => Promise<void>
+  
   fetchPatients: () => Promise<void>
   searchPatients: (query: string) => Promise<Patient[]>
   updatePatientGiftCardBalance: (id: string, amountToAdd: number) => Promise<void>
-  fetchServices: () => Promise<void>
-  fetchProducts: () => Promise<void>
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => Promise<void>
   updatePatient: (id: string, updates: Partial<Patient>) => Promise<void>
+  
   addAppointment: (appointment: Omit<Appointment, 'id'>) => Promise<void>
   fetchAppointments: () => Promise<void>
   getProfessionalsForService: (serviceId: string) => Professional[]
+  
+  fetchServices: () => Promise<void>
   addService: (service: Omit<Service, 'id'>) => Promise<void>
   updateService: (id: string, updates: Partial<Service>) => Promise<void>
   deleteService: (id: string) => Promise<void>
+  
+  fetchProducts: () => Promise<void>
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>
   deleteProduct: (id: string) => Promise<void>
@@ -225,10 +258,14 @@ interface ClinicStore {
   addOffer: (offer: Omit<Offer, 'id'>) => Promise<void>
   updateOffer: (id: string, updates: Partial<Offer>) => Promise<void>
   deleteOffer: (id: string) => Promise<void>
+  
   fetchCombos: () => Promise<void>
   addCombo: (combo: Omit<Combo, 'id'>) => Promise<void>
   updateCombo: (id: string, updates: Partial<Combo>) => Promise<void>
   deleteCombo: (id: string) => Promise<void>
+  
+  fetchCashClosures: () => Promise<void>
+  addCashClosure: (closure: Omit<CashClosure, 'id' | 'createdAt'>) => Promise<void>
   
   subscribeToAppointments: () => () => void
 }
@@ -245,10 +282,25 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   products: [],
   offers: [],
   combos: [],
+  cashClosures: [],
 
-  addExpense: (expenseData) => {
-    const newExpense = { ...expenseData, id: Date.now().toString(), date: new Date() }
-    set(state => ({ expenses: [...state.expenses, newExpense] }))
+  fetchExpenses: async () => {
+    try {
+      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false })
+      if (!error && data) {
+        set({ expenses: data.map((e: any) => ({ id: e.id, description: e.description, amount: Number(e.amount), date: new Date(e.date) })) })
+      }
+    } catch (err) { console.error('fetchExpenses error', err) }
+  },
+
+  addExpense: async (expenseData) => {
+    try {
+      const { data, error } = await supabase.from('expenses').insert([{ description: expenseData.description, amount: expenseData.amount }]).select().single()
+      if (!error && data) {
+        const newExpense = { id: data.id, description: data.description, amount: Number(data.amount), date: new Date(data.date) }
+        set(state => ({ expenses: [newExpense, ...state.expenses] }))
+      }
+    } catch (err) { console.error('addExpense error', err) }
   },
 
   fetchSales: async () => {
@@ -260,6 +312,12 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           items: s.items,
           total: s.total,
           paymentMethod: s.payment_method,
+          paymentSplits: s.payment_splits || [],
+          usedOfferId: s.used_offer_id,
+          observations: s.observations,
+          source: s.source || 'recepcion',
+          patientId: s.patient_id,
+          appointmentId: s.appointment_id,
           processedBy: s.processed_by,
           type: s.type,
           date: new Date(s.date)
@@ -295,11 +353,6 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         date: new Date(data.date)
       };
 
-      // ============================================
-      // COMISIONES: calcular cuántos productos vendió
-      // cada profesional en esta venta y persistir
-      // el nuevo monthlySalesCount en Supabase
-      // ============================================
       const updatedProfessionals = professionals.map(prof => {
         const soldItems = saleData.items.filter(
           item =>
@@ -312,20 +365,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         if (totalQty === 0) return prof
 
         const newCount = (prof.monthlySalesCount || 0) + totalQty
-
-        // Persistir en Supabase — columna exacta: "monthlySalesCount"
-        supabase
-          .from('professionals')
-          .update({ monthlySalesCount: newCount })
-          .eq('id', prof.id)
-          .then(({ error: updateErr }) => {
-            if (updateErr) {
-              console.error('[addSale] Error actualizando monthlySalesCount de ' + prof.shortName + ':', updateErr.message)
-            } else {
-              console.log('[addSale] monthlySalesCount de ' + prof.shortName + ' actualizado a ' + newCount)
-            }
-          })
-
+        supabase.from('professionals').update({ monthlySalesCount: newCount }).eq('id', prof.id)
         return { ...prof, monthlySalesCount: newCount }
       })
 
@@ -356,22 +396,87 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     } catch (err) { console.error("Error al guardar venta:", err); }
   },
 
+  // ============================================
+  // MULTIPAGO: Guarda partes divididas y observaciones
+  // ============================================
+  addSaleMultipago: async (saleData) => {
+    const { professionals } = get()
+    try {
+      const mainMethod = saleData.paymentSplits && saleData.paymentSplits.length > 0
+        ? saleData.paymentSplits.reduce((a, b) => a.amount >= b.amount ? a : b).method
+        : saleData.paymentMethod
+
+      const { data, error } = await supabase
+        .from('sales')
+        .insert([{
+          items: saleData.items,
+          total: saleData.total,
+          payment_method: mainMethod,
+          payment_splits: saleData.paymentSplits || [],
+          used_offer_id: saleData.usedOfferId || null,
+          observations: saleData.observations || null,
+          source: saleData.source || 'recepcion',
+          patient_id: saleData.patientId || null,
+          appointment_id: saleData.appointmentId || null,
+          processed_by: saleData.processedBy,
+          type: saleData.type || 'direct'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newSale: Sale = {
+        id: data.id,
+        items: data.items,
+        total: data.total,
+        paymentMethod: data.payment_method,
+        paymentSplits: data.payment_splits || [],
+        usedOfferId: data.used_offer_id,
+        observations: data.observations,
+        source: data.source,
+        patientId: data.patient_id,
+        appointmentId: data.appointment_id,
+        processedBy: data.processed_by,
+        type: data.type,
+        date: new Date(data.date)
+      };
+
+      const updatedProfessionals = professionals.map(prof => {
+        const soldItems = saleData.items.filter(item => item.type === 'product' && item.soldBy === prof.id)
+        const totalQty = soldItems.reduce((acc, item) => acc + item.quantity, 0)
+        if (totalQty === 0) return prof
+        const newCount = (prof.monthlySalesCount || 0) + totalQty
+        supabase.from('professionals').update({ monthlySalesCount: newCount }).eq('id', prof.id)
+        return { ...prof, monthlySalesCount: newCount }
+      })
+
+      set(state => {
+        let currentProducts = [...state.products]
+        saleData.items.forEach(item => {
+          if (item.type === 'product') {
+            currentProducts = currentProducts.map(p =>
+              p.id === item.itemId ? { ...p, stock: Math.max(0, p.stock - item.quantity) } : p
+            )
+          }
+        })
+        return { sales: [...state.sales, newSale], professionals: updatedProfessionals, products: currentProducts }
+      })
+    } catch (err) { console.error("Error addSaleMultipago:", err); }
+  },
+
   updateHourlyRate: (id, rate) => {
     set((state) => ({
       professionals: state.professionals.map(p => p.id === id ? { ...p, hourlyRate: rate } : p)
     }));
-    supabase.from('professionals').update({ hourlyRate: rate }).eq('id', id).then(({error}) => {
-       if(error) console.error('updateHourlyRate error:', error);
-    });
+    supabase.from('professionals').update({ hourlyRate: rate }).eq('id', id)
   },
 
   updateProfessional: (id, updates) => {
     set(state => ({
       professionals: state.professionals.map(p => p.id === id ? { ...p, ...updates } : p)
     }));
-    supabase.from('professionals').update(updates).eq('id', id).then(({error}) => {
-       if(error) console.error('updateProfessional error:', error);
-    });
+    supabase.from('professionals').update(updates).eq('id', id)
   },
 
   resetProfessionalPin: async (id) => {
@@ -379,27 +484,18 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       professionals: state.professionals.map(p => p.id === id ? { ...p, pin: null } : p)
     }));
     localStorage.removeItem(`c427_pins_${id}`);
-    try {
-      const { error } = await supabase.from('professionals').update({ pin: null }).eq('id', id);
-      if (error) console.error('Error Supabase PIN:', error.message);
-    } catch (err) { console.error('Fallo crítico PIN:', err); }
+    try { await supabase.from('professionals').update({ pin: null }).eq('id', id); } catch (err) {}
   },
 
   setProfessionalPin: async (id, pin) => {
     try {
       const { error } = await supabase.from('professionals').update({ pin }).eq('id', id);
-      if (error) {
-        console.error('Error guardando PIN:', error.message);
-        return false;
-      }
+      if (error) return false;
       set(state => ({
         professionals: state.professionals.map(p => p.id === id ? { ...p, pin } : p)
       }));
       return true;
-    } catch (err) {
-      console.error('Fallo crítico setProfessionalPin:', err);
-      return false;
-    }
+    } catch (err) { return false; }
   },
 
   addProfessional: async (prof) => {
@@ -418,19 +514,10 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           monthlySalesCount: 0,
           color: prof.color,
           pin: null
-        }])
-        .select()
-        .single();
+        }]).select().single();
         
-      if (error) {
-        console.error('Error Supabase addProfessional:', error.message);
-        return;
-      }
-
-      if (data) {
-        set(state => ({ professionals: [...state.professionals, data] }));
-      }
-    } catch(err) { console.error('Fallo crítico addProfessional:', err) }
+      if (!error && data) set(state => ({ professionals: [...state.professionals, data] }));
+    } catch(err) {}
   },
 
   toggleProfessionalActive: (id) => {
@@ -441,25 +528,16 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       set(state => ({
         professionals: state.professionals.map(p => p.id === id ? { ...p, isActive: nextActive } : p)
       }));
-      supabase.from('professionals').update({ isActive: nextActive }).eq('id', id).then(({error}) => {
-         if(error) console.error('toggleProfessionalActive error:', error);
-      });
+      supabase.from('professionals').update({ isActive: nextActive }).eq('id', id)
     }
   },
 
   addPatient: async (patient) => {
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .insert([{
-          name: patient.name,
-          dni: patient.dni,
-          phone: patient.phone,
-          email: patient.email,
-          birth_date: patient.birthdate
-        }])
-        .select()
-        .single();
+      const { data, error } = await supabase.from('patients').insert([{
+          name: patient.name, dni: patient.dni, phone: patient.phone,
+          email: patient.email, birth_date: patient.birthdate
+        }]).select().single();
         
       if (!error && data) {
         const np = {
@@ -518,9 +596,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   fetchProfessionals: async () => {
     try {
       const { data, error } = await supabase.from('professionals').select('*');
-      if (!error && data) {
-        set({ professionals: data });
-      }
+      if (!error && data) set({ professionals: data });
     } catch (err) { console.error(err); }
   },
 
@@ -563,17 +639,9 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   fetchServices: async () => {
     try {
       const { data, error } = await supabase.from('services').select('*').limit(500);
-      if (error) {
-        console.error('[fetchServices] Error:', error.message)
-        return
-      }
       if (data) set({ services: data.map((s: any) => ({ 
-        id: s.id, 
-        name: s.name, 
-        price: s.price, 
-        priceCash: s.price_cash ?? s.price, 
-        duration: s.duration ?? 60, 
-        category: s.category 
+        id: s.id, name: s.name, price: s.price, priceCash: s.price_cash ?? s.price, 
+        duration: s.duration ?? 60, category: s.category 
       })) });
     } catch (err) { console.error(err); }
   },
@@ -587,38 +655,19 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   addService: async (service) => {
     try {
-      const { data, error } = await supabase
-        .from('services')
-        .insert([{ 
-          name: service.name, 
-          price: service.price, 
-          price_cash: service.priceCash, 
-          duration: service.duration, 
-          category: service.category 
-        }])
-        .select()
-        .single()
-      if (error) {
-        console.error('[addService] Error Supabase:', error.message)
-        return
-      }
+      const { data, error } = await supabase.from('services').insert([{ 
+          name: service.name, price: service.price, price_cash: service.priceCash, 
+          duration: service.duration, category: service.category 
+        }]).select().single()
       if (data) set(state => ({ 
         services: [...state.services, { 
-          id: data.id, 
-          name: data.name, 
-          price: data.price, 
-          priceCash: data.price_cash ?? data.price, 
-          duration: data.duration ?? 60, 
-          category: data.category 
+          id: data.id, name: data.name, price: data.price, priceCash: data.price_cash ?? data.price, 
+          duration: data.duration ?? 60, category: data.category 
         }]
       }))
-    } catch (err) { console.error(err) }
+    } catch (err) {}
   },
 
-  // ============================================
-  // updateService — manda duration a Supabase
-  // como columna "duration" (int4 en tu tabla)
-  // ============================================
   updateService: async (id, updates) => {
     try {
       const up: any = {}
@@ -626,41 +675,24 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       if (updates.price !== undefined) up.price = updates.price
       if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
       if (updates.category !== undefined) up.category = updates.category
-      // CRÍTICO: duration se manda como número entero
       if (updates.duration !== undefined) up.duration = Number(updates.duration)
-
-      console.log('[updateService] Mandando a Supabase:', { id, payload: up })
-
       const { error } = await supabase.from('services').update(up).eq('id', id)
-
-      if (error) {
-        console.error('[updateService] Error Supabase:', error.message, error.details)
-        return
-      }
-
-      // Actualizar store local solo si Supabase confirmó
-      set(state => ({ 
-        services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) 
-      }))
-
-      console.log('[updateService] OK — duración guardada:', up.duration)
-    } catch (err) { 
-      console.error('[updateService] Fallo crítico:', err) 
-    }
+      if (!error) set(state => ({ services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) }))
+    } catch (err) {}
   },
 
   deleteService: async (id) => {
     try {
       const { error } = await supabase.from('services').delete().eq('id', id)
       if (!error) set(state => ({ services: state.services.filter(s => s.id !== id) }))
-    } catch (err) { console.error(err) }
+    } catch (err) {}
   },
 
   addProduct: async (product) => {
     try {
       const { data, error } = await supabase.from('products').insert([{ name: product.name, price_cash: product.priceCash, price_list: product.priceList, stock: product.stock, category: product.category }]).select().single()
       if (!error && data) set(state => ({ products: [...state.products, { id: data.id, name: data.name, priceCash: data.price_cash || 0, priceList: data.price_list || 0, stock: data.stock || 0, category: data.category }]}))
-    } catch (err) { console.error(err) }
+    } catch (err) {}
   },
 
   updateProduct: async (id, updates) => {
@@ -673,14 +705,14 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       if (updates.category !== undefined) up.category = updates.category
       const { error } = await supabase.from('products').update(up).eq('id', id)
       if (!error) set(state => ({ products: state.products.map(p => p.id === id ? { ...p, ...updates } : p) }))
-    } catch (err) { console.error(err) }
+    } catch (err) {}
   },
 
   deleteProduct: async (id) => {
     try {
       const { error } = await supabase.from('products').delete().eq('id', id)
       if (!error) set(state => ({ products: state.products.filter(p => p.id !== id) }))
-    } catch (err) { console.error(err) }
+    } catch (err) {}
   },
 
   startAttention: (id) => {
@@ -695,16 +727,13 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     finalProducts.forEach(p => calcTotal += (p.price * p.quantity));
     
     supabase.from('appointments').update({ 
-      status: 'pendiente_cobro', 
-      services: finalServices, 
-      products: finalProducts, 
-      totalAmount: calcTotal 
+      status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal 
     }).eq('id', id).then(() => {
       set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal } : a) }));
     })
   },
 
-  completeAppointment: (id, method, finalTotal, extraProducts: any[] = [], extraSoldBy = "") => {
+  completeAppointment: (id, method, finalTotal, extraProducts: any[] = [], extraSoldBy = "", paymentSplits?: PaymentSplit[], observations?: string) => {
     const apt = get().appointments.find(a => a.id === id);
     if(!apt) return;
     const accumulatedPaid = (apt.paidAmount || 0) + finalTotal;
@@ -713,12 +742,17 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     apt.services.forEach(s => saleItems.push({ type: 'service', itemId: s.serviceId, itemName: s.serviceName, price: method === 'efectivo' ? (s.priceCash || s.price) : s.price, priceCashReference: s.priceCash || s.price, quantity: 1, soldBy: apt.professionalId }));
     apt.products?.forEach(p => saleItems.push({ type: 'product', itemId: p.productId, itemName: p.productName, price: method === 'efectivo' ? (p.priceCashReference || p.price) : p.price, priceCashReference: p.priceCashReference || p.price, quantity: p.quantity, soldBy: apt.professionalId }));
     extraProducts.forEach(p => saleItems.push({ type: 'product', itemId: p.product.id, itemName: p.product.name, price: method === 'efectivo' ? p.product.priceCash : p.product.priceList, priceCashReference: p.product.priceCash, quantity: p.quantity, soldBy: extraSoldBy || apt.professionalId }));
-    
-    get().addSale({
+
+    get().addSaleMultipago({
       type: 'appointment',
       items: saleItems,
       total: finalTotal,
       paymentMethod: method,
+      paymentSplits: paymentSplits || [{ method, amount: finalTotal }],
+      observations,
+      source: 'recepcion',
+      patientId: apt.patientId,
+      appointmentId: id,
       processedBy: "Recepción"
     }).then(() => {
       supabase.from('appointments').update({ status: 'completado', paidAmount: accumulatedPaid }).eq('id', id).then(() => {
@@ -727,7 +761,6 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         }));
       })
     })
-
     if (method === 'gift_card') get().updatePatientGiftCardBalance(apt.patientId, -finalTotal);
   },
 
@@ -768,18 +801,14 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   fetchOffers: async () => {
     try {
       const { data, error } = await supabase.from('offers').select('*');
-      if (!error && data) {
-        set({ offers: data.map((o: any) => ({ id: o.id, name: o.name, discountPercentage: o.discount_percentage })) });
-      }
+      if (!error && data) set({ offers: data.map((o: any) => ({ id: o.id, name: o.name, discountPercentage: o.discount_percentage })) });
     } catch (err) { console.error(err); }
   },
 
   addOffer: async (offer) => {
     try {
       const { data, error } = await supabase.from('offers').insert([{ name: offer.name, discount_percentage: offer.discountPercentage }]).select().single();
-      if (!error && data) {
-        set(state => ({ offers: [...state.offers, { id: data.id, name: data.name, discountPercentage: data.discount_percentage }] }));
-      }
+      if (!error && data) set(state => ({ offers: [...state.offers, { id: data.id, name: data.name, discountPercentage: data.discount_percentage }] }));
     } catch (err) { console.error(err); }
   },
 
@@ -803,18 +832,14 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   fetchCombos: async () => {
     try {
       const { data, error } = await supabase.from('combos').select('*');
-      if (!error && data) {
-        set({ combos: data.map((c: any) => ({ id: c.id, name: c.name, items: c.items, priceCash: c.price_cash, priceList: c.price_list })) });
-      }
+      if (!error && data) set({ combos: data.map((c: any) => ({ id: c.id, name: c.name, items: c.items, priceCash: c.price_cash, priceList: c.price_list })) });
     } catch (err) { console.error(err); }
   },
 
   addCombo: async (combo) => {
     try {
       const { data, error } = await supabase.from('combos').insert([{ name: combo.name, items: combo.items, price_cash: combo.priceCash, price_list: combo.priceList }]).select().single();
-      if (!error && data) {
-        set(state => ({ combos: [...state.combos, { id: data.id, name: data.name, items: data.items, priceCash: data.price_cash, priceList: data.price_list }] }));
-      }
+      if (!error && data) set(state => ({ combos: [...state.combos, { id: data.id, name: data.name, items: data.items, priceCash: data.price_cash, priceList: data.price_list }] }));
     } catch (err) { console.error(err); }
   },
 
@@ -837,10 +862,61 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     } catch (err) { console.error(err); }
   },
 
+  fetchCashClosures: async () => {
+    try {
+      const { data, error } = await supabase.from('cash_closures').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        set({ cashClosures: data.map((c: any) => ({
+          id: c.id,
+          receptionistName: c.receptionist_name,
+          dateFrom: new Date(c.date_from),
+          dateTo: new Date(c.date_to),
+          amountEfectivo: c.amount_efectivo || 0,
+          amountTransferencia: c.amount_transferencia || 0,
+          amountTarjeta: c.amount_tarjeta || 0,
+          amountQr: c.amount_qr || 0,
+          total: c.total || 0,
+          observations: c.observations,
+          createdAt: new Date(c.created_at),
+        })) });
+      }
+    } catch (err) { console.error(err); }
+  },
+
+  addCashClosure: async (closure) => {
+    try {
+      const { data, error } = await supabase.from('cash_closures').insert([{
+        receptionist_name: closure.receptionistName,
+        date_from: closure.dateFrom.toISOString(),
+        date_to: closure.dateTo.toISOString(),
+        amount_efectivo: closure.amountEfectivo,
+        amount_transferencia: closure.amountTransferencia,
+        amount_tarjeta: closure.amountTarjeta,
+        amount_qr: closure.amountQr,
+        total: closure.total,
+        observations: closure.observations,
+      }]).select().single();
+      if (!error && data) {
+        const newClosure = {
+          id: data.id,
+          receptionistName: data.receptionist_name,
+          dateFrom: new Date(data.date_from),
+          dateTo: new Date(data.date_to),
+          amountEfectivo: data.amount_efectivo || 0,
+          amountTransferencia: data.amount_transferencia || 0,
+          amountTarjeta: data.amount_tarjeta || 0,
+          amountQr: data.amount_qr || 0,
+          total: data.total || 0,
+          observations: data.observations,
+          createdAt: new Date(data.created_at),
+        };
+        set(state => ({ cashClosures: [newClosure, ...state.cashClosures] }));
+      }
+    } catch (err) { console.error(err); }
+  },
+
   // ============================================
-  // REALTIME — escucha cambios en appointments
-  // y actualiza el store automáticamente.
-  // Llamar desde el componente raíz con useEffect.
+  // REALTIME — ACTUALIZADO PARA TODAS LAS TABLAS CLAVE
   // ============================================
   subscribeToAppointments: () => {
     const channelName = `clinic-realtime-${Date.now()}`
@@ -848,42 +924,63 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     const channel = supabase
       .channel(channelName)
       // --- APPOINTMENTS ---
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'appointments' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newApt = { ...payload.new, date: new Date(payload.new.date) }
-            set(state => {
-              if (state.appointments.find(a => a.id === newApt.id)) return state
-              return { appointments: [...state.appointments, newApt] }
-            })
-          }
-          if (payload.eventType === 'UPDATE') {
-            const updated = { ...payload.new, date: new Date(payload.new.date) }
-            set(state => ({
-              appointments: state.appointments.map(a => a.id === updated.id ? updated : a)
-            }))
-          }
-          if (payload.eventType === 'DELETE') {
-            set(state => ({
-              appointments: state.appointments.filter(a => a.id !== payload.old.id)
-            }))
-          }
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newApt = { ...payload.new, date: new Date(payload.new.date) }
+          set(state => {
+            if (state.appointments.find(a => a.id === newApt.id)) return state
+            return { appointments: [...state.appointments, newApt] }
+          })
         }
-      )
-      // --- PROFESSIONALS (para monthlySalesCount en tiempo real) ---
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'professionals' },
-        (payload) => {
-          set(state => ({
-            professionals: state.professionals.map(p =>
-              p.id === payload.new.id ? { ...p, ...payload.new } : p
-            )
-          }))
+        if (payload.eventType === 'UPDATE') {
+          const updated = { ...payload.new, date: new Date(payload.new.date) }
+          set(state => ({ appointments: state.appointments.map(a => a.id === updated.id ? updated : a) }))
         }
-      )
+        if (payload.eventType === 'DELETE') {
+          set(state => ({ appointments: state.appointments.filter(a => a.id !== payload.old.id) }))
+        }
+      })
+      // --- PROFESSIONALS ---
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'professionals' }, (payload) => {
+        set(state => ({ professionals: state.professionals.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p) }))
+      })
+      // --- PATIENTS ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'patients' }, (payload) => {
+        const p = payload.new
+        const newPatient = {
+          id: p.id, name: p.name, phone: p.phone, dni: p.dni, email: p.email,
+          birthdate: p.birth_date, createdAt: new Date(p.created_at || Date.now()),
+          notes: p.notes, giftCardBalance: p.gift_card_balance || 0
+        }
+        set(state => {
+          if (state.patients.find(x => x.id === newPatient.id)) return state
+          return { patients: [...state.patients, newPatient] }
+        })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'patients' }, (payload) => {
+        const p = payload.new
+        set(state => ({
+          patients: state.patients.map(x => x.id === p.id ? {
+            ...x, name: p.name, phone: p.phone, dni: p.dni, email: p.email,
+            birthdate: p.birth_date, notes: p.notes, giftCardBalance: p.gift_card_balance || 0
+          } : x)
+        }))
+      })
+      // --- SALES ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
+        const s = payload.new
+        const newSale: Sale = {
+          id: s.id, items: s.items, total: s.total,
+          paymentMethod: s.payment_method, paymentSplits: s.payment_splits || [],
+          usedOfferId: s.used_offer_id, observations: s.observations,
+          source: s.source || 'recepcion', processedBy: s.processed_by,
+          type: s.type, date: new Date(s.date)
+        }
+        set(state => {
+          if (state.sales.find(x => x.id === newSale.id)) return state
+          return { sales: [...state.sales, newSale] }
+        })
+      })
       .subscribe((status) => {
         console.log('[Realtime] Estado:', status)
       })

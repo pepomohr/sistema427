@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { format } from "date-fns"
+import { CashClosureModule } from "@/components/cash-closure-module"; // El componente que te dio Claude
 import { useClinicStore, getCategoryDisplayName, calculateCommissionTab } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -74,6 +75,7 @@ const getStatusColor = (status: string) => {
 
 export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pacientes" | "agenda" | "caja" | "comisiones" }) {
   const {
+    currentUser, // <-- ACÁ TRAEMOS AL USUARIO LOGUEADO
     sales = [],
     patients = [],
     appointments = [],
@@ -152,6 +154,11 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   // Edit Appointment
   const [editAppointmentData, setEditAppointmentData] = useState<any>(null)
+
+  // Agregar Seña a turno existente
+  const [showDepositModal, setShowDepositModal] = useState(false)
+  const [depositAptId, setDepositAptId] = useState<string>("")
+  const [depositAmount, setDepositAmount] = useState<string>("")
 
   useEffect(() => {
     if (typeof fetchPatients === 'function') fetchPatients()
@@ -308,7 +315,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       const doc = new jsPDF()
       const dateFormatted = agendaDate ? agendaDate.toLocaleDateString('es-ES') : new Date().toLocaleDateString('es-ES')
       const title = `Reporte de Turnos - Consultorio C427`
-    
+      
       doc.setFontSize(16)
       doc.text(title, 14, 22)
       doc.setFontSize(11)
@@ -417,26 +424,18 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     return getProfessionalsForService(schedulingService) || []
   }, [schedulingService, getProfessionalsForService])
 
-  // ============================================
-  // HELPER: Obtiene la duración de un servicio
-  // Soporta dos formatos:
-  // NUEVO: { serviceId: "SER-070", serviceName: "...", price, priceCash }
-  // MEDIO: "MiradaPerfecta120" (string comprimido sin espacios)
-  // ============================================
   const compressName = (s: string): string =>
     s.toLowerCase().replace(/[\s\-_()&+.,\/]/g, '')
 
   const getServiceDuration = (aptServiceInfo: any): number => {
     if (!aptServiceInfo || !services || services.length === 0) return 30
 
-    // FORMATO NUEVO: objeto con serviceId — búsqueda directa por ID
     if (typeof aptServiceInfo === 'object' && aptServiceInfo.serviceId) {
       const byId = services.find(
         s => s.id?.toLowerCase() === String(aptServiceInfo.serviceId).toLowerCase()
       )
       if (byId?.duration) return Number(byId.duration) || 30
 
-      // Fallback por nombre exacto
       if (aptServiceInfo.serviceName) {
         const byName = services.find(
           s => s.name?.trim().toLowerCase() === aptServiceInfo.serviceName.trim().toLowerCase()
@@ -445,7 +444,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       }
     }
 
-    // FORMATO MEDIO: string comprimido como "MiradaPerfecta120" o "Facial/Escote"
     if (typeof aptServiceInfo === 'string') {
       const compressed = compressName(aptServiceInfo)
       const found = services.find(s => {
@@ -459,23 +457,18 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     return 30
   }
 
-  // ============================================
-  // LOGICA DISPONIBILIDAD: VERSIÓN CORREGIDA
-  // ============================================
   const scheduleSlots = useMemo(() => {
     if (!schedulingProfessional || !schedulingDate || !professionals || !appointments || !services) return []
     
     const professional = professionals.find((p) => p.id === schedulingProfessional)
     if (!professional) return []
     
-    // 1. Crear todos los slots posibles de 30 min (9:00 a 20:30)
     const allPossibleSlots: string[] = []
     for (let h = 9; h < 21; h++) {
       allPossibleSlots.push(`${h.toString().padStart(2, "0")}:00`)
       allPossibleSlots.push(`${h.toString().padStart(2, "0")}:30`)
     }
     
-    // 2. Filtrar turnos del día para ese profesional (excluyendo cancelados)
     const dateForFilter = (
       schedulingDate.includes('T')
         ? new Date(schedulingDate)
@@ -489,41 +482,29 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       normalizeStatus(a.status as string) !== "cancelled"
     )
 
-    // 3. Para cada turno reservado, calcular qué slots bloquea
     const blockedTimes = new Set<string>()
 
     bookedAppointments.forEach(apt => {
-      // Parsear la hora de inicio del turno
       const timeParts = apt.time.split(':')
       const startH = parseInt(timeParts[0], 10)
       const startM = parseInt(timeParts[1], 10)
       const startInMinutes = startH * 60 + startM
 
-      // Obtener duración real usando el helper mejorado
       let duration = 30
       if (Array.isArray(apt.services) && apt.services.length > 0) {
-        // Usamos el primer servicio para calcular la duración
-        // (si en el futuro hay múltiples servicios, sumar sus duraciones)
         duration = getServiceDuration(apt.services[0])
       } else if (apt.serviceId) {
-        // Compatibilidad con turnos guardados con serviceId directo
         duration = getServiceDuration(apt.serviceId)
       }
 
       const endInMinutes = startInMinutes + duration
 
-      // DEBUG: descomentar para verificar en consola
-      // console.log(`[Turno bloqueado] ${apt.time} | duración: ${duration}min | bloquea hasta: ${Math.floor(endInMinutes/60)}:${String(endInMinutes%60).padStart(2,'0')}`)
-
-      // Bloquear cada slot que caiga DENTRO del rango del turno
       allPossibleSlots.forEach(slot => {
         const slotParts = slot.split(':')
         const slotH = parseInt(slotParts[0], 10)
         const slotM = parseInt(slotParts[1], 10)
         const slotInMinutes = slotH * 60 + slotM
 
-        // Un slot está bloqueado si empieza antes de que termine el turno reservado
-        // y después (o igual) de que empieza
         if (slotInMinutes >= startInMinutes && slotInMinutes < endInMinutes) {
           blockedTimes.add(slot)
         }
@@ -792,6 +773,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                 <Button variant="outline" size="sm" onClick={() => setShowGiftCardLoader(true)} className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 justify-start sm:justify-center">
                   <Gift className="h-4 w-4 mr-2 flex-shrink-0" /> Cargar Saldo a Favor
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => { setDepositAptId(""); setDepositAmount(""); setShowDepositModal(true) }} className="border-blue-400/50 text-blue-500 hover:bg-blue-500/10 justify-start sm:justify-center">
+                  <CreditCard className="h-4 w-4 mr-2 flex-shrink-0" /> Agregar Seña
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleEditPatientClick} className="border-[#16A34A]/30 text-[#16A34A] hover:bg-[#16A34A]/10 justify-start sm:justify-center">
                   <Edit2 className="h-4 w-4 mr-2 flex-shrink-0" /> Editar Info
@@ -1448,57 +1432,68 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
             </div>
           )}
 
-          {mainTab === "caja" && (() => {
-            const today = new Date().toDateString();
-            const todaysSales = sales.filter((s) => s.date.toDateString() === today);
-            
-            let totalIncome = 0;
-            const byMethod: Record<string, number> = { efectivo: 0, transferencia: 0, tarjeta: 0, qr: 0, gift_card: 0 };
-            
-            todaysSales.forEach(s => {
-              if (s.paymentMethod !== 'gift_card') {
-                 totalIncome += s.total;
-              }
-              if (byMethod[s.paymentMethod] !== undefined) {
-                 byMethod[s.paymentMethod] += s.total;
-              }
-            });
+          {mainTab === "caja" && (
+            <div className="space-y-6 mt-4">
+              
+              {/* === NUEVO MÓDULO DE CIERRE DE CAJA (POR RECEPCIONISTA) === */}
+              {currentUser && (
+                <CashClosureModule receptionistName={currentUser.name} />
+              )}
 
-            return (
-              <Card className="bg-white text-foreground border border-gray-200 shadow-xl rounded-2xl mt-4">
-                <CardHeader>
-                  <CardTitle className="text-[#16A34A] flex items-center gap-2 text-2xl">
-                    Cierre de Caja Diario
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="bg-gradient-to-br from-[#16A34A] to-[#14532D] p-8 rounded-2xl border border-emerald-500/30 text-center shadow-lg relative overflow-hidden">
-                    <p className="relative z-10 text-xs sm:text-sm text-emerald-100/90 font-bold uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
-                    <p className="relative z-10 text-5xl sm:text-6xl font-black text-white drop-shadow-md">${totalIncome.toLocaleString()}</p>
-                  </div>
+              {/* === RESUMEN GENERAL DIARIO (PARA TODA LA CLÍNICA) === */}
+              {(() => {
+                const today = new Date().toDateString();
+                const todaysSales = sales.filter((s) => s.date.toDateString() === today);
+                
+                let totalIncome = 0;
+                const byMethod: Record<string, number> = { efectivo: 0, transferencia: 0, tarjeta: 0, qr: 0, gift_card: 0 };
+                
+                todaysSales.forEach(s => {
+                  if (s.paymentMethod !== 'gift_card') {
+                     totalIncome += s.total;
+                  }
+                  if (byMethod[s.paymentMethod] !== undefined) {
+                     byMethod[s.paymentMethod] += s.total;
+                  }
+                });
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
-                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Efectivo</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.efectivo.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
-                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Transferencia</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
-                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Tarjeta</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
-                       <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">QR</p>
-                       <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.qr.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
+                return (
+                  <Card className="bg-white text-foreground border border-gray-200 shadow-xl rounded-2xl mt-4">
+                    <CardHeader>
+                      <CardTitle className="text-[#16A34A] flex items-center gap-2 text-2xl">
+                        Cierre de Caja Diario General
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="bg-gradient-to-br from-[#16A34A] to-[#14532D] p-8 rounded-2xl border border-emerald-500/30 text-center shadow-lg relative overflow-hidden">
+                        <p className="relative z-10 text-xs sm:text-sm text-emerald-100/90 font-bold uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
+                        <p className="relative z-10 text-5xl sm:text-6xl font-black text-white drop-shadow-md">${totalIncome.toLocaleString()}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
+                           <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Efectivo</p>
+                           <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.efectivo.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
+                           <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Transferencia</p>
+                           <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
+                           <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Tarjeta</p>
+                           <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
+                           <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">QR</p>
+                           <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.qr.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+            </div>
+          )}
 
           {mainTab === "comisiones" && (() => {
             const currentMonth = new Date().getMonth();
@@ -1572,6 +1567,85 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
         </div>
       </div>
+      {/* MODAL: Agregar Seña a turno existente */}
+      <Dialog open={showDepositModal} onOpenChange={setShowDepositModal}>
+        <DialogContent className="bg-white text-black max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-blue-600 font-black text-xl">Agregar Seña a Turno</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {(() => {
+              const patientApts = (appointments || []).filter(
+                (a: any) => a.patientId === selectedPatient?.id &&
+                  !['completado', 'cancelado'].includes(a.status)
+              ).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+              return (
+                <>
+                  {patientApts.length === 0 ? (
+                    <p className="text-gray-500 text-sm text-center py-4">No hay turnos pendientes para este paciente.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label className="font-bold text-black text-sm">Seleccionar Turno</Label>
+                      {patientApts.map((apt: any) => {
+                        const prof = professionals.find((p: any) => p.id === apt.professionalId)
+                        const isSelected = depositAptId === apt.id
+                        return (
+                          <button
+                            key={apt.id}
+                            onClick={() => setDepositAptId(apt.id)}
+                            className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-bold text-sm text-black">
+                                  {format(new Date(apt.date), "dd/MM/yyyy")} {apt.time}
+                                </p>
+                                <p className="text-xs text-gray-500">{prof?.shortName || "—"} · {apt.services?.[0]?.serviceName || "Servicio"}</p>
+                              </div>
+                              {(apt.paidAmount || 0) > 0 && (
+                                <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded">
+                                  Seña: ${apt.paidAmount.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <Label className="font-bold text-black text-sm">Monto de la Seña</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Ej: 5000"
+                      value={depositAmount}
+                      onChange={e => setDepositAmount(e.target.value)}
+                      className="border-gray-300 text-black font-bold text-lg h-12"
+                    />
+                  </div>
+                  <Button
+                    disabled={!depositAptId || !depositAmount || parseFloat(depositAmount) <= 0}
+                    onClick={async () => {
+                      const apt = appointments.find((a: any) => a.id === depositAptId)
+                      if (!apt) return
+                      const newPaid = (apt.paidAmount || 0) + parseFloat(depositAmount)
+                      await updateAppointment(depositAptId, { paidAmount: newPaid })
+                      setShowDepositModal(false)
+                      setDepositAmount("")
+                      setDepositAptId("")
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-12 text-base"
+                  >
+                    Guardar Seña
+                  </Button>
+                </>
+              )
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog />
     </div>
   )

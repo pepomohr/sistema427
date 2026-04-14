@@ -23,6 +23,7 @@ import {
   ArrowUpRight,
   Target
 } from "lucide-react"
+import { format } from "date-fns"
 import {
   BarChart,
   Bar,
@@ -38,10 +39,13 @@ import {
 } from "recharts"
 
 export function ReportsModule() {
-  const { sales, appointments, professionals, products, services, expenses, addExpense } = useClinicStore()
+  const { sales, appointments, professionals, products, services, expenses, addExpense, cashClosures } = useClinicStore()
   const [showNeto, setShowNeto] = useState(false)
   const [newExpenseDesc, setNewExpenseDesc] = useState("")
   const [newExpenseAmount, setNewExpenseAmount] = useState("")
+  const now = new Date()
+  const [closureFilterMonth, setClosureFilterMonth] = useState(now.getMonth())
+  const [closureFilterYear, setClosureFilterYear] = useState(now.getFullYear())
 
   const getAppointmentCommissionBase = (apt: any) => {
     if (!Array.isArray(apt?.services)) return 0
@@ -407,6 +411,9 @@ export function ReportsModule() {
           </TabsTrigger>
           <TabsTrigger value="egresos" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
             Gastos Fijos
+          </TabsTrigger>
+          <TabsTrigger value="cierres" className="data-[state=active]:bg-[#16A34A] data-[state=active]:text-white">
+            Cierres de Caja
           </TabsTrigger>
         </TabsList>
 
@@ -790,6 +797,113 @@ export function ReportsModule() {
                   </tbody>
                 </table>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cierres">
+          <Card className="bg-card border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center gap-2">
+                Cierres de Caja por Mes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Selector de mes */}
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: 12 }, (_, i) => {
+                  const label = new Date(closureFilterYear, i, 1).toLocaleDateString("es-AR", { month: "short" })
+                  const isActive = closureFilterMonth === i
+                  return (
+                    <Button
+                      key={i}
+                      variant={isActive ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setClosureFilterMonth(i)}
+                      className={`font-bold capitalize ${isActive ? "bg-[#16A34A] text-white" : "border-gray-300 text-black"}`}
+                    >
+                      {label}
+                    </Button>
+                  )
+                })}
+                <Input
+                  type="number"
+                  value={closureFilterYear}
+                  onChange={e => setClosureFilterYear(Number(e.target.value))}
+                  className="w-24 h-8 text-sm border-gray-300 text-black font-bold"
+                  min={2020}
+                  max={2099}
+                />
+              </div>
+
+              {/* Resumen del mes */}
+              {(() => {
+                const monthClosures = (cashClosures || []).filter((c: any) => {
+                  const d = new Date(c.dateFrom)
+                  return d.getMonth() === closureFilterMonth && d.getFullYear() === closureFilterYear
+                })
+                const monthSalesForPeriod = sales.filter((s: any) => {
+                  const d = new Date(s.date)
+                  return d.getMonth() === closureFilterMonth && d.getFullYear() === closureFilterYear && s.paymentMethod !== 'gift_card'
+                })
+                const totalIngresos = monthSalesForPeriod.reduce((sum: number, s: any) => sum + s.total, 0)
+                const totalEgresos = expenses.filter((e: any) => {
+                  const d = new Date(e.date)
+                  return d.getMonth() === closureFilterMonth && d.getFullYear() === closureFilterYear
+                }).reduce((sum: number, e: any) => sum + e.amount, 0)
+                const totalNeto = totalIngresos - totalEgresos
+
+                return (
+                  <>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+                        <p className="text-xs text-emerald-600 font-bold uppercase">Ingresos</p>
+                        <p className="text-xl font-black text-emerald-700">${totalIngresos.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                        <p className="text-xs text-red-500 font-bold uppercase">Egresos</p>
+                        <p className="text-xl font-black text-red-600">${totalEgresos.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                        <p className="text-xs text-blue-600 font-bold uppercase">Neto</p>
+                        <p className={`text-xl font-black ${totalNeto >= 0 ? "text-blue-700" : "text-red-600"}`}>${totalNeto.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    {/* Lista de cierres del mes */}
+                    {monthClosures.length === 0 ? (
+                      <p className="text-gray-400 text-sm text-center py-4">No hay cierres guardados para este mes.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {[...monthClosures]
+                          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                          .map((c: any) => {
+                            const isGeneral = String(c.receptionistName).startsWith("[GENERAL]")
+                            const displayName = isGeneral ? String(c.receptionistName).replace("[GENERAL] ", "") : c.receptionistName
+                            return (
+                              <div key={c.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <span className="text-xs font-bold text-gray-500 whitespace-nowrap">
+                                    {format(new Date(c.dateFrom), "dd/MM")}
+                                  </span>
+                                  {isGeneral
+                                    ? <span className="text-xs bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded">GENERAL</span>
+                                    : <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded truncate">{displayName}</span>
+                                  }
+                                  <span className="text-xs text-gray-400 whitespace-nowrap">
+                                    {format(new Date(c.dateFrom), "HH:mm")}→{format(new Date(c.dateTo), "HH:mm")}
+                                  </span>
+                                  {c.observations && <span className="text-xs text-gray-400 italic truncate">"{c.observations}"</span>}
+                                </div>
+                                <span className="font-black text-emerald-600 whitespace-nowrap">${c.total.toLocaleString()}</span>
+                              </div>
+                            )
+                          })}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
