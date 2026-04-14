@@ -473,9 +473,10 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
         </DialogContent>
       </Dialog>
 
-      {/* MODAL: Venta Directa */}
+      {/* MODAL: Venta Directa (AHORA CON TOPE DE ALTURA Y SCROLL) */}
       <Dialog open={showDirectSaleModal} onOpenChange={setShowDirectSaleModal}>
-        <DialogContent className="bg-card border-gray-200 text-foreground max-w-lg">
+        {/* EL CAMBIO ESTÁ ACÁ: max-h-[85vh] y overflow-y-auto */}
+        <DialogContent className="bg-card border-gray-200 text-foreground max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-[#16A34A]">Venta Directa de Productos</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
