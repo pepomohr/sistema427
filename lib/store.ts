@@ -135,6 +135,11 @@ export interface Sale {
   items: SaleItem[]
   total: number
   paymentMethod: 'efectivo' | 'tarjeta' | 'transferencia' | 'qr' | 'gift_card'
+  secondPaymentMethod?: 'efectivo' | 'tarjeta' | 'transferencia' | 'qr'
+  secondPaymentAmount?: number
+  observations?: string
+  patientId?: string
+  appointmentId?: string
   date: Date
   processedBy: string
   type?: 'direct' | 'appointment'
@@ -199,7 +204,7 @@ interface ClinicStore {
   toggleProfessionalActive: (id: string) => void
   startAttention: (id: string) => void
   finishAttention: (id: string, finalServices: any[], finalProducts: any[]) => void
-  completeAppointment: (id: string, paymentMethod: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card", finalTotal: number, extraProducts?: any[], extraSoldBy?: string) => void
+  completeAppointment: (id: string, paymentMethod: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card", finalTotal: number, extraProducts?: any[], extraSoldBy?: string, secondPaymentMethod?: string, secondPaymentAmount?: number, observations?: string) => void
   cancelAppointment: (id: string) => void
   updateAppointment: (id: string, updates: Partial<Appointment>) => void
   fetchProfessionals: () => Promise<void>
@@ -260,6 +265,11 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           items: s.items,
           total: s.total,
           paymentMethod: s.payment_method,
+          secondPaymentMethod: s.second_payment_method,
+          secondPaymentAmount: s.second_payment_amount,
+          observations: s.observations,
+          patientId: s.patient_id,
+          appointmentId: s.appointment_id,
           processedBy: s.processed_by,
           type: s.type,
           date: new Date(s.date)
@@ -277,6 +287,11 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           items: saleData.items,
           total: saleData.total,
           payment_method: saleData.paymentMethod,
+          second_payment_method: saleData.secondPaymentMethod || null,
+          second_payment_amount: saleData.secondPaymentAmount || null,
+          observations: saleData.observations || null,
+          patient_id: saleData.patientId || null,
+          appointment_id: saleData.appointmentId || null,
           processed_by: saleData.processedBy,
           type: saleData.type || 'direct'
         }])
@@ -285,11 +300,16 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
       if (error) throw error;
 
-      const newSale: Sale = { 
-        id: data.id, 
+      const newSale: Sale = {
+        id: data.id,
         items: data.items,
         total: data.total,
         paymentMethod: data.payment_method,
+        secondPaymentMethod: data.second_payment_method,
+        secondPaymentAmount: data.second_payment_amount,
+        observations: data.observations,
+        patientId: data.patient_id,
+        appointmentId: data.appointment_id,
         processedBy: data.processed_by,
         type: data.type,
         date: new Date(data.date)
@@ -704,7 +724,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     })
   },
 
-  completeAppointment: (id, method, finalTotal, extraProducts: any[] = [], extraSoldBy = "") => {
+  completeAppointment: (id, method, finalTotal, extraProducts: any[] = [], extraSoldBy = "", secondPaymentMethod?: string, secondPaymentAmount?: number, observations?: string) => {
     const apt = get().appointments.find(a => a.id === id);
     if(!apt) return;
     const accumulatedPaid = (apt.paidAmount || 0) + finalTotal;
@@ -713,12 +733,17 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     apt.services.forEach(s => saleItems.push({ type: 'service', itemId: s.serviceId, itemName: s.serviceName, price: method === 'efectivo' ? (s.priceCash || s.price) : s.price, priceCashReference: s.priceCash || s.price, quantity: 1, soldBy: apt.professionalId }));
     apt.products?.forEach(p => saleItems.push({ type: 'product', itemId: p.productId, itemName: p.productName, price: method === 'efectivo' ? (p.priceCashReference || p.price) : p.price, priceCashReference: p.priceCashReference || p.price, quantity: p.quantity, soldBy: apt.professionalId }));
     extraProducts.forEach(p => saleItems.push({ type: 'product', itemId: p.product.id, itemName: p.product.name, price: method === 'efectivo' ? p.product.priceCash : p.product.priceList, priceCashReference: p.product.priceCash, quantity: p.quantity, soldBy: extraSoldBy || apt.professionalId }));
-    
+
     get().addSale({
       type: 'appointment',
       items: saleItems,
       total: finalTotal,
       paymentMethod: method,
+      secondPaymentMethod: secondPaymentMethod as any,
+      secondPaymentAmount,
+      observations,
+      patientId: apt.patientId,
+      appointmentId: id,
       processedBy: "Recepción"
     }).then(() => {
       supabase.from('appointments').update({ status: 'completado', paidAmount: accumulatedPaid }).eq('id', id).then(() => {

@@ -20,9 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { 
-  CreditCard, 
-  Banknote, 
+import { Textarea } from "@/components/ui/textarea"
+import {
+  CreditCard,
+  Banknote,
   Building2,
   User,
   Clock,
@@ -34,7 +35,8 @@ import {
   X,
   AlertCircle,
   Search,
-  Trash2
+  Trash2,
+  MessageSquare
 } from "lucide-react"
 
 export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?: (patientId: string, aptId: string) => void }) {
@@ -58,6 +60,9 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   const [extraProducts, setExtraProducts] = useState<any[]>([])
   const [selectedOfferId, setSelectedOfferId] = useState<string>("")
   const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "">("")
+  const [secondPaymentMethod, setSecondPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "">("")
+  const [secondPaymentAmount, setSecondPaymentAmount] = useState<string>("")
+  const [checkoutObservations, setCheckoutObservations] = useState<string>("")
   const [prodSearch, setProdSearch] = useState("")
   const [showProdMenu, setShowProdMenu] = useState(false)
 
@@ -70,6 +75,9 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   const [profMenuOpen, setProfMenuOpen] = useState<Record<number, boolean>>({})
   const [directSaleOfferId, setDirectSaleOfferId] = useState<string>("")
   const [directSalePaymentMethod, setDirectSalePaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
+  const [directSaleSecondMethod, setDirectSaleSecondMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "">("")
+  const [directSaleSecondAmount, setDirectSaleSecondAmount] = useState<string>("")
+  const [directSaleObservations, setDirectSaleObservations] = useState<string>("")
 
   const isGiftCardGeneralItem = (item: any) => ((item?.itemName || "").toLowerCase().includes("gift card general"))
   const getDirectSaleUnitPrice = (item: any, method: "efectivo" | "tarjeta" | "transferencia") => {
@@ -102,6 +110,9 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     setExtraProducts([])
     setSelectedOfferId("")
     setPaymentMethod("")
+    setSecondPaymentMethod("")
+    setSecondPaymentAmount("")
+    setCheckoutObservations("")
     setShowCheckoutModal(true)
   }
 
@@ -130,11 +141,16 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
 
   const handleFinalizePayment = () => {
     if (!paymentMethod) return
+    const parsedSecond = secondPaymentAmount ? parseFloat(secondPaymentAmount) : undefined
     completeAppointment(
-      activeApt.id, 
-      paymentMethod as any, 
-      totals.total, 
-      extraProducts.map(p => ({ product: p, quantity: p.quantity }))
+      activeApt.id,
+      paymentMethod as any,
+      totals.total,
+      extraProducts.map(p => ({ product: p, quantity: p.quantity })),
+      "",
+      secondPaymentMethod || undefined,
+      parsedSecond,
+      checkoutObservations || undefined
     )
     setShowCheckoutModal(false)
     setActiveApt(null)
@@ -183,11 +199,23 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
         const offer = offers.find(o => o.id === directSaleOfferId)
         if (offer) total = Math.max(0, Math.round(subtotal * (1 - offer.discountPercentage / 100)))
       }
-      await addSale({ type: "direct", items: saleItems as any, total, paymentMethod: method, processedBy: "Recepción" })
+      await addSale({
+        type: "direct",
+        items: saleItems as any,
+        total,
+        paymentMethod: method,
+        secondPaymentMethod: directSaleSecondMethod as any || undefined,
+        secondPaymentAmount: directSaleSecondAmount ? parseFloat(directSaleSecondAmount) : undefined,
+        observations: directSaleObservations || undefined,
+        patientId: directSalePatient || undefined,
+        processedBy: "Recepción"
+      })
       if (giftCardAmount > 0 && directSalePatient) {
         await updatePatientGiftCardBalance(directSalePatient, giftCardAmount)
       }
-      setDirectSaleItems([]); setDirectSalePatient(""); setDirectSaleOfferId(""); setShowDirectSaleModal(false);
+      setDirectSaleItems([]); setDirectSalePatient(""); setDirectSaleOfferId("");
+      setDirectSaleSecondMethod(""); setDirectSaleSecondAmount(""); setDirectSaleObservations("");
+      setShowDirectSaleModal(false);
     }
   }
 
@@ -302,6 +330,15 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-black flex items-center gap-1"><MessageSquare className="h-3 w-3" /> Observaciones</Label>
+                <Textarea
+                  placeholder="Ej: Abono $35.000, quedan $10.000 a favor para próxima sesión..."
+                  value={checkoutObservations}
+                  onChange={(e) => setCheckoutObservations(e.target.value)}
+                  className="bg-white border-gray-300 text-black font-medium text-sm min-h-[70px] resize-none"
+                />
+              </div>
             </div>
             <div className="flex flex-col justify-between bg-gray-50 p-6 rounded-2xl border border-gray-200">
               <div className="space-y-4">
@@ -312,7 +349,32 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   <Button variant={paymentMethod === 'tarjeta' ? 'default' : 'outline'} onClick={() => setPaymentMethod('tarjeta')} className={`h-12 font-black ${paymentMethod === 'tarjeta' ? 'bg-purple-600' : 'text-black border-gray-300'}`}>TARJETA</Button>
                   <Button variant={paymentMethod === 'qr' ? 'default' : 'outline'} onClick={() => setPaymentMethod('qr')} className={`h-12 font-black ${paymentMethod === 'qr' ? 'bg-orange-500' : 'text-black border-gray-300'}`}>QR</Button>
                 </div>
-                <div className="pt-6 border-t border-gray-200 mt-6 text-center space-y-1 text-black">
+                {paymentMethod && (
+                  <div className="space-y-2 border-t border-gray-200 pt-3">
+                    <Label className="font-black text-black uppercase text-xs block">2do Método (opcional)</Label>
+                    <div className="grid grid-cols-2 gap-1">
+                      {(['efectivo','transferencia','tarjeta','qr'] as const).filter(m => m !== paymentMethod).map(m => {
+                        const colors: Record<string, string> = { efectivo: 'bg-emerald-600', transferencia: 'bg-blue-600', tarjeta: 'bg-purple-600', qr: 'bg-orange-500' }
+                        const labels: Record<string, string> = { efectivo: 'EFECT.', transferencia: 'TRANSF.', tarjeta: 'TARJETA', qr: 'QR' }
+                        const isSelected = secondPaymentMethod === m
+                        return (
+                          <Button key={m} variant={isSelected ? 'default' : 'outline'} onClick={() => { setSecondPaymentMethod(isSelected ? '' : m); if (isSelected) setSecondPaymentAmount('') }} className={"h-9 text-xs font-black " + (isSelected ? colors[m] : 'text-black border-gray-300')}>{labels[m]}</Button>
+                        )
+                      })}
+                    </div>
+                    {secondPaymentMethod && (
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Monto del 2do pago"
+                        value={secondPaymentAmount}
+                        onChange={(e) => setSecondPaymentAmount(e.target.value)}
+                        className="h-9 text-sm bg-white border-gray-300 text-black font-bold"
+                      />
+                    )}
+                  </div>
+                )}
+                <div className="pt-4 border-t border-gray-200 mt-2 text-center space-y-1 text-black">
                   {!!totals.alreadyPaid && (
                     <p className="text-xs font-bold text-emerald-700">
                       Seña registrada: ${totals.alreadyPaid.toLocaleString()}
@@ -427,6 +489,24 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
             {directSaleItems.length > 0 && (
               <div className="pt-4 border-t border-gray-200 space-y-3">
                 <div className="flex justify-between text-xl font-black text-black"><span>Total:</span><span className="text-[#16A34A]">${directSaleDisplayTotal.toLocaleString()}</span></div>
+                <div className="space-y-2">
+                  <Label className="text-black font-bold text-xs uppercase">2do Método de Pago (opcional)</Label>
+                  <div className="grid grid-cols-4 gap-1">
+                    {(['efectivo','tarjeta','transferencia','qr'] as const).map(m => {
+                      const colors: Record<string, string> = { efectivo: 'bg-green-600', tarjeta: 'bg-blue-600', transferencia: 'bg-purple-600', qr: 'bg-orange-500' }
+                      const labels: Record<string, string> = { efectivo: 'EFECT.', tarjeta: 'TARJETA', transferencia: 'TRANSF.', qr: 'QR' }
+                      const isSel = directSaleSecondMethod === m
+                      return <Button key={m} variant={isSel ? 'default' : 'outline'} onClick={() => { setDirectSaleSecondMethod(isSel ? '' : m); if (isSel) setDirectSaleSecondAmount('') }} className={"h-8 text-xs font-black " + (isSel ? colors[m] : 'text-black border-gray-300')}>{labels[m]}</Button>
+                    })}
+                  </div>
+                  {directSaleSecondMethod && (
+                    <Input type="number" min={0} placeholder="Monto del 2do pago" value={directSaleSecondAmount} onChange={(e) => setDirectSaleSecondAmount(e.target.value)} className="h-8 text-sm bg-input border-gray-200 text-black font-bold" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-black font-bold text-xs uppercase flex items-center gap-1"><MessageSquare className="h-3 w-3" /> Observaciones</Label>
+                  <Textarea placeholder="Ej: Abono, saldo a favor, aclaración..." value={directSaleObservations} onChange={(e) => setDirectSaleObservations(e.target.value)} className="min-h-[60px] text-sm bg-input border-gray-200 text-black font-medium resize-none" />
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     onClick={() => { setDirectSalePaymentMethod("efectivo"); handleProcessDirectSale("efectivo") }}
