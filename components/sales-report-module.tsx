@@ -357,9 +357,9 @@ export function SalesReportModule() {
                       <td className="px-3 py-2 text-right font-black text-[#16A34A] whitespace-nowrap">
                         {row.isFirstItem ? `$${row.saleTotal.toLocaleString()}` : ""}
                       </td>
-                      <td className="px-3 py-2 text-gray-600 max-w-[200px]">
+                      <td className="px-3 py-2 text-gray-600">
                         {row.observations
-                          ? <span className="block text-xs italic text-gray-500 truncate" title={row.observations}>{row.observations}</span>
+                          ? <span className="block text-xs italic text-gray-500 whitespace-normal break-words max-w-[220px]">{row.observations}</span>
                           : ""}
                       </td>
                     </tr>

@@ -61,7 +61,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   const [activeApt, setActiveApt] = useState<any>(null)
   const [extraProducts, setExtraProducts] = useState<any[]>([])
   const [selectedOfferId, setSelectedOfferId] = useState<string>("")
-  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "">("")
+  const [paymentMethod, setPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card" | "">("")
   const [secondPaymentMethod, setSecondPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "">("")
   const [secondPaymentAmount, setSecondPaymentAmount] = useState<string>("")
   const [checkoutObservations, setCheckoutObservations] = useState<string>("")
@@ -76,13 +76,13 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   const [profSearch, setProfSearch] = useState<Record<number, string>>({})
   const [profMenuOpen, setProfMenuOpen] = useState<Record<number, boolean>>({})
   const [directSaleOfferId, setDirectSaleOfferId] = useState<string>("")
-  const [directSalePaymentMethod, setDirectSalePaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
+  const [directSalePaymentMethod, setDirectSalePaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card" | "">("")
   const [directSaleSecondMethod, setDirectSaleSecondMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "">("")
   const [directSaleSecondAmount, setDirectSaleSecondAmount] = useState<string>("")
   const [directSaleObservations, setDirectSaleObservations] = useState<string>("")
 
   const isGiftCardGeneralItem = (item: any) => ((item?.itemName || "").toLowerCase().includes("gift card general"))
-  const getDirectSaleUnitPrice = (item: any, method: "efectivo" | "tarjeta" | "transferencia") => {
+  const getDirectSaleUnitPrice = (item: any, method: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card" | "") => {
     if (isGiftCardGeneralItem(item) && typeof item.customUnitPrice === "number" && item.customUnitPrice > 0) {
       return item.customUnitPrice
     }
@@ -143,6 +143,14 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
 
   const handleFinalizePayment = () => {
     if (!paymentMethod) return
+    if (paymentMethod === 'gift_card') {
+      const aptPat = patients.find(p => p.id === activeApt?.patientId)
+      const bal = aptPat?.giftCardBalance || 0
+      if (bal < totals.total) {
+        alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${totals.total.toLocaleString('es-AR')}`)
+        return
+      }
+    }
 
     // Armar los splits de pago
     const splits: PaymentSplit[] = []
@@ -181,7 +189,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     }
   }
 
-  const handleProcessDirectSale = async (method: "efectivo" | "tarjeta" | "transferencia") => {
+  const handleProcessDirectSale = async (method: "efectivo" | "tarjeta" | "transferencia" | "qr") => {
     if (!directSalePatient) {
       alert("Seleccioná el paciente antes de procesar la venta.")
       return
@@ -252,12 +260,14 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     transferencia: 'bg-blue-600',
     tarjeta: 'bg-purple-600',
     qr: 'bg-orange-500',
+    gift_card: 'bg-pink-600',
   }
   const paymentLabels: Record<string, string> = {
     efectivo: 'EFECTIVO',
     transferencia: 'TRANSF.',
     tarjeta: 'TARJETA',
     qr: 'QR',
+    gift_card: 'SALDO A FAVOR',
   }
 
   return (
@@ -391,6 +401,13 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
             <div className="flex flex-col justify-between bg-gray-50 p-6 rounded-2xl border border-gray-200">
               <div className="space-y-4">
                 <Label className="font-black text-black uppercase text-center block">Método de Pago</Label>
+                {(() => {
+                  const aptPat = patients.find(p => p.id === activeApt?.patientId)
+                  const bal = aptPat?.giftCardBalance || 0
+                  return bal > 0 ? (
+                    <p className="text-xs text-pink-600 font-bold text-center">💳 Saldo disponible: ${bal.toLocaleString('es-AR')}</p>
+                  ) : null
+                })()}
                 <div className="grid grid-cols-2 gap-2">
                   {(['efectivo', 'transferencia', 'tarjeta', 'qr'] as const).map(m => (
                     <Button
@@ -398,7 +415,6 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                       variant={paymentMethod === m ? 'default' : 'outline'}
                       onClick={() => {
                         setPaymentMethod(m)
-                        // Si el 2do método es igual al nuevo principal, lo limpiamos
                         if (secondPaymentMethod === m) { setSecondPaymentMethod(""); setSecondPaymentAmount("") }
                       }}
                       className={`h-12 font-black ${paymentMethod === m ? paymentColors[m] : 'text-black border-gray-300'}`}
@@ -406,6 +422,25 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                       {paymentLabels[m]}
                     </Button>
                   ))}
+                  {(() => {
+                    const aptPat = patients.find(p => p.id === activeApt?.patientId)
+                    const bal = aptPat?.giftCardBalance || 0
+                    return (
+                      <div className="col-span-2">
+                        <Button
+                          variant={paymentMethod === 'gift_card' ? 'default' : 'outline'}
+                          disabled={bal <= 0}
+                          onClick={() => {
+                            setPaymentMethod('gift_card' as any)
+                            setSecondPaymentMethod(""); setSecondPaymentAmount("")
+                          }}
+                          className={`w-full h-12 font-black ${paymentMethod === 'gift_card' ? paymentColors['gift_card'] : bal > 0 ? 'text-pink-600 border-pink-300 hover:bg-pink-50' : 'text-gray-400 border-gray-200'}`}
+                        >
+                          💳 SALDO A FAVOR {bal > 0 ? `· $${bal.toLocaleString('es-AR')}` : '· sin saldo'}
+                        </Button>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* 2do método de pago (aparece solo cuando hay un método principal elegido) */}
@@ -566,40 +601,92 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
               </div>
             )}
             {directSaleItems.length > 0 && (
-              <div className="pt-4 border-t border-gray-200 space-y-3">
-                <div className="flex justify-between text-xl font-black text-black"><span>Total:</span><span className="text-[#16A34A]">${directSaleDisplayTotal.toLocaleString()}</span></div>
-
-                {/* 2do método para venta directa */}
-                <div className="space-y-2">
-                  <Label className="text-black font-bold text-xs uppercase">2do Método de Pago (opcional)</Label>
-                  <div className="grid grid-cols-4 gap-1">
-                    {(['efectivo', 'tarjeta', 'transferencia', 'qr'] as const).map(m => {
-                      const isSel = directSaleSecondMethod === m
-                      return (
-                        <Button
-                          key={m}
-                          variant={isSel ? 'default' : 'outline'}
-                          onClick={() => { setDirectSaleSecondMethod(isSel ? '' : m); if (isSel) setDirectSaleSecondAmount('') }}
-                          className={`h-8 text-xs font-black ${isSel ? paymentColors[m] : 'text-black border-gray-300'}`}
-                        >
-                          {paymentLabels[m]}
-                        </Button>
-                      )
-                    })}
-                  </div>
-                  {directSaleSecondMethod && (
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="Monto del 2do pago"
-                      value={directSaleSecondAmount}
-                      onChange={(e) => setDirectSaleSecondAmount(e.target.value)}
-                      className="h-8 text-sm bg-input border-gray-200 text-black font-bold"
-                    />
-                  )}
+              <div className="pt-4 border-t border-gray-200 space-y-4">
+                {/* TOTAL */}
+                <div className="flex justify-between text-2xl font-black text-black bg-gray-50 px-4 py-3 rounded-xl border border-gray-200">
+                  <span>Total:</span>
+                  <span className="text-[#16A34A]">${directSaleDisplayTotal.toLocaleString()}</span>
                 </div>
 
-                {/* Observaciones para venta directa */}
+                {/* MÉTODO PRINCIPAL */}
+                <div className="space-y-2">
+                  <Label className="text-black font-bold text-xs uppercase">Método de Pago</Label>
+                  {(() => {
+                    const dsPat = patients.find(p => p.id === directSalePatient)
+                    const bal = dsPat?.giftCardBalance || 0
+                    return bal > 0 ? <p className="text-xs text-pink-600 font-bold">💳 Saldo disponible: ${bal.toLocaleString('es-AR')}</p> : null
+                  })()}
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['efectivo', 'tarjeta', 'transferencia', 'qr'] as const).map(m => (
+                      <Button
+                        key={m}
+                        variant={directSalePaymentMethod === m ? 'default' : 'outline'}
+                        onClick={() => { setDirectSalePaymentMethod(m); setDirectSaleSecondMethod(''); setDirectSaleSecondAmount('') }}
+                        className={`h-11 font-black ${directSalePaymentMethod === m ? paymentColors[m] : 'text-black border-gray-300'}`}
+                      >
+                        {paymentLabels[m]}
+                      </Button>
+                    ))}
+                    {(() => {
+                      const dsPat = patients.find(p => p.id === directSalePatient)
+                      const bal = dsPat?.giftCardBalance || 0
+                      const isSelected = (directSalePaymentMethod as any) === 'gift_card'
+                      return (
+                        <div className="col-span-2">
+                          <Button
+                            variant={isSelected ? 'default' : 'outline'}
+                            disabled={bal <= 0}
+                            onClick={() => { setDirectSalePaymentMethod('gift_card' as any); setDirectSaleSecondMethod(''); setDirectSaleSecondAmount('') }}
+                            className={`w-full h-11 font-black ${isSelected ? 'bg-pink-600 text-white' : bal > 0 ? 'text-pink-600 border-pink-300 hover:bg-pink-50' : 'text-gray-400 border-gray-200'}`}
+                          >
+                            💳 SALDO A FAVOR {bal > 0 ? `· $${bal.toLocaleString('es-AR')}` : '· sin saldo'}
+                          </Button>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* 2DO MÉTODO COLAPSABLE */}
+                {directSalePaymentMethod && (directSalePaymentMethod as any) !== 'gift_card' && (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => { setDirectSaleSecondMethod(directSaleSecondMethod ? '' : 'efectivo' as any); setDirectSaleSecondAmount('') }}
+                      className="text-xs text-gray-500 underline font-bold"
+                    >
+                      {directSaleSecondMethod ? '− Quitar 2do método' : '+ Agregar 2do método (opcional)'}
+                    </button>
+                    {directSaleSecondMethod && (
+                      <div className="space-y-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                        <div className="grid grid-cols-4 gap-1">
+                          {(['efectivo', 'tarjeta', 'transferencia', 'qr'] as const)
+                            .filter(m => m !== directSalePaymentMethod)
+                            .map(m => (
+                              <Button
+                                key={m}
+                                variant={directSaleSecondMethod === m ? 'default' : 'outline'}
+                                onClick={() => setDirectSaleSecondMethod(m)}
+                                className={`h-9 text-xs font-black ${directSaleSecondMethod === m ? paymentColors[m] : 'text-black border-gray-300'}`}
+                              >
+                                {paymentLabels[m]}
+                              </Button>
+                            ))}
+                        </div>
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Monto del 2do pago"
+                          value={directSaleSecondAmount}
+                          onChange={(e) => setDirectSaleSecondAmount(e.target.value)}
+                          className="h-9 text-sm bg-white border-gray-300 text-black font-bold"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* OBSERVACIONES */}
                 <div className="space-y-1">
                   <Label className="text-black font-bold text-xs uppercase flex items-center gap-1">
                     <MessageSquare className="h-3 w-3" /> Observaciones
@@ -612,26 +699,31 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <Button
-                    onClick={() => { setDirectSalePaymentMethod("efectivo"); handleProcessDirectSale("efectivo") }}
-                    className="bg-green-600 font-black"
-                  >
-                    EFECTIVO
-                  </Button>
-                  <Button
-                    onClick={() => { setDirectSalePaymentMethod("tarjeta"); handleProcessDirectSale("tarjeta") }}
-                    className="bg-blue-600 font-black"
-                  >
-                    TARJETA
-                  </Button>
-                  <Button
-                    onClick={() => { setDirectSalePaymentMethod("transferencia"); handleProcessDirectSale("transferencia") }}
-                    className="bg-purple-600 font-black"
-                  >
-                    TRANSF.
-                  </Button>
-                </div>
+                {/* BOTÓN GRANDE CONFIRMAR */}
+                <Button
+                  disabled={!directSalePaymentMethod}
+                  onClick={async () => {
+                    if ((directSalePaymentMethod as any) === 'gift_card') {
+                      const dsPat = patients.find(p => p.id === directSalePatient)
+                      const bal = dsPat?.giftCardBalance || 0
+                      if (!directSalePatient) { alert("Seleccioná el paciente primero."); return }
+                      if (bal < directSaleDisplayTotal) {
+                        alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${directSaleDisplayTotal.toLocaleString('es-AR')}`)
+                        return
+                      }
+                      const totalCapturado = directSaleDisplayTotal
+                      const pacienteCapturado = directSalePatient
+                      setDirectSalePaymentMethod("efectivo")
+                      await handleProcessDirectSale("efectivo")
+                      await updatePatientGiftCardBalance(pacienteCapturado, -totalCapturado)
+                    } else {
+                      handleProcessDirectSale(directSalePaymentMethod as any)
+                    }
+                  }}
+                  className="w-full h-14 text-lg font-black bg-[#16A34A] hover:bg-[#15803d] text-white shadow-lg"
+                >
+                  CONFIRMAR VENTA
+                </Button>
               </div>
             )}
           </div>

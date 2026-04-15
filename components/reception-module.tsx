@@ -122,7 +122,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const { confirm, ConfirmDialog } = useConfirm()
 
   const [checkoutAptId, setCheckoutAptId] = useState<string>("")
-  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card" | "">("")
   const [newPatient, setNewPatient] = useState({
     name: "",
     phone: "",
@@ -1149,6 +1149,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                               <SelectItem value="transferencia">🏦 Transferencia (Lista)</SelectItem>
                               <SelectItem value="tarjeta">💳 Tarjeta (Lista)</SelectItem>
                               <SelectItem value="qr">📱 Código QR</SelectItem>
+                              {(() => {
+                                const bal = selectedPatient?.giftCardBalance || 0
+                                return (
+                                  <SelectItem value="gift_card" disabled={bal <= 0}>
+                                    💳 Saldo a Favor {bal > 0 ? `($${bal.toLocaleString('es-AR')} disp.)` : '(sin saldo)'}
+                                  </SelectItem>
+                                )
+                              })()}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1176,6 +1184,13 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           className="w-full bg-[#16A34A] hover:bg-[#15803D] h-14 text-white font-bold mt-6 shadow-lg text-lg"
                           disabled={!checkoutPaymentMethod}
                           onClick={() => {
+                            if (checkoutPaymentMethod === 'gift_card') {
+                              const bal = selectedPatient?.giftCardBalance || 0
+                              if (bal < finalToPay) {
+                                alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${finalToPay.toLocaleString('es-AR')}`)
+                                return
+                              }
+                            }
                             if (typeof useClinicStore.getState().completeAppointment === 'function') {
                               (useClinicStore.getState() as any).completeAppointment(checkoutAptId, checkoutPaymentMethod as any, finalToPay);
                             }
@@ -1497,7 +1512,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                               return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase">Ya Asistió</Badge>;
                             }
                             if (sNorm === 'programado' || sNorm === 'scheduled') {
-                              return <Badge className="bg-sky-100/80 text-sky-600 border-sky-200 font-bold text-[10px] uppercase">Programado</Badge>;
+                              return <Badge onClick={() => updateAppointment(apt.id, { status: 'confirmado' })} className="bg-sky-100/80 text-sky-600 border-sky-200 font-bold text-[10px] uppercase cursor-pointer hover:bg-emerald-100 hover:text-emerald-700 hover:border-emerald-300 transition-colors">Programado</Badge>;
                             }
                             if (sNorm === 'confirmado') {
                               return <Badge className="bg-emerald-500 text-white font-bold text-[10px] uppercase">Confirmado</Badge>;

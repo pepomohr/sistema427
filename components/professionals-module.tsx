@@ -52,6 +52,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     fetchProducts,
     fetchAppointments,
     addAppointment,
+    updatePatientGiftCardBalance,
   } = useClinicStore()
 
   const activeTab = view
@@ -88,6 +89,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const [directSaleSearch, setDirectSaleSearch] = useState("")
   const [directSaleMenuOpen, setDirectSaleMenuOpen] = useState(false)
   const [directSalePaymentMethod, setDirectSalePaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "">("")
+  const [directSalePatientId, setDirectSalePatientId] = useState<string>("")
 
   const { confirm, ConfirmDialog } = useConfirm()
 
@@ -518,6 +520,25 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
               </div>
             )}
 
+            {/* Paciente (solo para saldo a favor) */}
+            {directSaleCart.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase text-gray-500">Paciente (opcional — para usar saldo a favor)</label>
+                <select
+                  value={directSalePatientId}
+                  onChange={e => setDirectSalePatientId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-800"
+                >
+                  <option value="">Sin paciente</option>
+                  {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                {directSalePatientId && (() => {
+                  const bal = patients.find(p => p.id === directSalePatientId)?.giftCardBalance || 0
+                  return bal > 0 ? <p className="text-xs text-pink-600 font-bold">💳 Saldo disponible: ${bal.toLocaleString('es-AR')}</p> : null
+                })()}
+              </div>
+            )}
+
             {/* Total y confirmar */}
             {directSaleCart.length > 0 && directSalePaymentMethod && (
               <div className="bg-orange-500 p-4 rounded-xl flex items-center justify-between">
@@ -533,6 +554,30 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                 </Button>
               </div>
             )}
+            {/* Saldo a favor */}
+            {directSaleCart.length > 0 && (() => {
+              const bal = patients.find(p => p.id === directSalePatientId)?.giftCardBalance || 0
+              if (!directSalePatientId || bal <= 0) return null
+              return (
+                <Button
+                  onClick={async () => {
+                    if (bal < directSaleTotal) {
+                      alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${directSaleTotal.toLocaleString('es-AR')}`)
+                      return
+                    }
+                    const totalCapturado = directSaleTotal
+                    const pacienteCapturado = directSalePatientId
+                    setDirectSalePaymentMethod("efectivo")
+                    handleConfirmDirectSale()
+                    await updatePatientGiftCardBalance(pacienteCapturado, -totalCapturado)
+                    setDirectSalePatientId("")
+                  }}
+                  className="w-full bg-pink-600 hover:bg-pink-700 font-black text-white"
+                >
+                  💳 SALDO A FAVOR (${bal.toLocaleString('es-AR')} disp.)
+                </Button>
+              )
+            })()}
           </div>
         </DialogContent>
       </Dialog>
