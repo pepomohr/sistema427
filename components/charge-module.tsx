@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { useConfirm } from "@/hooks/use-confirm"
 import {
   CreditCard,
   Banknote,
@@ -40,6 +41,7 @@ import {
 } from "lucide-react"
 
 export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?: (patientId: string, aptId: string) => void }) {
+  const { confirm, ConfirmDialog } = useConfirm()
   const {
     patients = [],
     appointments = [],
@@ -291,6 +293,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog />
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-[#16A34A]">Cobrar</h2>
         <Button onClick={() => setShowDirectSaleModal(true)} className="bg-[#16A34A] text-white hover:bg-[#15803D]">
