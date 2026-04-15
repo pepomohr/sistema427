@@ -444,18 +444,22 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   {(() => {
                     const aptPat = patients.find(p => p.id === activeApt?.patientId)
                     const bal = aptPat?.giftCardBalance || 0
+                    const isSelected = paymentMethod === 'gift_card'
                     return (
                       <div className="col-span-2">
                         <Button
-                          variant={paymentMethod === 'gift_card' ? 'default' : 'outline'}
-                          disabled={bal <= 0}
+                          variant={isSelected ? 'default' : 'outline'}
                           onClick={() => {
+                            if (bal <= 0) {
+                              confirm({ title: "Sin saldo a favor", description: "Este paciente no tiene saldo a favor disponible.", actionType: "info", onConfirm: () => {} })
+                              return
+                            }
                             setPaymentMethod('gift_card' as any)
                             setSecondPaymentMethod(""); setSecondPaymentAmount("")
                           }}
-                          className={`w-full h-12 font-black ${paymentMethod === 'gift_card' ? paymentColors['gift_card'] : bal > 0 ? 'text-pink-600 border-pink-300 hover:bg-pink-50' : 'text-gray-400 border-gray-200'}`}
+                          className={`w-full h-12 font-black ${isSelected ? paymentColors['gift_card'] : 'text-pink-600 border-pink-300 hover:bg-pink-50'}`}
                         >
-                          💳 SALDO A FAVOR {bal > 0 ? `· $${bal.toLocaleString('es-AR')}` : '· sin saldo'}
+                          💳 SALDO A FAVOR {bal > 0 ? `· $${bal.toLocaleString('es-AR')}` : ''}
                         </Button>
                       </div>
                     )
