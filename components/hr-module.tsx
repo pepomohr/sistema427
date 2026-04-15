@@ -67,9 +67,13 @@ export function HRModule() {
 
   const handleSaveSchedule = async () => {
     if (selectedProf && editingSchedule) {
-      await updateProfessional(selectedProf.id, { schedule: editingSchedule })
-      setShowScheduleModal(false)
-      confirm({ title: "Horarios Guardados", actionType: "success", confirmText: "Cerrar", onConfirm: () => {} })
+      try {
+        await updateProfessional(selectedProf.id, { schedule: editingSchedule })
+        setShowScheduleModal(false)
+        confirm({ title: "✅ Horarios Guardados", description: "Los cambios fueron guardados correctamente.", actionType: "success", onConfirm: () => {} })
+      } catch (err: any) {
+        alert(`❌ Error al guardar los horarios: ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`)
+      }
     }
   }
 

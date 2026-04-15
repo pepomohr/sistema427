@@ -489,6 +489,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     const professional = professionals.find((p) => p.id === schedulingProfessional)
     if (!professional) return []
 
+    // Duración del servicio seleccionado (para filtrar slots y detectar solapamiento hacia adelante)
+    const selectedSvc = services.find(s => s.id === schedulingService)
+    const newAptDuration = selectedSvc ? (Number(selectedSvc.duration) || 60) : 60
+    // Si la duración es múltiplo de 60 → solo slots en :00. Si tiene componente de 30 min → también :30
+    const stepMinutes = (newAptDuration % 60 === 0) ? 60 : 30
+
     // Get day of week for the selected date
     const dateObj = schedulingDate.includes('T') ? new Date(schedulingDate) : new Date(schedulingDate + 'T12:00:00')
     const dayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dateObj.getDay()]
@@ -503,20 +509,21 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         const [endH, endM] = end.split(':').map(Number)
         const startMins = startH * 60 + startM
         const endMins = endH * 60 + endM
-        for (let m = startMins; m < endMins; m += 30) {
+        for (let m = startMins; m < endMins; m += stepMinutes) {
           const h = Math.floor(m / 60)
           const min = m % 60
           allPossibleSlots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
         }
       })
     } else {
-      // No schedule configured = show all 9-21
-      for (let h = 9; h < 21; h++) {
-        allPossibleSlots.push(`${h.toString().padStart(2, "0")}:00`)
-        allPossibleSlots.push(`${h.toString().padStart(2, "0")}:30`)
+      // No schedule configured = show all 9-21 with correct step
+      for (let m = 9 * 60; m < 21 * 60; m += stepMinutes) {
+        const h = Math.floor(m / 60)
+        const min = m % 60
+        allPossibleSlots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
       }
     }
-    
+
     const dateForFilter = (
       schedulingDate.includes('T')
         ? new Date(schedulingDate)
@@ -527,7 +534,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       a.professionalId === schedulingProfessional &&
       new Date(a.date).toDateString() === dateForFilter &&
       normalizeStatus(a.status as string) !== "cancelado" &&
-      normalizeStatus(a.status as string) !== "cancelled"
+      normalizeStatus(a.status as string) !== "cancelled" &&
+      (editAppointmentData ? a.id !== editAppointmentData : true)
     )
 
     const blockedTimes = new Set<string>()
@@ -536,33 +544,34 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       const timeParts = apt.time.split(':')
       const startH = parseInt(timeParts[0], 10)
       const startM = parseInt(timeParts[1], 10)
-      const startInMinutes = startH * 60 + startM
+      const aptStart = startH * 60 + startM
 
-      let duration = 30
+      let aptDuration = 60
       if (Array.isArray(apt.services) && apt.services.length > 0) {
-        duration = getServiceDuration(apt.services[0])
+        aptDuration = getServiceDuration(apt.services[0])
       } else if (apt.serviceId) {
-        duration = getServiceDuration(apt.serviceId)
+        aptDuration = getServiceDuration(apt.serviceId)
       }
-
-      const endInMinutes = startInMinutes + duration
+      const aptEnd = aptStart + aptDuration
 
       allPossibleSlots.forEach(slot => {
-        const slotParts = slot.split(':')
-        const slotH = parseInt(slotParts[0], 10)
-        const slotM = parseInt(slotParts[1], 10)
-        const slotInMinutes = slotH * 60 + slotM
+        const [sH, sM] = slot.split(':').map(Number)
+        const slotStart = sH * 60 + sM
+        const slotEnd = slotStart + newAptDuration
 
-        if (slotInMinutes >= startInMinutes && slotInMinutes < endInMinutes) {
+        // Bloquear si:
+        // 1. El slot cae dentro de un turno existente (el nuevo empezaría dentro de otro)
+        // 2. El nuevo turno se solaparía con uno existente (el nuevo termina después de que empieza el existente)
+        if (slotStart < aptEnd && slotEnd > aptStart) {
           blockedTimes.add(slot)
         }
       })
     })
-    
+
     return allPossibleSlots
       .sort()
       .map((slot) => ({ slot, blocked: blockedTimes.has(slot) }))
-  }, [schedulingProfessional, schedulingDate, professionals, appointments, services])
+  }, [schedulingProfessional, schedulingDate, schedulingService, professionals, appointments, services, editAppointmentData])
 
   const handleScheduleAppointment = () => {
     if (!selectedPatient || !schedulingProfessional || !schedulingService || !schedulingTime) return

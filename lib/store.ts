@@ -518,11 +518,20 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     supabase.from('professionals').update({ hourlyRate: rate }).eq('id', id)
   },
 
-  updateProfessional: (id, updates) => {
+  updateProfessional: async (id, updates) => {
     set(state => ({
       professionals: state.professionals.map(p => p.id === id ? { ...p, ...updates } : p)
     }));
-    supabase.from('professionals').update(updates).eq('id', id)
+    try {
+      const { error } = await supabase.from('professionals').update(updates).eq('id', id)
+      if (error) {
+        console.error('[updateProfessional] Error guardando en Supabase:', error)
+        throw new Error(error.message)
+      }
+    } catch (err) {
+      console.error('[updateProfessional] Error:', err)
+      throw err
+    }
   },
 
   resetProfessionalPin: async (id) => {
