@@ -333,10 +333,10 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
               <div className="space-y-2">
                 <Label className="font-black text-black text-sm uppercase">Resumen de Cuenta</Label>
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm space-y-2">
-                  {activeApt?.services.map((s: any, i: number) => (
+                  {(activeApt?.services || []).map((s: any, i: number) => (
                     <div key={i} className="flex justify-between font-bold text-black">
                       <span>{s.serviceName}</span>
-                      <span>${(paymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price).toLocaleString()}</span>
+                      <span>${(paymentMethod === 'efectivo' ? (s.priceCash || s.price || 0) : (s.price || 0)).toLocaleString()}</span>
                     </div>
                   ))}
                   {activeApt?.products?.map((p: any, i: number) => (
