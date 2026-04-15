@@ -374,7 +374,10 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           total: saleData.total,
           payment_method: saleData.paymentMethod,
           processed_by: saleData.processedBy,
-          type: saleData.type || 'direct'
+          type: saleData.type || 'direct',
+          source: saleData.source || 'recepcion',
+          patient_id: saleData.patientId || null,
+          observations: saleData.observations || null,
         }])
         .select()
         .single();
@@ -391,6 +394,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         date: new Date(data.date)
       };
 
+      const profUpdates: Array<{ id: string; count: number; amount: number }> = []
       const updatedProfessionals = professionals.map(prof => {
         const soldItems = saleData.items.filter(
           item =>
@@ -405,9 +409,12 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         const totalAmt = soldItems.reduce((acc, item) => acc + ((item.priceCashReference || item.price) * item.quantity), 0)
         const newCount = (prof.monthlySalesCount || 0) + totalQty
         const newAmount = (prof.monthlySalesAmount || 0) + totalAmt
-        supabase.from('professionals').update({ monthlySalesCount: newCount, monthlySalesAmount: newAmount }).eq('id', prof.id)
+        profUpdates.push({ id: prof.id, count: newCount, amount: newAmount })
         return { ...prof, monthlySalesCount: newCount, monthlySalesAmount: newAmount }
       })
+      await Promise.all(profUpdates.map(u =>
+        supabase.from('professionals').update({ monthlySalesCount: u.count, monthlySalesAmount: u.amount }).eq('id', u.id)
+      ))
 
       set((state) => {
         let currentProducts = [...state.products]
@@ -482,6 +489,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         date: new Date(data.date)
       };
 
+      const profUpdates2: Array<{ id: string; count: number; amount: number }> = []
       const updatedProfessionals = professionals.map(prof => {
         const soldItems = saleData.items.filter(
           item => item.type === 'product' && item.soldBy === prof.id &&
@@ -493,9 +501,12 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         const totalAmt = soldItems.reduce((acc, item) => acc + ((item.priceCashReference || item.price) * item.quantity), 0)
         const newCount = (prof.monthlySalesCount || 0) + totalQty
         const newAmount = (prof.monthlySalesAmount || 0) + totalAmt
-        supabase.from('professionals').update({ monthlySalesCount: newCount, monthlySalesAmount: newAmount }).eq('id', prof.id)
+        profUpdates2.push({ id: prof.id, count: newCount, amount: newAmount })
         return { ...prof, monthlySalesCount: newCount, monthlySalesAmount: newAmount }
       })
+      await Promise.all(profUpdates2.map(u =>
+        supabase.from('professionals').update({ monthlySalesCount: u.count, monthlySalesAmount: u.amount }).eq('id', u.id)
+      ))
 
       set(state => {
         let currentProducts = [...state.products]

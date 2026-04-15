@@ -111,8 +111,14 @@ export function HRModule() {
     let detailContent: React.ReactNode = null;
 
     if (isCommission) {
-      const profAppointments = appointments?.filter(a => a.professionalId === p.id) || []; // CORRECCIÓN: a.profId no existe, es professionalId
-      const totalSales = profAppointments.reduce((acc, a) => acc + (a.totalAmount || a.paidAmount || 0), 0); // CORRECCIÓN: price no existe en appointment root
+      const now = new Date()
+      const profAppointments = appointments?.filter(a => {
+        if (a.professionalId !== p.id) return false
+        if (a.status !== 'completado') return false
+        const aptDate = new Date(a.date)
+        return aptDate.getFullYear() === now.getFullYear() && aptDate.getMonth() === now.getMonth()
+      }) || []
+      const totalSales = profAppointments.reduce((acc, a) => acc + (a.paidAmount || a.totalAmount || 0), 0);
       totalPay = totalSales * (p.hourlyRate! / 100);
 
       detailContent = (

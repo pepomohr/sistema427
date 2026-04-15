@@ -99,7 +99,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     startAttention,
     cancelAppointment,
     updatePatientGiftCardBalance,
-    addSale
+    addSale,
+    addSaleMultipago
   } = useClinicStore()
 
   const mainTab = activeView
@@ -228,7 +229,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         return
       }
 
-      addSale({
+      await addSaleMultipago({
         type: 'direct',
         items: [{
            type: 'product',
@@ -241,7 +242,10 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
         }],
         total: giftCardAmount,
         paymentMethod: giftCardPaymentMethod as any,
+        paymentSplits: [{ method: giftCardPaymentMethod as any, amount: giftCardAmount }],
         processedBy: "Recepción",
+        patientId: selectedPatient.id,
+        source: 'recepcion',
       });
 
       setSelectedPatient({ ...selectedPatient, giftCardBalance: (selectedPatient.giftCardBalance || 0) + giftCardAmount });
@@ -932,7 +936,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                <p className="font-bold text-foreground">{apt.services.map((s:any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
                                <p className="text-sm text-[#16A34A]">con {prof?.name || 'Profesional no encontrado'}</p>
                             </div>
-                            {['programado', 'confirmado', 'scheduled'].includes(normalizeStatus(apt.status as string)) && (
+                            {['programado', 'confirmado', 'scheduled', 'pendiente_cobro'].includes(normalizeStatus(apt.status as string)) && (
                                <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                                  {(apt.paidAmount || 0) > 0 && (
                                    <Button variant="outline" size="sm" onClick={() => {
@@ -943,6 +947,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                      ✏️ Seña: ${(apt.paidAmount || 0).toLocaleString('es-AR')}
                                    </Button>
                                  )}
+                                 {normalizeStatus(apt.status as string) !== 'pendiente_cobro' && (
                                  <Button variant="outline" size="sm" onClick={() => {
                                     setSchedulingDate(new Date(apt.date).toISOString().split('T')[0])
                                     setSchedulingTime(apt.time)
@@ -954,6 +959,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                     setEditAppointmentData(apt.id)
                                     window.scrollTo({ top: 0, behavior: 'smooth' })
                                  }} className="flex-1 sm:flex-none border-blue-500/50 text-blue-400 hover:bg-blue-500/10">Reprogramar</Button>
+                                 )}
                                  <Button variant="outline" size="sm" onClick={() => {
                                     confirm({
                                       title: "Cancelar Turno",
@@ -1374,13 +1380,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           itemId: i.product.id,
                           itemName: i.product.name,
                           price: getDirectSaleUnitPrice(i),
-                          priceCashReference: getDirectSaleUnitPrice(i),
+                          priceCashReference: i.product.priceCash || i.product.priceList, // siempre precio cash para comisión
                           quantity: i.quantity,
                           soldBy: directSaleProf || "recepcion"
                         })),
                         total: Math.round(directSaleTotal),
                         paymentMethod: directSalePaymentMethod as any,
-                        processedBy: "Recepción"
+                        processedBy: "Recepción",
+                        patientId: selectedPatient?.id,
                       })
 
                       if (selectedPatient && giftCardCredit > 0) {

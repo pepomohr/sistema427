@@ -287,14 +287,16 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
             type: 'product' as const,
             itemId: i.product.id,
             itemName: i.product.name,
-            price: directSalePaymentMethod === 'efectivo' ? i.product.priceCash : i.product.priceList,
-            priceCashReference: i.product.priceCash,
+            // gift_card y efectivo usan precio cash (dinero del paciente = cash)
+            price: (directSalePaymentMethod === 'efectivo' || directSalePaymentMethod === 'gift_card') ? i.product.priceCash : i.product.priceList,
+            priceCashReference: i.product.priceCash, // siempre cash para comisión correcta
             quantity: i.quantity,
-            soldBy: currentProfessional.id, // ID real de la profesional → suma a su contador
+            soldBy: currentProfessional.id,
           })),
           total: directSaleTotal,
           paymentMethod: directSalePaymentMethod as any,
           processedBy: currentProfessional.shortName,
+          patientId: directSalePatientId || undefined,
         })
         setDirectSaleCart([])
         setDirectSalePaymentMethod("")
@@ -565,12 +567,31 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                       alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${directSaleTotal.toLocaleString('es-AR')}`)
                       return
                     }
+                    if (!currentProfessional) return
                     const totalCapturado = directSaleTotal
                     const pacienteCapturado = directSalePatientId
-                    setDirectSalePaymentMethod("efectivo")
-                    handleConfirmDirectSale()
+                    // Registrar venta con gift_card como método real (no fakear efectivo)
+                    await addSale({
+                      type: 'direct',
+                      items: directSaleCart.map(i => ({
+                        type: 'product' as const,
+                        itemId: i.product.id,
+                        itemName: i.product.name,
+                        price: i.product.priceCash,
+                        priceCashReference: i.product.priceCash,
+                        quantity: i.quantity,
+                        soldBy: currentProfessional.id,
+                      })),
+                      total: totalCapturado,
+                      paymentMethod: 'gift_card' as any,
+                      processedBy: currentProfessional.shortName,
+                      patientId: pacienteCapturado || undefined,
+                    })
                     await updatePatientGiftCardBalance(pacienteCapturado, -totalCapturado)
+                    setDirectSaleCart([])
+                    setDirectSalePaymentMethod("")
                     setDirectSalePatientId("")
+                    setShowDirectSaleDialog(false)
                   }}
                   className="w-full bg-pink-600 hover:bg-pink-700 font-black text-white"
                 >

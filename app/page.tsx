@@ -20,8 +20,8 @@ export default function Home() {
     const store = useClinicStore.getState()
 
     const initApp = async () => {
-      // Cargamos ventas primero (necesarias para recalcular contadores)
-      await store.fetchSales()
+      // Cargamos ventas y profesionales primero (necesarios para recalcular contadores)
+      await Promise.all([store.fetchSales(), store.fetchProfessionals()])
 
       // Reset mensual automático de contadores de comisiones
       const now = new Date()
@@ -37,11 +37,10 @@ export default function Home() {
         localStorage.setItem(RESET_MONTH_KEY, currentMonthKey)
       }
 
-      // Resto de datos
+      // Resto de datos en paralelo
       store.fetchOffers()
       store.fetchCombos()
       store.fetchAppointments()
-      store.fetchProfessionals()
       store.fetchServices()
       store.fetchProducts()
       store.fetchCashClosures()

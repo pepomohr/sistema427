@@ -146,8 +146,18 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     if (paymentMethod === 'gift_card') {
       const aptPat = patients.find(p => p.id === activeApt?.patientId)
       const bal = aptPat?.giftCardBalance || 0
-      if (bal < totals.total) {
-        alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${totals.total.toLocaleString('es-AR')}`)
+      if (bal <= 0) {
+        alert('Este paciente no tiene saldo a favor.')
+        return
+      }
+      if (bal >= totals.total && secondPaymentMethod && parseFloat(secondPaymentAmount) > 0) {
+        // Saldo cubre todo el turno → no puede usarse como pago parcial
+        alert(`El saldo disponible ($${bal.toLocaleString('es-AR')}) cubre el total del turno. No se puede dividir el pago: el saldo a favor debe cubrir el total completo.`)
+        return
+      }
+      if (bal < totals.total && !secondPaymentMethod) {
+        // Saldo no alcanza y no hay segundo método
+        alert(`Saldo insuficiente para cubrir el turno completo ($${totals.total.toLocaleString('es-AR')}). Disponible: $${bal.toLocaleString('es-AR')}. Seleccioná un segundo método de pago por la diferencia de $${(totals.total - bal).toLocaleString('es-AR')}.`)
         return
       }
     }
@@ -155,7 +165,13 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     // Armar los splits de pago
     const splits: PaymentSplit[] = []
     const secondAmt = secondPaymentAmount ? parseFloat(secondPaymentAmount) : 0
-    if (secondPaymentMethod && secondAmt > 0) {
+    if (paymentMethod === 'gift_card' && secondPaymentMethod && secondAmt > 0) {
+      // Saldo < total: gift_card cubre lo que puede, resto con segundo método
+      const aptPat = patients.find(p => p.id === activeApt?.patientId)
+      const bal = aptPat?.giftCardBalance || 0
+      splits.push({ method: 'gift_card' as any, amount: bal })
+      splits.push({ method: secondPaymentMethod as any, amount: totals.total - bal })
+    } else if (secondPaymentMethod && secondAmt > 0) {
       const firstAmt = Math.max(0, totals.total - secondAmt)
       splits.push({ method: paymentMethod as any, amount: firstAmt })
       splits.push({ method: secondPaymentMethod as any, amount: secondAmt })
@@ -189,7 +205,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     }
   }
 
-  const handleProcessDirectSale = async (method: "efectivo" | "tarjeta" | "transferencia" | "qr") => {
+  const handleProcessDirectSale = async (method: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card") => {
     if (!directSalePatient) {
       alert("Seleccioná el paciente antes de procesar la venta.")
       return
@@ -203,10 +219,13 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
         return;
       }
 
+      // Para gift_card se cobra precio efectivo (es dinero del paciente)
+      const pricingMethod = method === 'gift_card' ? 'efectivo' : method
       const saleItems = directSaleItems.map(i => ({
         ...i,
-        price: getDirectSaleUnitPrice(i, method),
-        priceCashReference: getDirectSaleUnitPrice(i, method),
+        price: getDirectSaleUnitPrice(i, pricingMethod),
+        // priceCashReference siempre en efectivo para comisión correcta
+        priceCashReference: isGiftCardGeneralItem(i) ? (i.customUnitPrice || 0) : (i.priceCashReference || i.price),
       }))
 
       const giftCardAmount = directSaleItems.reduce((sum, i) => {
@@ -704,20 +723,20 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   disabled={!directSalePaymentMethod}
                   onClick={async () => {
                     if ((directSalePaymentMethod as any) === 'gift_card') {
+                      if (!directSalePatient) { alert("Seleccioná el paciente primero."); return }
                       const dsPat = patients.find(p => p.id === directSalePatient)
                       const bal = dsPat?.giftCardBalance || 0
-                      if (!directSalePatient) { alert("Seleccioná el paciente primero."); return }
                       if (bal < directSaleDisplayTotal) {
                         alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${directSaleDisplayTotal.toLocaleString('es-AR')}`)
                         return
                       }
-                      const totalCapturado = directSaleDisplayTotal
                       const pacienteCapturado = directSalePatient
-                      setDirectSalePaymentMethod("efectivo")
-                      await handleProcessDirectSale("efectivo")
+                      const totalCapturado = directSaleDisplayTotal
+                      // Procesar con gift_card como método real (no fakeando efectivo)
+                      await handleProcessDirectSale("gift_card")
                       await updatePatientGiftCardBalance(pacienteCapturado, -totalCapturado)
                     } else {
-                      handleProcessDirectSale(directSalePaymentMethod as any)
+                      await handleProcessDirectSale(directSalePaymentMethod as any)
                     }
                   }}
                   className="w-full h-14 text-lg font-black bg-[#16A34A] hover:bg-[#15803d] text-white shadow-lg"
