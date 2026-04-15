@@ -457,16 +457,55 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     return 30
   }
 
+  // Helper: check if an appointment is outside the professional's schedule
+  const isAptOutsideSchedule = (apt: any): boolean => {
+    const prof = professionals.find(p => p.id === apt.professionalId)
+    if (!prof?.schedule) return false
+    const dateObj = new Date(apt.date)
+    const dayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dateObj.getDay()]
+    const daySchedule = (prof.schedule as any)[dayKey]
+    if (!daySchedule || daySchedule.length === 0) return false
+    const [aptH, aptM] = (apt.time || '00:00').split(':').map(Number)
+    const aptMins = aptH * 60 + aptM
+    return !daySchedule.some(({ start, end }: any) => {
+      const [sH, sM] = start.split(':').map(Number)
+      const [eH, eM] = end.split(':').map(Number)
+      return aptMins >= sH * 60 + sM && aptMins < eH * 60 + eM
+    })
+  }
+
   const scheduleSlots = useMemo(() => {
     if (!schedulingProfessional || !schedulingDate || !professionals || !appointments || !services) return []
-    
+
     const professional = professionals.find((p) => p.id === schedulingProfessional)
     if (!professional) return []
-    
+
+    // Get day of week for the selected date
+    const dateObj = schedulingDate.includes('T') ? new Date(schedulingDate) : new Date(schedulingDate + 'T12:00:00')
+    const dayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dateObj.getDay()]
+    const daySchedule = professional.schedule ? (professional.schedule as any)[dayKey] : null
+
     const allPossibleSlots: string[] = []
-    for (let h = 9; h < 21; h++) {
-      allPossibleSlots.push(`${h.toString().padStart(2, "0")}:00`)
-      allPossibleSlots.push(`${h.toString().padStart(2, "0")}:30`)
+
+    if (daySchedule && daySchedule.length > 0) {
+      // Only generate slots within the professional's working hours
+      daySchedule.forEach(({ start, end }: { start: string, end: string }) => {
+        const [startH, startM] = start.split(':').map(Number)
+        const [endH, endM] = end.split(':').map(Number)
+        const startMins = startH * 60 + startM
+        const endMins = endH * 60 + endM
+        for (let m = startMins; m < endMins; m += 30) {
+          const h = Math.floor(m / 60)
+          const min = m % 60
+          allPossibleSlots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
+        }
+      })
+    } else {
+      // No schedule configured = show all 9-21
+      for (let h = 9; h < 21; h++) {
+        allPossibleSlots.push(`${h.toString().padStart(2, "0")}:00`)
+        allPossibleSlots.push(`${h.toString().padStart(2, "0")}:30`)
+      }
     }
     
     const dateForFilter = (
@@ -518,6 +557,18 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   const handleScheduleAppointment = () => {
     if (!selectedPatient || !schedulingProfessional || !schedulingService || !schedulingTime) return
+    // Validar que no sea fecha pasada
+    const selectedDateObj = schedulingDate.includes('T') ? new Date(schedulingDate) : new Date(schedulingDate + 'T12:00:00')
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    if (selectedDateObj < today) {
+      confirm({
+        title: "Fecha no válida",
+        description: "No se puede agendar un turno en una fecha pasada. Por favor seleccioná una fecha de hoy en adelante.",
+        actionType: "info",
+        onConfirm: () => {}
+      })
+      return
+    }
     const service = services.find((s) => s.id === schedulingService)
     if (!service) return
     const profName = professionals.find((p) => p.id === schedulingProfessional)?.shortName
@@ -802,6 +853,40 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
             {activePanel === "historial" && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
+                {/* Resumen financiero del paciente */}
+                {(() => {
+                  const patApts = getPatientHistory(selectedPatient.id)
+                  const totalPagado = patApts
+                    .filter((a: any) => a.status === 'completado')
+                    .reduce((sum: number, a: any) => sum + (a.paidAmount || a.totalAmount || 0), 0)
+                  const seniasPendientes = patApts
+                    .filter((a: any) => ['programado','confirmado','scheduled'].includes(normalizeStatus(a.status)))
+                    .reduce((sum: number, a: any) => sum + (a.paidAmount || 0), 0)
+                  const patientSales = sales.filter((s: any) => s.patientId === selectedPatient.id && s.paymentMethod !== 'gift_card')
+                  const totalVentas = patientSales.reduce((sum: number, s: any) => sum + s.total, 0)
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">Turnos cobrados</p>
+                        <p className="text-lg font-black text-emerald-600">${totalPagado.toLocaleString()}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">Señas activas</p>
+                        <p className="text-lg font-black text-blue-600">${seniasPendientes.toLocaleString()}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">Productos</p>
+                        <p className="text-lg font-black text-gray-700">${totalVentas.toLocaleString()}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">Saldo favor</p>
+                        <p className={`text-lg font-black ${(selectedPatient.giftCardBalance || 0) > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                          ${(selectedPatient.giftCardBalance || 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()}
                 {getPatientHistory(selectedPatient.id).length === 0 ? (
                   <p className="text-sm text-gray-500 italic text-center py-4">No hay turnos registrados para este paciente.</p>
                 ) : (
@@ -1370,12 +1455,15 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   const pat = patients.find(p => p.id === apt.patientId);
                   const sNorm = normalizeStatus(apt.status as string);
                   const isAttended = sNorm === 'en_atencion' || sNorm === 'completado' || sNorm === 'pendiente_cobro' || sNorm === 'completed';
-                  
+                  const isOutside = !isAttended && isAptOutsideSchedule(apt);
+
                   return (
-                    <div 
-                      key={apt.id} 
+                    <div
+                      key={apt.id}
                       className={`relative bg-secondary/10 border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all ${
-                        isAttended ? 'opacity-50 grayscale border-gray-100' : 'border-gray-200 hover:border-[#16A34A]/30'
+                        isAttended ? 'opacity-50 grayscale border-gray-100' :
+                        isOutside ? 'border-red-400 bg-red-50/60 hover:border-red-500' :
+                        'border-gray-200 hover:border-[#16A34A]/30'
                       }`}
                     >
                       {isAttended && <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/20 -translate-y-1/2 rounded-full pointer-events-none z-10"></div>}
@@ -1399,6 +1487,11 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       
                       <div className="flex items-center justify-between w-full md:w-auto gap-4 z-0">
                         <div className="flex flex-col items-end gap-1">
+                          {isOutside && (
+                            <Badge className="bg-red-500 text-white border-red-600 font-bold text-[10px] uppercase">
+                              ⚠ Fuera de Horario — Reprogramar
+                            </Badge>
+                          )}
                           {(() => {
                             if (isAttended) {
                               return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase">Ya Asistió</Badge>;

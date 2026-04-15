@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import type { User, UserRole } from "@/lib/store"
+import { useClinicStore } from "@/lib/store"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +18,9 @@ import {
   Wallet,
   Award,
   Settings,
-  ClipboardList
+  ClipboardList,
+  AlertTriangle,
+  DollarSign
 } from "lucide-react"
 import { ReceptionModule } from "@/components/reception-module"
 import { ProfessionalsModule } from "@/components/professionals-module"
@@ -26,13 +29,14 @@ import { ReportsModule } from "@/components/reports-module"
 import { SalesReportModule } from "@/components/sales-report-module"
 import { HRModule } from "@/components/hr-module"
 import { SystemConfigModule } from "@/components/system-config-module"
+import { PricesModule } from "@/components/prices-module"
 
 interface MainLayoutProps {
   user: User
   onLogout: () => void
 }
 
-type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "ventas" | "reportes" | "rrhh" | "config"
+type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "ventas" | "precios" | "reportes" | "rrhh" | "config"
 
 interface Tab {
   id: TabId
@@ -50,8 +54,9 @@ const allTabs: Tab[] = [
   { id: "agenda", label: "Mi Agenda", icon: Calendar, roles: ["profesional"] }, // Solo profesionales
   { id: "atencion", label: "Atención", icon: Stethoscope, roles: ["profesional"] }, // Solo profesionales
   { id: "comisiones", label: "Comisiones", icon: Award, roles: ["profesional"] }, // Solo profesionales
-  { id: "cobrar", label: "Cobrar", icon: CreditCard, roles: ["recepción"] }, // Solo recepción
-  { id: "ventas", label: "Ventas", icon: ClipboardList, roles: ["recepción", "admin"] }, // Recepción y admin
+  { id: "cobrar", label: "Cobrar", icon: CreditCard, roles: ["recepción"] },
+  { id: "ventas", label: "Ventas", icon: ClipboardList, roles: ["recepción", "admin"] },
+  { id: "precios", label: "Precios", icon: DollarSign, roles: ["recepción", "admin"] },
   { id: "rrhh", label: "RRHH", icon: UserCog, roles: ["admin"] },
   { id: "reportes", label: "Reportes", icon: BarChart3, roles: ["admin"] },
   { id: "config", label: "Configuración", icon: Settings, roles: ["admin"] }
@@ -61,6 +66,13 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
   const availableTabs = allTabs.filter((tab) => tab.roles.includes(user.role))
   const [activeTab, setActiveTab] = useState<TabId>(availableTabs[0]?.id || "recepcion-busqueda")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [dismissedLowStock, setDismissedLowStock] = useState(false)
+
+  const { products } = useClinicStore()
+  const lowStockProducts = useMemo(
+    () => (products || []).filter(p => typeof p.stock === 'number' && p.stock < 3 && p.stock >= 0),
+    [products]
+  )
 
   const renderContent = () => {
     switch (activeTab) {
@@ -82,6 +94,8 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
         return <ChargeModule />
       case "ventas":
         return <SalesReportModule />
+      case "precios":
+        return <PricesModule />
       case "reportes":
         return <ReportsModule />
       case "rrhh":
@@ -214,6 +228,19 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-4 md:p-6">
+          {/* Banner de stock bajo */}
+          {lowStockProducts.length > 0 && !dismissedLowStock && (
+            <div className="mb-4 bg-orange-50 border border-orange-300 rounded-xl px-4 py-3 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-orange-700">⚠ Stock bajo en {lowStockProducts.length} producto{lowStockProducts.length > 1 ? 's' : ''}</p>
+                <p className="text-xs text-orange-600 mt-0.5">
+                  {lowStockProducts.map(p => `${p.name} (${p.stock} unid.)`).join(' · ')}
+                </p>
+              </div>
+              <button onClick={() => setDismissedLowStock(true)} className="text-orange-400 hover:text-orange-600 text-xs font-bold">✕</button>
+            </div>
+          )}
           {renderContent()}
         </main>
       </div>

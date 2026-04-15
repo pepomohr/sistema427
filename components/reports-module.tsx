@@ -63,12 +63,20 @@ export function ReportsModule() {
     }
   }
 
-  // Calculate total commissions
+  // Filtra solo turnos del mes actual
+  const thisMonth = new Date().getMonth()
+  const thisYear = new Date().getFullYear()
+  const isThisMonth = (d: Date | string) => {
+    const date = new Date(d)
+    return date.getMonth() === thisMonth && date.getFullYear() === thisYear
+  }
+
+  // Calculate total commissions (solo mes actual)
   const calculateCommissions = useMemo(() => {
     let totalCommissions = 0
     professionals.forEach((prof) => {
       const profAppointments = appointments.filter(
-        (a) => a.professionalId === prof.id && a.status === "completado"
+        (a) => a.professionalId === prof.id && a.status === "completado" && isThisMonth(a.date)
       )
       const totalBilled = profAppointments.reduce((sum, a) => sum + getAppointmentCommissionBase(a), 0)
       const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
@@ -144,11 +152,11 @@ export function ReportsModule() {
     ]
   }, [sales])
 
-  // Calculate commissions per professional
+  // Calculate commissions per professional (solo mes actual)
   const commissionsData = useMemo(() => {
     return professionals.map((prof) => {
       const profAppointments = appointments.filter(
-        (a) => a.professionalId === prof.id && a.status === "completado"
+        (a) => a.professionalId === prof.id && a.status === "completado" && isThisMonth(a.date)
       )
       const totalBilled = profAppointments.reduce((sum, a) => sum + getAppointmentCommissionBase(a), 0)
       const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)

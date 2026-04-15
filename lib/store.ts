@@ -220,6 +220,7 @@ interface ClinicStore {
   addSale: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>
   addSaleMultipago: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>
   fetchSales: () => Promise<void>
+  resetMonthlyCommissions: () => Promise<void>
   
   updateHourlyRate: (id: string, rate: number) => void
   updateProfessional: (id: string, updates: Partial<Professional>) => void
@@ -305,25 +306,34 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   fetchSales: async () => {
     try {
-      const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false });
+      // Solo los últimos 90 días para no sobrecargar con el historial completo
+      const since = new Date()
+      since.setDate(since.getDate() - 90)
+      const { data, error } = await supabase
+        .from('sales').select('*')
+        .gte('date', since.toISOString())
+        .order('date', { ascending: false })
       if (!error && data) {
         set({ sales: data.map((s: any) => ({
-          id: s.id,
-          items: s.items,
-          total: s.total,
-          paymentMethod: s.payment_method,
-          paymentSplits: s.payment_splits || [],
-          usedOfferId: s.used_offer_id,
-          observations: s.observations,
-          source: s.source || 'recepcion',
-          patientId: s.patient_id,
-          appointmentId: s.appointment_id,
-          processedBy: s.processed_by,
-          type: s.type,
-          date: new Date(s.date)
-        })) });
+          id: s.id, items: s.items, total: s.total,
+          paymentMethod: s.payment_method, paymentSplits: s.payment_splits || [],
+          usedOfferId: s.used_offer_id, observations: s.observations,
+          source: s.source || 'recepcion', patientId: s.patient_id,
+          appointmentId: s.appointment_id, processedBy: s.processed_by,
+          type: s.type, date: new Date(s.date)
+        })) })
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err) }
+  },
+
+  resetMonthlyCommissions: async () => {
+    try {
+      const { error } = await supabase.from('professionals').update({ monthlySalesCount: 0 }).neq('id', '')
+      if (!error) {
+        set(state => ({ professionals: state.professionals.map(p => ({ ...p, monthlySalesCount: 0 })) }))
+        localStorage.setItem('c427_commission_reset', `${new Date().getFullYear()}-${new Date().getMonth()}`)
+      }
+    } catch (err) { console.error(err) }
   },
 
   addSale: async (saleData) => {
@@ -791,7 +801,13 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     const { patients } = get();
     const patient = patients.find(p => p.id === id);
     if (!patient) return;
-    const newBalance = (patient.giftCardBalance || 0) + amountToAdd;
+    const currentBalance = patient.giftCardBalance || 0
+    // Nunca puede quedar negativo
+    const newBalance = Math.max(0, currentBalance + amountToAdd)
+    if (amountToAdd < 0 && currentBalance + amountToAdd < 0) {
+      console.warn(`[GiftCard] Saldo insuficiente: tiene $${currentBalance}, intenta usar $${Math.abs(amountToAdd)}`)
+      return
+    }
     try {
       const { error } = await supabase.from('patients').update({ gift_card_balance: newBalance }).eq('id', id);
       if (!error) set((state) => ({ patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: newBalance } : p) }));
@@ -916,34 +932,85 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   // ============================================
-  // REALTIME — ACTUALIZADO PARA TODAS LAS TABLAS CLAVE
+  // REALTIME — TODAS LAS TABLAS
   // ============================================
   subscribeToAppointments: () => {
     const channelName = `clinic-realtime-${Date.now()}`
 
+    const mapSale = (s: any): Sale => ({
+      id: s.id, items: s.items || [], total: s.total,
+      paymentMethod: s.payment_method, paymentSplits: s.payment_splits || [],
+      usedOfferId: s.used_offer_id, observations: s.observations,
+      source: s.source || 'recepcion', processedBy: s.processed_by,
+      patientId: s.patient_id, appointmentId: s.appointment_id,
+      type: s.type, date: new Date(s.date)
+    })
+
+    const mapClosure = (c: any) => ({
+      id: c.id, receptionistName: c.receptionist_name,
+      dateFrom: new Date(c.date_from), dateTo: new Date(c.date_to),
+      amountEfectivo: c.amount_efectivo || 0, amountTransferencia: c.amount_transferencia || 0,
+      amountTarjeta: c.amount_tarjeta || 0, amountQr: c.amount_qr || 0,
+      total: c.total || 0, observations: c.observations, createdAt: new Date(c.created_at),
+    })
+
     const channel = supabase
       .channel(channelName)
+
       // --- APPOINTMENTS ---
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          const newApt = { ...payload.new, date: new Date(payload.new.date) }
+          const newApt = { ...payload.new, date: new Date((payload.new as any).date) } as any
           set(state => {
-            if (state.appointments.find(a => a.id === newApt.id)) return state
-            return { appointments: [...state.appointments, newApt] }
+            if (state.appointments.find((a: any) => a.id === newApt.id)) return state
+            return { appointments: [...state.appointments, newApt] } as any
           })
         }
         if (payload.eventType === 'UPDATE') {
-          const updated = { ...payload.new, date: new Date(payload.new.date) }
-          set(state => ({ appointments: state.appointments.map(a => a.id === updated.id ? updated : a) }))
+          const updated = { ...payload.new, date: new Date((payload.new as any).date) } as any
+          set(state => ({ appointments: state.appointments.map((a: any) => a.id === updated.id ? { ...a, ...updated } : a) } as any))
         }
         if (payload.eventType === 'DELETE') {
-          set(state => ({ appointments: state.appointments.filter(a => a.id !== payload.old.id) }))
+          const old = payload.old as any
+          set(state => ({ appointments: state.appointments.filter((a: any) => a.id !== old.id) } as any))
         }
       })
-      // --- PROFESSIONALS ---
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'professionals' }, (payload) => {
-        set(state => ({ professionals: state.professionals.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p) }))
+
+      // --- SALES ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
+        const newSale = mapSale(payload.new)
+        set(state => {
+          if (state.sales.find(x => x.id === newSale.id)) return state
+          return { sales: [newSale, ...state.sales] }
+        })
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sales' }, (payload) => {
+        const updated = mapSale(payload.new)
+        set(state => ({ sales: state.sales.map(x => x.id === updated.id ? updated : x) }))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'sales' }, (payload) => {
+        set(state => ({ sales: state.sales.filter(x => x.id !== payload.old.id) }))
+      })
+
+      // --- PROFESSIONALS ---
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'professionals' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const np = payload.new as any
+          set(state => {
+            if (state.professionals.find(p => p.id === np.id)) return state
+            return { professionals: [...state.professionals, np] }
+          })
+        }
+        if (payload.eventType === 'UPDATE') {
+          const up = payload.new as any
+          set(state => ({ professionals: state.professionals.map(p => p.id === up.id ? { ...p, ...up } : p) }))
+        }
+        if (payload.eventType === 'DELETE') {
+          const dp = payload.old as any
+          set(state => ({ professionals: state.professionals.filter(p => p.id !== dp.id) }))
+        }
+      })
+
       // --- PATIENTS ---
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'patients' }, (payload) => {
         const p = payload.new
@@ -966,21 +1033,34 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           } : x)
         }))
       })
-      // --- SALES ---
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
-        const s = payload.new
-        const newSale: Sale = {
-          id: s.id, items: s.items, total: s.total,
-          paymentMethod: s.payment_method, paymentSplits: s.payment_splits || [],
-          usedOfferId: s.used_offer_id, observations: s.observations,
-          source: s.source || 'recepcion', processedBy: s.processed_by,
-          type: s.type, date: new Date(s.date)
-        }
+
+      // --- CASH CLOSURES ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cash_closures' }, (payload) => {
+        const newClosure = mapClosure(payload.new)
         set(state => {
-          if (state.sales.find(x => x.id === newSale.id)) return state
-          return { sales: [...state.sales, newSale] }
+          if (state.cashClosures.find(x => x.id === newClosure.id)) return state
+          return { cashClosures: [newClosure, ...state.cashClosures] }
         })
       })
+
+      // --- EXPENSES ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'expenses' }, (payload) => {
+        const e = payload.new
+        const newExp = { id: e.id, description: e.description, amount: Number(e.amount), date: new Date(e.date) }
+        set(state => {
+          if (state.expenses.find(x => x.id === newExp.id)) return state
+          return { expenses: [newExp, ...state.expenses] }
+        })
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'expenses' }, (payload) => {
+        set(state => ({ expenses: state.expenses.filter(x => x.id !== payload.old.id) }))
+      })
+
+      // --- PRODUCTS (stock changes) ---
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, (payload) => {
+        set(state => ({ products: state.products.map(p => p.id === payload.new.id ? { ...p, stock: payload.new.stock ?? p.stock } : p) }))
+      })
+
       .subscribe((status) => {
         console.log('[Realtime] Estado:', status)
       })

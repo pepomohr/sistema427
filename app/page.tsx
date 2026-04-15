@@ -29,6 +29,14 @@ export default function Home() {
     store.fetchCashClosures()
     store.fetchExpenses()
 
+    // Auto-reset comisiones si cambió el mes
+    const now = new Date()
+    const currentKey = `${now.getFullYear()}-${now.getMonth()}`
+    const lastReset = localStorage.getItem('c427_commission_reset')
+    if (lastReset !== currentKey) {
+      store.resetMonthlyCommissions()
+    }
+
     // Activamos Realtime de Claude
     const unsubscribe = store.subscribeToAppointments()
 

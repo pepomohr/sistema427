@@ -47,9 +47,14 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
       const prof = useClinicStore.getState().professionals.find(p => p.id === profId);
       const serverPin = prof?.pin;
       const localPin = localStorage.getItem(`c427_pins_${profId}`);
-      
-      // Chequeamos contra el servidor (ideal) o contra el local (respaldo)
+
       if (enteredPin === serverPin || enteredPin === localPin) {
+        // Si el PIN estaba solo en localStorage pero no en Supabase, lo migramos ahora
+        if (!serverPin && enteredPin === localPin) {
+          setProfessionalPin(profId, enteredPin).then(ok => {
+            if (ok) console.log('[PIN] Migrado a Supabase:', profId)
+          })
+        }
         setIsSaving(false);
         onSelect(profId);
       } else {
@@ -89,13 +94,14 @@ export function ProfessionalSelectScreen({ onSelect, onBack }: ProfessionalSelec
     const prof = professionals.find(p => p.id === id);
     const hasPinInServer = !!prof?.pin;
     const hasPinLocal = !!localStorage.getItem(`c427_pins_${id}`);
-    
+    const hasPin = hasPinInServer || hasPinLocal;
+
     setSelectedProfId(id);
     setPin("");
     setErrorShake(false);
-    
-    // Si no tiene PIN ni en el server ni en la compu, está creando uno nuevo
-    setIsCreating(!hasPinInServer && !hasPinLocal);
+
+    // Si no tiene PIN en ningún lado, está creando uno nuevo
+    setIsCreating(!hasPin);
   }
 
   return (
