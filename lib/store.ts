@@ -828,8 +828,11 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         }));
       })
     })
-    if (method === 'gift_card') {
-      get().updatePatientGiftCardBalance(apt.patientId, -finalTotal).catch((err: any) => {
+    // Descontar saldo a favor: si hay split, usar monto del split (puede ser pago parcial)
+    const giftCardSplit = paymentSplits?.find(s => s.method === 'gift_card')
+    if (method === 'gift_card' || giftCardSplit) {
+      const amountToDeduct = giftCardSplit ? giftCardSplit.amount : finalTotal
+      get().updatePatientGiftCardBalance(apt.patientId, -amountToDeduct).catch((err: any) => {
         console.error('[GiftCard] Error descontando saldo:', err)
       })
     }

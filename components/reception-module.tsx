@@ -1800,12 +1800,13 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     onClick={async () => {
                       const apt = appointments.find((a: any) => a.id === depositAptId)
                       if (!apt) return
-                      const newPaid = (apt.paidAmount || 0) + parseFloat(depositAmount)
+                      const montoSeña = parseFloat(depositAmount)
+                      const newPaid = (apt.paidAmount || 0) + montoSeña
                       await updateAppointment(depositAptId, { paidAmount: newPaid })
                       setShowDepositModal(false)
                       setDepositAmount("")
                       setDepositAptId("")
-                      confirm({ title: "✅ SEÑA GUARDADA CON ÉXITO", description: `Se registró una seña de $${parseFloat(depositAmount).toLocaleString('es-AR')} correctamente.`, actionType: "success", onConfirm: () => {} })
+                      alert(`✅ SEÑA GUARDADA CON ÉXITO\nSe registró una seña de $${montoSeña.toLocaleString('es-AR')}.`)
                     }}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-12 text-base"
                   >
@@ -1857,7 +1858,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   setShowEditDepositModal(false)
                   setEditDepositAptId("")
                   setEditDepositAmount("")
-                  confirm({ title: "✅ SEÑA ACTUALIZADA CON ÉXITO", description: `La seña quedó registrada en $${montoEditado.toLocaleString('es-AR')}.`, actionType: "success", onConfirm: () => {} })
+                  alert(`✅ SEÑA ACTUALIZADA CON ÉXITO\nLa seña quedó registrada en $${montoEditado.toLocaleString('es-AR')}.`)
                 }}
                 className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black"
               >

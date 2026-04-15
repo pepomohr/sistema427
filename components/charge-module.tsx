@@ -462,8 +462,8 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   })()}
                 </div>
 
-                {/* 2do método de pago (aparece solo cuando hay un método principal elegido) */}
-                {paymentMethod && (
+                {/* 2do método de pago: aparece si hay método principal, excepto gift_card cuando el saldo cubre todo */}
+                {paymentMethod && !(paymentMethod === 'gift_card' && (() => { const aptPat = patients.find(p => p.id === activeApt?.patientId); return (aptPat?.giftCardBalance || 0) >= totals.total })()) && (
                   <div className="space-y-2 border-t border-gray-200 pt-3">
                     <Label className="font-black text-black uppercase text-xs block">2do Método (opcional)</Label>
                     <div className="grid grid-cols-2 gap-1">
