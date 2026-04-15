@@ -159,6 +159,10 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const [showDepositModal, setShowDepositModal] = useState(false)
   const [depositAptId, setDepositAptId] = useState<string>("")
   const [depositAmount, setDepositAmount] = useState<string>("")
+  // Editar Seña existente
+  const [showEditDepositModal, setShowEditDepositModal] = useState(false)
+  const [editDepositAptId, setEditDepositAptId] = useState<string>("")
+  const [editDepositAmount, setEditDepositAmount] = useState<string>("")
 
   useEffect(() => {
     if (typeof fetchPatients === 'function') fetchPatients()
@@ -812,11 +816,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <div>
                   <CardTitle className="text-lg sm:text-xl flex flex-wrap items-center gap-2">
                     {selectedPatient.name}
-                    {(selectedPatient.giftCardBalance || 0) > 0 && (
-                      <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-none">
-                        Saldo: ${selectedPatient.giftCardBalance.toLocaleString()}
-                      </Badge>
-                    )}
+                    {(() => {
+                      const liveBal = patients.find(p => p.id === selectedPatient.id)?.giftCardBalance || 0
+                      return liveBal > 0 ? (
+                        <Badge className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-none">
+                          Saldo: ${liveBal.toLocaleString()}
+                        </Badge>
+                      ) : null
+                    })()}
                   </CardTitle>
                   <p className="text-xs sm:text-sm text-muted-foreground">DNI: {selectedPatient.dni} | Tel: {selectedPatient.phone}</p>
                 </div>
@@ -880,9 +887,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-gray-400 font-bold uppercase">Saldo favor</p>
-                        <p className={`text-lg font-black ${(selectedPatient.giftCardBalance || 0) > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
-                          ${(selectedPatient.giftCardBalance || 0).toLocaleString()}
-                        </p>
+                        {(() => {
+                          const liveBal = patients.find(p => p.id === selectedPatient.id)?.giftCardBalance || 0
+                          return (
+                            <p className={`text-lg font-black ${liveBal > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                              ${liveBal.toLocaleString()}
+                            </p>
+                          )
+                        })()}
                       </div>
                     </div>
                   )
@@ -907,7 +919,16 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                                <p className="text-sm text-[#16A34A]">con {prof?.name || 'Profesional no encontrado'}</p>
                             </div>
                             {['programado', 'confirmado', 'scheduled'].includes(normalizeStatus(apt.status as string)) && (
-                               <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                               <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                                 {(apt.paidAmount || 0) > 0 && (
+                                   <Button variant="outline" size="sm" onClick={() => {
+                                     setEditDepositAptId(apt.id)
+                                     setEditDepositAmount(String(apt.paidAmount))
+                                     setShowEditDepositModal(true)
+                                   }} className="flex-1 sm:flex-none border-amber-400/60 text-amber-600 hover:bg-amber-50">
+                                     ✏️ Seña: ${(apt.paidAmount || 0).toLocaleString('es-AR')}
+                                   </Button>
+                                 )}
                                  <Button variant="outline" size="sm" onClick={() => {
                                     setSchedulingDate(new Date(apt.date).toISOString().split('T')[0])
                                     setSchedulingTime(apt.time)
@@ -1150,7 +1171,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                               <SelectItem value="tarjeta">💳 Tarjeta (Lista)</SelectItem>
                               <SelectItem value="qr">📱 Código QR</SelectItem>
                               {(() => {
-                                const bal = selectedPatient?.giftCardBalance || 0
+                                const bal = patients.find(p => p.id === selectedPatient?.id)?.giftCardBalance || 0
                                 return (
                                   <SelectItem value="gift_card" disabled={bal <= 0}>
                                     💳 Saldo a Favor {bal > 0 ? `($${bal.toLocaleString('es-AR')} disp.)` : '(sin saldo)'}
@@ -1185,7 +1206,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                           disabled={!checkoutPaymentMethod}
                           onClick={() => {
                             if (checkoutPaymentMethod === 'gift_card') {
-                              const bal = selectedPatient?.giftCardBalance || 0
+                              const bal = patients.find(p => p.id === selectedPatient?.id)?.giftCardBalance || 0
                               if (bal < finalToPay) {
                                 alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${finalToPay.toLocaleString('es-AR')}`)
                                 return
@@ -1750,6 +1771,54 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 </>
               )
             })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: Editar Seña existente */}
+      <Dialog open={showEditDepositModal} onOpenChange={setShowEditDepositModal}>
+        <DialogContent className="bg-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-amber-600 font-black text-xl">Editar Seña</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {(() => {
+              const apt = appointments.find((a: any) => a.id === editDepositAptId)
+              const pat = apt ? patients.find((p: any) => p.id === apt.patientId) : null
+              return apt ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                  <p className="font-bold text-gray-900">{apt.patientName || pat?.name}</p>
+                  <p className="text-gray-500">{apt.services?.map((s: any) => typeof s === 'string' ? s : s.serviceName).join(', ')}</p>
+                  <p className="text-xs text-gray-400">{new Date(apt.date).toLocaleDateString()} — {apt.time}</p>
+                </div>
+              ) : null
+            })()}
+            <div className="space-y-2">
+              <Label className="font-bold text-black">Monto correcto de la seña</Label>
+              <Input
+                type="number"
+                min={0}
+                value={editDepositAmount}
+                onChange={e => setEditDepositAmount(e.target.value)}
+                className="h-12 text-xl font-black text-center bg-white border-amber-300"
+                placeholder="0"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowEditDepositModal(false)} className="flex-1">Cancelar</Button>
+              <Button
+                disabled={!editDepositAmount || parseFloat(editDepositAmount) < 0}
+                onClick={async () => {
+                  await updateAppointment(editDepositAptId, { paidAmount: parseFloat(editDepositAmount) })
+                  setShowEditDepositModal(false)
+                  setEditDepositAptId("")
+                  setEditDepositAmount("")
+                }}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black"
+              >
+                Guardar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

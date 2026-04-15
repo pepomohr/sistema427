@@ -1093,9 +1093,92 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         set(state => ({ expenses: state.expenses.filter(x => x.id !== payload.old.id) }))
       })
 
-      // --- PRODUCTS (stock changes) ---
+      // --- PRODUCTS (full realtime) ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'products' }, (payload) => {
+        const p = payload.new as any
+        const newProd = { id: p.id, name: p.name, priceCash: p.price_cash || 0, priceList: p.price_list || 0, stock: p.stock || 0, category: p.category }
+        set(state => {
+          if (state.products.find(x => x.id === newProd.id)) return state
+          return { products: [...state.products, newProd] }
+        })
+      })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, (payload) => {
-        set(state => ({ products: state.products.map(p => p.id === payload.new.id ? { ...p, stock: payload.new.stock ?? p.stock } : p) }))
+        const p = payload.new as any
+        set(state => ({ products: state.products.map(x => x.id === p.id ? { ...x, id: p.id, name: p.name, priceCash: p.price_cash || 0, priceList: p.price_list || 0, stock: p.stock ?? x.stock, category: p.category } : x) }))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'products' }, (payload) => {
+        set(state => ({ products: state.products.filter(x => x.id !== payload.old.id) }))
+      })
+
+      // --- SERVICES (full realtime) ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'services' }, (payload) => {
+        const s = payload.new as any
+        const newSvc = { id: s.id, name: s.name, price: s.price, priceCash: s.price_cash ?? s.price, duration: s.duration ?? 60, category: s.category }
+        set(state => {
+          if (state.services.find(x => x.id === newSvc.id)) return state
+          return { services: [...state.services, newSvc] }
+        })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'services' }, (payload) => {
+        const s = payload.new as any
+        set(state => ({ services: state.services.map(x => x.id === s.id ? { ...x, name: s.name, price: s.price, priceCash: s.price_cash ?? s.price, duration: s.duration ?? 60, category: s.category } : x) }))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'services' }, (payload) => {
+        set(state => ({ services: state.services.filter(x => x.id !== payload.old.id) }))
+      })
+
+      // --- OFFERS (full realtime) ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'offers' }, (payload) => {
+        const o = payload.new as any
+        const newOffer = { id: o.id, name: o.name, discountPercentage: o.discount_percentage }
+        set(state => {
+          if (state.offers.find(x => x.id === newOffer.id)) return state
+          return { offers: [...state.offers, newOffer] }
+        })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'offers' }, (payload) => {
+        const o = payload.new as any
+        set(state => ({ offers: state.offers.map(x => x.id === o.id ? { ...x, name: o.name, discountPercentage: o.discount_percentage } : x) }))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'offers' }, (payload) => {
+        set(state => ({ offers: state.offers.filter(x => x.id !== payload.old.id) }))
+      })
+
+      // --- PATIENTS DELETE ---
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'patients' }, (payload) => {
+        set(state => ({ patients: state.patients.filter(x => x.id !== payload.old.id) }))
+      })
+
+      // --- COMBOS (full realtime) ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'combos' }, (payload) => {
+        const c = payload.new as any
+        const newCombo = { id: c.id, name: c.name, items: c.items, priceCash: c.price_cash, priceList: c.price_list }
+        set(state => {
+          if (state.combos.find(x => x.id === newCombo.id)) return state
+          return { combos: [...state.combos, newCombo] }
+        })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'combos' }, (payload) => {
+        const c = payload.new as any
+        set(state => ({ combos: state.combos.map(x => x.id === c.id ? { ...x, name: c.name, items: c.items, priceCash: c.price_cash, priceList: c.price_list } : x) }))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'combos' }, (payload) => {
+        set(state => ({ combos: state.combos.filter(x => x.id !== payload.old.id) }))
+      })
+
+      // --- CASH CLOSURES UPDATE/DELETE ---
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cash_closures' }, (payload) => {
+        const updated = mapClosure(payload.new)
+        set(state => ({ cashClosures: state.cashClosures.map(x => x.id === updated.id ? updated : x) }))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'cash_closures' }, (payload) => {
+        set(state => ({ cashClosures: state.cashClosures.filter(x => x.id !== payload.old.id) }))
+      })
+
+      // --- EXPENSES UPDATE ---
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'expenses' }, (payload) => {
+        const e = payload.new as any
+        set(state => ({ expenses: state.expenses.map(x => x.id === e.id ? { ...x, description: e.description, amount: Number(e.amount), date: new Date(e.date) } : x) }))
       })
 
       .subscribe((status) => {
