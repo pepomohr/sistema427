@@ -434,8 +434,15 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   const availableProfessionals = useMemo(() => {
     if (!schedulingService || typeof getProfessionalsForService !== 'function') return []
-    return getProfessionalsForService(schedulingService) || []
-  }, [schedulingService, getProfessionalsForService])
+    const all = getProfessionalsForService(schedulingService) || []
+    if (!schedulingDate) return all
+    const dateObj = schedulingDate.includes('T') ? new Date(schedulingDate) : new Date(schedulingDate + 'T12:00:00')
+    const dayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dateObj.getDay()]
+    return all.filter((p: any) => {
+      const daySched = p.schedule ? (p.schedule as any)[dayKey] : null
+      return daySched && daySched.length > 0
+    })
+  }, [schedulingService, getProfessionalsForService, schedulingDate])
 
   const compressName = (s: string): string =>
     s.toLowerCase().replace(/[\s\-_()&+.,\/]/g, '')
