@@ -122,10 +122,10 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   const totals = useMemo(() => {
     if (!activeApt) return { subtotal: 0, total: 0 }
     let subtotal = 0
-    activeApt.services.forEach((s: any) => {
+    ;(activeApt.services || []).forEach((s: any) => {
       subtotal += (paymentMethod === 'efectivo' ? (s.priceCash || s.price) : s.price)
     })
-    activeApt.products?.forEach((p: any) => {
+    ;(activeApt.products || []).forEach((p: any) => {
       subtotal += (paymentMethod === 'efectivo' ? (p.priceCashReference || p.price) : p.price) * p.quantity
     })
     extraProducts.forEach((p: any) => {

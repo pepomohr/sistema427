@@ -808,7 +808,11 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         }));
       })
     })
-    if (method === 'gift_card') get().updatePatientGiftCardBalance(apt.patientId, -finalTotal);
+    if (method === 'gift_card') {
+      get().updatePatientGiftCardBalance(apt.patientId, -finalTotal).catch((err: any) => {
+        console.error('[GiftCard] Error descontando saldo:', err)
+      })
+    }
   },
 
   cancelAppointment: async (id) => {
@@ -847,8 +851,15 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     }
     try {
       const { error } = await supabase.from('patients').update({ gift_card_balance: newBalance }).eq('id', id);
-      if (!error) set((state) => ({ patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: newBalance } : p) }));
-    } catch (err) { console.error(err); }
+      if (error) {
+        console.error('[GiftCard] Error guardando saldo:', error)
+        throw new Error(error.message)
+      }
+      set((state) => ({ patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: newBalance } : p) }));
+    } catch (err) {
+      console.error('[GiftCard] Error:', err)
+      throw err
+    }
   },
 
   fetchOffers: async () => {

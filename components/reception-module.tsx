@@ -221,7 +221,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   const handleLoadGiftCard = async () => {
     if (typeof giftCardAmount === 'number' && giftCardAmount > 0 && giftCardPaymentMethod && selectedPatient) {
-      await updatePatientGiftCardBalance(selectedPatient.id, giftCardAmount);
+      try {
+        await updatePatientGiftCardBalance(selectedPatient.id, giftCardAmount);
+      } catch (err: any) {
+        alert(`❌ Error al guardar el saldo a favor: ${err?.message || 'Error desconocido'}. El saldo NO fue acreditado.`)
+        return
+      }
 
       addSale({
         type: 'direct',
