@@ -399,9 +399,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         const soldItems = saleData.items.filter(
           item =>
             item.type === 'product' &&
-            item.soldBy === prof.id &&
-            item.itemId !== 'gift-card-loader' &&
-            !String(item.itemName || '').toLowerCase().includes('gift card')
+            item.soldBy === prof.id
         )
         const totalQty = soldItems.reduce((acc, item) => acc + item.quantity, 0)
         if (totalQty === 0) return prof

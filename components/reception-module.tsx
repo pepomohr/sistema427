@@ -1655,11 +1655,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               const saleDate = new Date(s.date);
               if (saleDate.getMonth() !== currentMonth || saleDate.getFullYear() !== currentYear) return total;
               const receptionItems = (s.items || []).filter(
-                item =>
-                  item.type === 'product' &&
-                  item.soldBy === 'recepcion' &&
-                  item.itemId !== 'gift-card-loader' &&
-                  !String(item.itemName || '').toLowerCase().includes('gift card')
+                item => item.type === 'product' && item.soldBy === 'recepcion'
               );
               return total + receptionItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
             }, 0);
@@ -1668,11 +1664,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               const saleDate = new Date(s.date);
               if (saleDate.getMonth() !== currentMonth || saleDate.getFullYear() !== currentYear) return total;
               const receptionItems = (s.items || []).filter(
-                item =>
-                  item.type === 'product' &&
-                  item.soldBy === 'recepcion' &&
-                  item.itemId !== 'gift-card-loader' &&
-                  !String(item.itemName || '').toLowerCase().includes('gift card')
+                item => item.type === 'product' && item.soldBy === 'recepcion'
               );
               return total + receptionItems.reduce((sum, item) => sum + ((item.priceCashReference || item.price || 0) * (item.quantity || 1)), 0);
             }, 0);
@@ -1806,7 +1798,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       setShowDepositModal(false)
                       setDepositAmount("")
                       setDepositAptId("")
-                      alert(`✅ SEÑA GUARDADA CON ÉXITO\nSe registró una seña de $${montoSeña.toLocaleString('es-AR')}.`)
+                      confirm({ title: "Seña guardada", description: `Se registró una seña de $${montoSeña.toLocaleString('es-AR')} correctamente.`, actionType: "info", onConfirm: () => {} })
                     }}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-12 text-base"
                   >
@@ -1858,7 +1850,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   setShowEditDepositModal(false)
                   setEditDepositAptId("")
                   setEditDepositAmount("")
-                  alert(`✅ SEÑA ACTUALIZADA CON ÉXITO\nLa seña quedó registrada en $${montoEditado.toLocaleString('es-AR')}.`)
+                  confirm({ title: "Seña actualizada", description: `La seña quedó registrada en $${montoEditado.toLocaleString('es-AR')} correctamente.`, actionType: "info", onConfirm: () => {} })
                 }}
                 className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black"
               >

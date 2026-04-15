@@ -709,8 +709,6 @@ export function ReportsModule() {
                 ;(sale.items || []).forEach((item: any) => {
                   if (
                     item.type === 'product' &&
-                    item.itemId !== 'gift-card-loader' &&
-                    !String(item.itemName || '').toLowerCase().includes('gift card') &&
                     (!item.soldBy || !profIds.has(item.soldBy))
                   ) {
                     if (!recepMap[name]) recepMap[name] = { count: 0, amount: 0 }
