@@ -96,7 +96,8 @@ export interface Professional {
   hourlyRate: number 
   hourlyRateFacial?: number 
   hourlyRateCorporal?: number 
-  monthlySalesCount: number 
+  monthlySalesCount: number
+  monthlySalesAmount: number
   color: string
   avatar?: string
   pin?: string | null
@@ -193,7 +194,7 @@ export const getCategoryDisplayName = (category: string): string => {
 export const calculateCommissionTab = (count: number) => {
   if (count >= 31) return 10
   if (count >= 21) return 7.5
-  if (count >= 10) return 5
+  if (count >= 1) return 5
   return 0
 }
 
@@ -221,6 +222,7 @@ interface ClinicStore {
   addSaleMultipago: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>
   fetchSales: () => Promise<void>
   resetMonthlyCommissions: () => Promise<void>
+  monthlyReset: () => Promise<void>
   
   updateHourlyRate: (id: string, rate: number) => void
   updateProfessional: (id: string, updates: Partial<Professional>) => void
@@ -306,12 +308,8 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   fetchSales: async () => {
     try {
-      // Solo los últimos 90 días para no sobrecargar con el historial completo
-      const since = new Date()
-      since.setDate(since.getDate() - 90)
       const { data, error } = await supabase
         .from('sales').select('*')
-        .gte('date', since.toISOString())
         .order('date', { ascending: false })
       if (!error && data) {
         set({ sales: data.map((s: any) => ({
@@ -327,12 +325,42 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   resetMonthlyCommissions: async () => {
+    // Recalcula monthlySalesCount desde las ventas reales del mes en curso
     try {
-      const { error } = await supabase.from('professionals').update({ monthlySalesCount: 0 }).neq('id', '')
-      if (!error) {
-        set(state => ({ professionals: state.professionals.map(p => ({ ...p, monthlySalesCount: 0 })) }))
-        localStorage.setItem('c427_commission_reset', `${new Date().getFullYear()}-${new Date().getMonth()}`)
+      const { sales, professionals } = get()
+      const now = new Date()
+      const monthSales = sales.filter(s => {
+        const d = new Date(s.date)
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      })
+      for (const prof of professionals) {
+        const soldItems = monthSales.flatMap(sale =>
+          (sale.items || []).filter((item: any) =>
+            item.type === 'product' &&
+            item.soldBy === prof.id &&
+            !String(item.itemName || '').toLowerCase().includes('gift card')
+          )
+        )
+        const count = soldItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+        const amount = soldItems.reduce((sum: number, item: any) => sum + ((item.priceCashReference || item.price || 0) * (item.quantity || 1)), 0)
+        await supabase.from('professionals').update({ monthlySalesCount: count, monthlySalesAmount: amount }).eq('id', prof.id)
+        set(state => ({ professionals: state.professionals.map(p => p.id === prof.id ? { ...p, monthlySalesCount: count, monthlySalesAmount: amount } : p) }))
       }
+      console.log('[Comisiones] Contadores recalculados desde ventas reales')
+    } catch (err) { console.error(err) }
+  },
+
+  monthlyReset: async () => {
+    // Pone monthlySalesCount y monthlySalesAmount a 0 (se llama al cambiar de mes)
+    try {
+      const { professionals } = get()
+      for (const prof of professionals) {
+        await supabase.from('professionals').update({ monthlySalesCount: 0, monthlySalesAmount: 0 }).eq('id', prof.id)
+      }
+      set(state => ({
+        professionals: state.professionals.map(p => ({ ...p, monthlySalesCount: 0, monthlySalesAmount: 0 }))
+      }))
+      console.log('[Comisiones] Reset mensual ejecutado')
     } catch (err) { console.error(err) }
   },
 
@@ -374,9 +402,11 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         const totalQty = soldItems.reduce((acc, item) => acc + item.quantity, 0)
         if (totalQty === 0) return prof
 
+        const totalAmt = soldItems.reduce((acc, item) => acc + ((item.priceCashReference || item.price) * item.quantity), 0)
         const newCount = (prof.monthlySalesCount || 0) + totalQty
-        supabase.from('professionals').update({ monthlySalesCount: newCount }).eq('id', prof.id)
-        return { ...prof, monthlySalesCount: newCount }
+        const newAmount = (prof.monthlySalesAmount || 0) + totalAmt
+        supabase.from('professionals').update({ monthlySalesCount: newCount, monthlySalesAmount: newAmount }).eq('id', prof.id)
+        return { ...prof, monthlySalesCount: newCount, monthlySalesAmount: newAmount }
       })
 
       set((state) => {
@@ -453,12 +483,18 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       };
 
       const updatedProfessionals = professionals.map(prof => {
-        const soldItems = saleData.items.filter(item => item.type === 'product' && item.soldBy === prof.id)
+        const soldItems = saleData.items.filter(
+          item => item.type === 'product' && item.soldBy === prof.id &&
+          item.itemId !== 'gift-card-loader' &&
+          !String(item.itemName || '').toLowerCase().includes('gift card')
+        )
         const totalQty = soldItems.reduce((acc, item) => acc + item.quantity, 0)
         if (totalQty === 0) return prof
+        const totalAmt = soldItems.reduce((acc, item) => acc + ((item.priceCashReference || item.price) * item.quantity), 0)
         const newCount = (prof.monthlySalesCount || 0) + totalQty
-        supabase.from('professionals').update({ monthlySalesCount: newCount }).eq('id', prof.id)
-        return { ...prof, monthlySalesCount: newCount }
+        const newAmount = (prof.monthlySalesAmount || 0) + totalAmt
+        supabase.from('professionals').update({ monthlySalesCount: newCount, monthlySalesAmount: newAmount }).eq('id', prof.id)
+        return { ...prof, monthlySalesCount: newCount, monthlySalesAmount: newAmount }
       })
 
       set(state => {
@@ -522,6 +558,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           hourlyRateFacial: prof.hourlyRateFacial || 0,
           hourlyRateCorporal: prof.hourlyRateCorporal || 0,
           monthlySalesCount: 0,
+          monthlySalesAmount: 0,
           color: prof.color,
           pin: null
         }]).select().single();

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { useClinicStore, type Professional, type WeekSchedule, getCategoryDisplayName, type ServiceCategory } from "@/lib/store"
+import { useClinicStore, type Professional, type WeekSchedule, getCategoryDisplayName, calculateCommissionTab, type ServiceCategory } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -186,11 +186,13 @@ export function HRModule() {
     <div className="space-y-6">
       <ConfirmDialog />
       
-      <div className="flex items-center justify-between px-4">
+      <div className="flex items-center justify-between px-4 flex-wrap gap-3">
         <h2 className="text-2xl font-bold text-[#16A34A]">Gestión de Personal</h2>
-        <Button onClick={() => setShowNewModal(true)} className="bg-[#16A34A] hover:bg-[#15803d] text-white rounded-md h-10 px-4 font-medium shadow-sm">
-          <Plus className="h-5 w-5 mr-2" /> Nuevo Profesional
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowNewModal(true)} className="bg-[#16A34A] hover:bg-[#15803d] text-white rounded-md h-10 px-4 font-medium shadow-sm">
+            <Plus className="h-5 w-5 mr-2" /> Nuevo Profesional
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 px-4">
@@ -307,6 +309,34 @@ export function HRModule() {
                   </div>
 
                 </div>
+
+                {/* BLOQUE COMISIÓN POR VENTAS DE PRODUCTOS */}
+                {(() => {
+                  const salesCount = p.monthlySalesCount || 0
+                  const salesAmount = p.monthlySalesAmount || 0
+                  const pct = calculateCommissionTab(salesCount)
+                  const commission = salesAmount * pct / 100
+                  const levelLabel = pct === 10 ? 'Nivel 3 — 10%' : pct === 7.5 ? 'Nivel 2 — 7.5%' : pct === 5 ? 'Nivel 1 — 5%' : 'Sin nivel aún'
+                  const levelColor = pct === 10 ? 'bg-purple-50 border-purple-200 text-purple-700' : pct === 7.5 ? 'bg-blue-50 border-blue-200 text-blue-700' : pct === 5 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'
+                  return (
+                    <div className="mx-6 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider mb-2">Objetivo de Ventas — Mes actual</p>
+                      <div className="flex flex-wrap gap-3 items-center">
+                        <div className="text-sm text-gray-700">
+                          <span className="font-bold text-gray-900">{salesCount}</span> productos · <span className="font-bold text-gray-900">${salesAmount.toLocaleString('es-AR')}</span> vendidos
+                        </div>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${levelColor}`}>{levelLabel}</span>
+                        {pct > 0 && (
+                          <span className="text-sm font-bold text-amber-700">
+                            Comisión: <span className="text-amber-900">${commission.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-amber-500 mt-1.5">Nivel 1: 1+ productos (5%) · Nivel 2: 21+ (7.5%) · Nivel 3: 31+ (10%)</p>
+                    </div>
+                  )
+                })()}
+
               </CardContent>
             </Card>
           )

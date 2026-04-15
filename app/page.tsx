@@ -8,6 +8,7 @@ import { MainLayout } from "@/components/main-layout"
 import Loader from "@/components/loader"
 
 const STORAGE_KEY = "c427_professional_session"
+const RESET_MONTH_KEY = "c427_last_sales_reset"
 
 export default function Home() {
   const { currentUser, setCurrentUser } = useClinicStore()
@@ -17,27 +18,39 @@ export default function Home() {
   // EFECTO 1: Carga de datos y Realtime (Array vacío para que corra UNA sola vez y no haga bucle)
   useEffect(() => {
     const store = useClinicStore.getState()
-    
-    // Traemos los datos de Supabase
-    store.fetchSales()
-    store.fetchOffers()
-    store.fetchCombos()
-    store.fetchAppointments()
-    store.fetchProfessionals()
-    store.fetchServices()
-    store.fetchProducts()
-    store.fetchCashClosures()
-    store.fetchExpenses()
 
-    // Auto-reset comisiones si cambió el mes
-    const now = new Date()
-    const currentKey = `${now.getFullYear()}-${now.getMonth()}`
-    const lastReset = localStorage.getItem('c427_commission_reset')
-    if (lastReset !== currentKey) {
-      store.resetMonthlyCommissions()
+    const initApp = async () => {
+      // Cargamos ventas primero (necesarias para recalcular contadores)
+      await store.fetchSales()
+
+      // Reset mensual automático de contadores de comisiones
+      const now = new Date()
+      const currentMonthKey = `${now.getFullYear()}-${now.getMonth()}`
+      const lastReset = localStorage.getItem(RESET_MONTH_KEY)
+      if (lastReset === null) {
+        // Primera vez: recalcular desde ventas reales para restaurar contadores
+        await store.resetMonthlyCommissions()
+        localStorage.setItem(RESET_MONTH_KEY, currentMonthKey)
+      } else if (lastReset !== currentMonthKey) {
+        // Cambió el mes → poner todo a 0
+        await store.monthlyReset()
+        localStorage.setItem(RESET_MONTH_KEY, currentMonthKey)
+      }
+
+      // Resto de datos
+      store.fetchOffers()
+      store.fetchCombos()
+      store.fetchAppointments()
+      store.fetchProfessionals()
+      store.fetchServices()
+      store.fetchProducts()
+      store.fetchCashClosures()
+      store.fetchExpenses()
     }
 
-    // Activamos Realtime de Claude
+    initApp()
+
+    // Activamos Realtime
     const unsubscribe = store.subscribeToAppointments()
 
     // Sacamos el loader a los 3 segundos

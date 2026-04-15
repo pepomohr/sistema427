@@ -229,7 +229,7 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {/* Banner de stock bajo */}
-          {lowStockProducts.length > 0 && !dismissedLowStock && (
+          {lowStockProducts.length > 0 && !dismissedLowStock && user.role !== 'profesional' && (
             <div className="mb-4 bg-orange-50 border border-orange-300 rounded-xl px-4 py-3 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">

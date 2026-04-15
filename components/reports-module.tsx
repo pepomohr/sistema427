@@ -692,50 +692,127 @@ export function ReportsModule() {
             <h3 className="text-xl font-bold text-[#16A34A] flex items-center gap-2">
               <Target className="h-6 w-6" /> Panel Global de Objetivos del Staff
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {professionals.map(prof => {
-                const salesCount = prof.monthlySalesCount || 0;
-                
-                const tInfo = (count: number) => {
-                  if (count < 10) return { next: 10, label: "5%" }
-                  if (count < 21) return { next: 21, label: "7.5%" }
-                  return { next: 31, label: "10%" }
-                }
-                
-                const info = tInfo(salesCount);
-                const progressValue = Math.min((salesCount / info.next) * 100, 100);
-                
-                return (
-                  <Card key={prof.id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-5">
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg" style={{ backgroundColor: prof.color || '#16A34A' }}>
-                            {prof.shortName?.substring(0, 2).toUpperCase()}
+
+            {/* RECEPCIÓN */}
+            {(() => {
+              const profIds = new Set(professionals.map(p => p.id))
+              const thisMonth = now.getMonth()
+              const thisYear = now.getFullYear()
+              const monthSales = sales.filter(s => {
+                const d = new Date(s.date)
+                return d.getMonth() === thisMonth && d.getFullYear() === thisYear
+              })
+              // Agrupar por processedBy los productos cuyo soldBy no es un profesional
+              const recepMap: Record<string, { count: number, amount: number }> = {}
+              monthSales.forEach(sale => {
+                const name = sale.processedBy || 'Recepción'
+                ;(sale.items || []).forEach((item: any) => {
+                  if (
+                    item.type === 'product' &&
+                    item.itemId !== 'gift-card-loader' &&
+                    !String(item.itemName || '').toLowerCase().includes('gift card') &&
+                    (!item.soldBy || !profIds.has(item.soldBy))
+                  ) {
+                    if (!recepMap[name]) recepMap[name] = { count: 0, amount: 0 }
+                    recepMap[name].count += item.quantity || 1
+                    recepMap[name].amount += (item.priceCashReference || item.price || 0) * (item.quantity || 1)
+                  }
+                })
+              })
+              const recepEntries = Object.entries(recepMap)
+              if (recepEntries.length === 0) return null
+              return (
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Recepción</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {recepEntries.map(([name, data]) => {
+                      const pct = calculateCommissionTab(data.count)
+                      const commission = data.amount * pct / 100
+                      const nextTarget = data.count < 21 ? 21 : data.count < 31 ? 31 : 31
+                      const progressValue = Math.min((data.count / nextTarget) * 100, 100)
+                      const levelLabel = pct === 10 ? 'Nivel 3 — 10%' : pct === 7.5 ? 'Nivel 2 — 7.5%' : pct === 5 ? 'Nivel 1 — 5%' : 'Sin nivel'
+                      return (
+                        <Card key={name} className="bg-white border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+                          <CardContent className="p-5">
+                            <div className="flex justify-between items-center mb-4">
+                              <div className="flex items-center gap-3">
+                                <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg bg-blue-500">
+                                  {name.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-900">{name}</p>
+                                  <p className="text-xs text-gray-500">Recepción · <span className="font-bold text-gray-800">{data.count} prod.</span></p>
+                                </div>
+                              </div>
+                              <Badge className="bg-blue-50 text-blue-700 border-none px-3 py-1">{levelLabel}</Badge>
+                            </div>
+                            <div className="space-y-2 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                              <div className="flex justify-between text-xs font-medium text-gray-500">
+                                <span>${data.amount.toLocaleString('es-AR')} vendidos</span>
+                                <span className="font-bold text-blue-600">{data.count} / {nextTarget}</span>
+                              </div>
+                              <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-blue-500" />
+                              {pct > 0 && (
+                                <p className="text-xs font-bold text-center text-blue-700 mt-1">
+                                  Comisión: ${commission.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                                </p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* PROFESIONALES */}
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Profesionales</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {professionals.map(prof => {
+                  const salesCount = prof.monthlySalesCount || 0;
+                  const salesAmount = prof.monthlySalesAmount || 0;
+                  const pct = calculateCommissionTab(salesCount)
+                  const commission = salesAmount * pct / 100
+                  const nextTarget = salesCount < 21 ? 21 : salesCount < 31 ? 31 : 31
+                  const progressValue = Math.min((salesCount / nextTarget) * 100, 100);
+                  const levelLabel = pct === 10 ? 'Nivel 3 — 10%' : pct === 7.5 ? 'Nivel 2 — 7.5%' : pct === 5 ? 'Nivel 1 — 5%' : 'Sin nivel'
+                  return (
+                    <Card key={prof.id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-5">
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg" style={{ backgroundColor: prof.color || '#16A34A' }}>
+                              {prof.shortName?.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900">{prof.shortName}</p>
+                              <p className="text-xs text-gray-500">Profesional · <span className="font-bold text-gray-800">{salesCount} prod.</span></p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-gray-900">{prof.shortName}</p>
-                            <p className="text-xs text-gray-500 font-medium">Ventas del mes: <span className="font-bold text-gray-800">{salesCount}</span></p>
+                          <Badge className="bg-emerald-100/50 text-emerald-700 border-none px-3 py-1">{levelLabel}</Badge>
+                        </div>
+                        <div className="space-y-2 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                          <div className="flex justify-between text-xs font-medium text-gray-500">
+                            <span>${salesAmount.toLocaleString('es-AR')} vendidos</span>
+                            <span className="font-bold text-emerald-600">{salesCount} / {nextTarget}</span>
                           </div>
+                          <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-[#16A34A]" />
+                          {pct > 0 && (
+                            <p className="text-xs font-bold text-center text-emerald-700 mt-1">
+                              Comisión: ${commission.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                            </p>
+                          )}
                         </div>
-                        <Badge className="bg-emerald-100/50 text-emerald-700 border-none px-3 py-1">Nivel {info.label}</Badge>
-                      </div>
-                      
-                      <div className="space-y-2 mt-4 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                        <div className="flex justify-between text-xs font-medium text-gray-500">
-                          <span>Progreso actual</span>
-                          <span className="font-bold text-emerald-600">{salesCount} / {info.next} ventas</span>
-                        </div>
-                        <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-[#16A34A]" />
-                        <p className="text-[10px] text-gray-400 text-center mt-1 uppercase tracking-wider font-bold">
-                          Faltan {info.next - salesCount} para subir al próximo nivel
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
             </div>
+
           </div>
         </TabsContent>
 
