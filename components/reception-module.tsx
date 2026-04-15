@@ -1655,17 +1655,36 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               const saleDate = new Date(s.date);
               if (saleDate.getMonth() !== currentMonth || saleDate.getFullYear() !== currentYear) return total;
               const receptionItems = (s.items || []).filter(
-                item => item.type === 'product' && item.soldBy === 'recepcion'
+                item =>
+                  item.type === 'product' &&
+                  item.soldBy === 'recepcion' &&
+                  item.itemId !== 'gift-card-loader' &&
+                  !String(item.itemName || '').toLowerCase().includes('gift card')
               );
               return total + receptionItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
             }, 0);
 
+            const receptionSalesAmount = sales.reduce((total, s) => {
+              const saleDate = new Date(s.date);
+              if (saleDate.getMonth() !== currentMonth || saleDate.getFullYear() !== currentYear) return total;
+              const receptionItems = (s.items || []).filter(
+                item =>
+                  item.type === 'product' &&
+                  item.soldBy === 'recepcion' &&
+                  item.itemId !== 'gift-card-loader' &&
+                  !String(item.itemName || '').toLowerCase().includes('gift card')
+              );
+              return total + receptionItems.reduce((sum, item) => sum + ((item.priceCashReference || item.price || 0) * (item.quantity || 1)), 0);
+            }, 0);
+
+            // Mismos umbrales que calculateCommissionTab: 1→5%, 21→7.5%, 31→10%
+            const pct = calculateCommissionTab(receptionSalesCount)
             const tInfo = (count: number) => {
-              if (count < 10) return { next: 10, label: "5%", nextLabel: "7.5%" }
-              if (count < 21) return { next: 21, label: "7.5%", nextLabel: "10%" }
+              if (count < 21) return { next: 21, label: "5%", nextLabel: "7.5%" }
+              if (count < 31) return { next: 31, label: "7.5%", nextLabel: "10%" }
               return { next: count, label: "10%", nextLabel: "MÁXIMO" }
             }
-            
+
             const info = tInfo(receptionSalesCount);
             const progressValue = Math.min((receptionSalesCount / (info.next === receptionSalesCount && info.next > 0 ? info.next : info.next || 1)) * 100, 100);
 
@@ -1680,12 +1699,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   <CardContent className="pt-5 space-y-5">
                     <div className="flex justify-between items-center p-4 rounded-xl border border-[#16A34A]/20">
                       <div className="space-y-1">
-                        <p className="text-[10px] text-gray-500 uppercase font-medium">Ventas</p>
+                        <p className="text-[10px] text-gray-500 uppercase font-medium">Productos vendidos</p>
                         <p className="text-4xl font-extrabold text-foreground">{receptionSalesCount}</p>
+                        <p className="text-xs text-gray-400">${receptionSalesAmount.toLocaleString('es-AR')} vendidos</p>
                       </div>
                       <div className="text-right space-y-1">
                         <p className="text-[10px] text-gray-500 uppercase font-medium">Comisión</p>
-                        <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5">{info.label}</Badge>
+                        <Badge className="bg-[#16A34A] text-white text-lg font-bold px-4 py-1.5">{pct}%</Badge>
+                        <p className="text-xs text-emerald-600 font-bold">${Math.round(receptionSalesAmount * pct / 100).toLocaleString('es-AR')}</p>
                       </div>
                     </div>
                     
@@ -1784,6 +1805,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       setShowDepositModal(false)
                       setDepositAmount("")
                       setDepositAptId("")
+                      confirm({ title: "✅ SEÑA GUARDADA CON ÉXITO", description: `Se registró una seña de $${parseFloat(depositAmount).toLocaleString('es-AR')} correctamente.`, actionType: "success", onConfirm: () => {} })
                     }}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black h-12 text-base"
                   >
@@ -1830,10 +1852,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               <Button
                 disabled={!editDepositAmount || parseFloat(editDepositAmount) < 0}
                 onClick={async () => {
-                  await updateAppointment(editDepositAptId, { paidAmount: parseFloat(editDepositAmount) })
+                  const montoEditado = parseFloat(editDepositAmount)
+                  await updateAppointment(editDepositAptId, { paidAmount: montoEditado })
                   setShowEditDepositModal(false)
                   setEditDepositAptId("")
                   setEditDepositAmount("")
+                  confirm({ title: "✅ SEÑA ACTUALIZADA CON ÉXITO", description: `La seña quedó registrada en $${montoEditado.toLocaleString('es-AR')}.`, actionType: "success", onConfirm: () => {} })
                 }}
                 className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black"
               >
