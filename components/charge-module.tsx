@@ -73,6 +73,8 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
 
   // Estados para Venta Directa
   const [directSalePatient, setDirectSalePatient] = useState("")
+  const [directSalePatientSearch, setDirectSalePatientSearch] = useState("")
+  const [directSalePatientMenuOpen, setDirectSalePatientMenuOpen] = useState(false)
   const [directSaleItems, setDirectSaleItems] = useState<any[]>([])
   const [directSaleProductSearch, setDirectSaleProductSearch] = useState("")
   const [directSaleProductMenuOpen, setDirectSaleProductMenuOpen] = useState(false)
@@ -281,6 +283,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
       }
       setDirectSaleItems([])
       setDirectSalePatient("")
+      setDirectSalePatientSearch("")
       setDirectSaleOfferId("")
       setDirectSaleSecondMethod("")
       setDirectSaleSecondAmount("")
@@ -555,18 +558,46 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label className="text-black font-bold">Paciente <span className="text-red-500">*</span></Label>
-              <Select value={directSalePatient} onValueChange={(id) => { setDirectSalePatient(id); if (id) useClinicStore.getState().refreshPatientBalance(id) }}>
-                <SelectTrigger className="bg-input border-gray-200 text-black font-bold">
-                  <SelectValue placeholder="Seleccionar paciente (obligatorio)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} {p.dni ? `- DNI ${p.dni}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                <Input
+                  placeholder="Buscar paciente por nombre o DNI..."
+                  value={directSalePatientSearch}
+                  onChange={(e) => { setDirectSalePatientSearch(e.target.value); setDirectSalePatient(""); setDirectSalePatientMenuOpen(true) }}
+                  onFocus={() => setDirectSalePatientMenuOpen(true)}
+                  onBlur={() => setTimeout(() => setDirectSalePatientMenuOpen(false), 200)}
+                  className="bg-input border-gray-200 text-black font-bold"
+                />
+                {directSalePatientMenuOpen && directSalePatientSearch.length >= 2 && (
+                  <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                    {patients
+                      .filter(p => {
+                        const q = directSalePatientSearch.toLowerCase()
+                        return p.name.toLowerCase().includes(q) || (p.dni && p.dni.toLowerCase().includes(q))
+                      })
+                      .slice(0, 20)
+                      .map(p => (
+                        <div
+                          key={p.id}
+                          className="px-3 py-2 hover:bg-green-50 cursor-pointer text-sm font-medium text-black"
+                          onMouseDown={() => {
+                            setDirectSalePatient(p.id)
+                            setDirectSalePatientSearch(p.name + (p.dni ? ` - DNI ${p.dni}` : ""))
+                            setDirectSalePatientMenuOpen(false)
+                            useClinicStore.getState().refreshPatientBalance(p.id)
+                          }}
+                        >
+                          {p.name}{p.dni ? ` - DNI ${p.dni}` : ""}
+                        </div>
+                      ))}
+                    {patients.filter(p => {
+                      const q = directSalePatientSearch.toLowerCase()
+                      return p.name.toLowerCase().includes(q) || (p.dni && p.dni.toLowerCase().includes(q))
+                    }).length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-400 italic">Sin resultados</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <Label className="text-black font-bold">Seleccionar Producto</Label>
             <div className="relative">
