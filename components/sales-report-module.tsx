@@ -132,52 +132,76 @@ export function SalesReportModule() {
     return "Recepción"
   }
 
-  // Cada fila = un ítem dentro de una venta
-  const rows = useMemo(() => {
-    const result: any[] = []
-    // Map de pacientes para lookup O(1) — construido dentro del memo para evitar stale closure
-    const patientMap = new Map(patients.map((p: any) => [p.id, p.name]))
-    filteredSales.forEach(sale => {
-      let patientName: string
-      if (sale.patientId && patientMap.has(sale.patientId)) {
-        patientName = patientMap.get(sale.patientId)!
+  // Leemos patients SIEMPRE frescos desde el store para evitar cualquier problema de stale closure/memo
+  const storePatients = useClinicStore(state => state.patients)
+  const storeProfessionals = useClinicStore(state => state.professionals)
+  const storeAppointments = useClinicStore(state => state.appointments)
+
+  // Cada fila = un ítem dentro de una venta — sin memo para siempre usar datos frescos
+  const patientMap = new Map((storePatients || []).map((p: any) => [p.id, p.name]))
+  const profMap = new Map((storeProfessionals || []).map((p: any) => [p.id, p.shortName || p.name]))
+  const rows = filteredSales.flatMap(sale => {
+    // Nombre del paciente
+    let patientName: string
+    if (sale.patientId && patientMap.has(sale.patientId)) {
+      patientName = patientMap.get(sale.patientId)!
+    } else if (sale.appointmentId) {
+      const apt = storeAppointments.find((a: any) => a.id === sale.appointmentId)
+      if (apt) {
+        const p = patientMap.get(apt.patientId)
+        patientName = p || apt.patientName || "—"
       } else {
-        patientName = getPatientName(sale)
+        patientName = sale.type === "direct" ? "Consumidor Final" : "—"
       }
-      const profName = getProfessionalName(sale)
-      const saleDate = new Date(sale.date)
-      const saleId = sale.id ? sale.id.slice(0, 8).toUpperCase() : "—"
-      const isAppointment = sale.type === "appointment"
+    } else if (sale.type === "appointment" && sale.items?.length) {
+      const profId = sale.items[0]?.soldBy
+      const saleDay = new Date(sale.date).toDateString()
+      const candidatos = storeAppointments.filter((a: any) =>
+        a.professionalId === profId && new Date(a.date).toDateString() === saleDay && a.status === "completado"
+      )
+      const matched = candidatos.length === 1 ? candidatos[0] : candidatos.find((a: any) => a.totalAmount === sale.total) || candidatos[0]
+      patientName = matched ? (patientMap.get(matched.patientId) || matched.patientName || "—") : "—"
+    } else {
+      patientName = sale.type === "direct" ? "Consumidor Final" : "—"
+    }
 
-      // Splits de pago (2do método)
-      const splits = sale.paymentSplits || []
-      const hasSplit = splits.length > 1
-      const split1 = splits[0]
-      const split2 = splits[1]
+    // Nombre del profesional
+    let profName = "Recepción"
+    if (sale.type === "appointment" && sale.appointmentId) {
+      const apt = storeAppointments.find((a: any) => a.id === sale.appointmentId)
+      if (apt) profName = profMap.get(apt.professionalId) || "Recepción"
+    } else if (sale.items?.length) {
+      const soldBy = sale.items[0]?.soldBy
+      if (soldBy && soldBy !== "recepcion") profName = profMap.get(soldBy) || soldBy
+    }
 
-      sale.items.forEach((item: any, i: number) => {
-        result.push({
-          saleId,
-          date: saleDate,
-          patientName,
-          profName,
-          isAppointment,
-          itemName: item.itemName,
-          itemType: item.type,
-          quantity: item.quantity,
-          price: item.price * item.quantity,
-          paymentMethod: sale.paymentMethod,
-          hasSplit,
-          split1,
-          split2,
-          observations: i === 0 ? (sale.observations || "") : "",
-          isFirstItem: i === 0,
-          saleTotal: sale.total,
-        })
-      })
-    })
-    return result
-  }, [filteredSales, patients, professionals, appointments])
+    const saleDate = new Date(sale.date)
+    const saleId = sale.id ? sale.id.slice(0, 8).toUpperCase() : "—"
+    const isAppointment = sale.type === "appointment"
+    const splits = sale.paymentSplits || []
+    const hasSplit = splits.length > 1
+    const split1 = splits[0]
+    const split2 = splits[1]
+
+    return (sale.items || []).map((item: any, i: number) => ({
+      saleId,
+      date: saleDate,
+      patientName,
+      profName,
+      isAppointment,
+      itemName: item.itemName,
+      itemType: item.type,
+      quantity: item.quantity,
+      price: (item.price || 0) * item.quantity,
+      paymentMethod: sale.paymentMethod,
+      hasSplit,
+      split1,
+      split2,
+      observations: i === 0 ? (sale.observations || "") : "",
+      isFirstItem: i === 0,
+      saleTotal: sale.total,
+    }))
+  })
 
   const handleExportPDF = async () => {
     if (typeof window === 'undefined') return
