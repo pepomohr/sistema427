@@ -179,33 +179,52 @@ export function SalesReportModule() {
     return result
   }, [filteredSales, patients, professionals, appointments])
 
-  const handleExportCSV = () => {
-    const headers = ["ID Venta","Fecha","Paciente","Profesional","Origen","Ítem","Tipo","Cant","Precio","Método Pago 1","Monto 1","Método Pago 2","Monto 2","Total Venta","Observaciones"]
-    const csvRows = rows.map((r: any) => [
-      r.saleId,
-      format(r.date, "dd/MM/yyyy HH:mm"),
-      r.patientName,
-      r.profName,
-      r.isAppointment ? "Turno" : "Venta Directa",
-      r.itemName,
-      r.itemType === "service" ? "Servicio" : "Producto",
-      r.quantity,
-      r.price,
-      r.isFirstItem ? (PAYMENT_LABELS[r.split1?.method || r.paymentMethod] || r.paymentMethod) : "",
-      r.isFirstItem ? (r.split1?.amount ?? r.saleTotal) : "",
-      r.isFirstItem && r.hasSplit ? (PAYMENT_LABELS[r.split2?.method] || r.split2?.method || "") : "",
-      r.isFirstItem && r.hasSplit ? (r.split2?.amount || "") : "",
-      r.isFirstItem ? r.saleTotal : "",
-      r.observations,
-    ])
-    const csv = [headers, ...csvRows].map((row: any[]) => row.map((v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(",")).join("\n")
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `ventas_${dateFrom}_${dateTo}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  const handleExportPDF = async () => {
+    if (typeof window === 'undefined') return
+    try {
+      const { jsPDF } = await import("jspdf")
+      const autoTableModule = await import("jspdf-autotable")
+      const applyAutoTable: any = autoTableModule.default || autoTableModule
+
+      const doc = new jsPDF({ orientation: 'landscape' })
+      doc.setFontSize(16)
+      doc.text("Reporte de Ventas — Consultorio C427", 14, 18)
+      doc.setFontSize(10)
+      doc.text(`Período: ${dateFrom} al ${dateTo}   |   Total: $${totalAmount.toLocaleString('es-AR')}`, 14, 26)
+
+      const tableColumn = ["ID","Fecha","Paciente","Profesional","Origen","Ítem","Tipo","Cant","Precio","Pago","Total"]
+      const tableRows = rows.map((r: any) => [
+        r.isFirstItem ? r.saleId : "↳",
+        r.isFirstItem ? format(r.date, "dd/MM/yy HH:mm") : "",
+        r.isFirstItem ? r.patientName : "",
+        r.isFirstItem ? r.profName : "",
+        r.isFirstItem ? (r.isAppointment ? "Turno" : "Venta Directa") : "",
+        r.itemName,
+        r.itemType === "service" ? "Servicio" : "Producto",
+        r.quantity,
+        `$${r.price.toLocaleString('es-AR')}`,
+        r.isFirstItem ? (PAYMENT_LABELS[r.split1?.method || r.paymentMethod] || r.paymentMethod || "") : "",
+        r.isFirstItem ? `$${r.saleTotal.toLocaleString('es-AR')}` : "",
+      ])
+
+      applyAutoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 32,
+        headStyles: { fillColor: '#16A34A', textColor: '#ffffff', fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 2 },
+        alternateRowStyles: { fillColor: '#f9fafb' },
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 28 },
+          5: { cellWidth: 40 },
+        }
+      })
+
+      doc.save(`ventas_${dateFrom}_${dateTo}.pdf`)
+    } catch (error) {
+      console.error("Error generando PDF:", error)
+    }
   }
 
   return (
@@ -244,8 +263,8 @@ export function SalesReportModule() {
             <Label className="text-xs font-bold text-gray-600 whitespace-nowrap">Hasta</Label>
             <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border-0 p-0 h-auto text-sm font-bold text-black w-36 focus-visible:ring-0" />
           </div>
-          <Button onClick={handleExportCSV} variant="outline" className="border-gray-300 text-black font-bold gap-2">
-            <Download className="h-4 w-4" /> Exportar CSV
+          <Button onClick={handleExportPDF} variant="outline" className="border-[#16A34A] text-[#16A34A] font-bold gap-2 hover:bg-[#16A34A] hover:text-white">
+            <Download className="h-4 w-4" /> Descargar PDF
           </Button>
         </div>
       </div>
