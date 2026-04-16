@@ -384,11 +384,16 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
       if (error) throw error;
 
-      const newSale: Sale = { 
-        id: data.id, 
+      const newSale: Sale = {
+        id: data.id,
         items: data.items,
         total: data.total,
         paymentMethod: data.payment_method,
+        paymentSplits: data.payment_splits || [],
+        observations: data.observations,
+        source: data.source,
+        patientId: data.patient_id,
+        appointmentId: data.appointment_id,
         processedBy: data.processed_by,
         type: data.type,
         date: new Date(data.date)
@@ -490,9 +495,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       const profUpdates2: Array<{ id: string; count: number; amount: number }> = []
       const updatedProfessionals = professionals.map(prof => {
         const soldItems = saleData.items.filter(
-          item => item.type === 'product' && item.soldBy === prof.id &&
-          item.itemId !== 'gift-card-loader' &&
-          !String(item.itemName || '').toLowerCase().includes('gift card')
+          item => item.type === 'product' && item.soldBy === prof.id
         )
         const totalQty = soldItems.reduce((acc, item) => acc + item.quantity, 0)
         if (totalQty === 0) return prof
