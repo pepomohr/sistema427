@@ -113,6 +113,10 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     setActiveApt(apt)
     setExtraProducts([])
     setSelectedOfferId("")
+    // Refrescar balance del paciente desde DB para tener dato actualizado
+    if (apt?.patientId) {
+      useClinicStore.getState().refreshPatientBalance(apt.patientId)
+    }
     setPaymentMethod("")
     setSecondPaymentMethod("")
     setSecondPaymentAmount("")
@@ -542,7 +546,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label className="text-black font-bold">Paciente <span className="text-red-500">*</span></Label>
-              <Select value={directSalePatient} onValueChange={setDirectSalePatient}>
+              <Select value={directSalePatient} onValueChange={(id) => { setDirectSalePatient(id); if (id) useClinicStore.getState().refreshPatientBalance(id) }}>
                 <SelectTrigger className="bg-input border-gray-200 text-black font-bold">
                   <SelectValue placeholder="Seleccionar paciente (obligatorio)" />
                 </SelectTrigger>

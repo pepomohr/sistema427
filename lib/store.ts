@@ -239,6 +239,7 @@ interface ClinicStore {
   
   fetchPatients: () => Promise<void>
   searchPatients: (query: string) => Promise<Patient[]>
+  refreshPatientBalance: (id: string) => Promise<void>
   updatePatientGiftCardBalance: (id: string, amountToAdd: number) => Promise<void>
   addPatient: (patient: Omit<Patient, 'id' | 'createdAt'>) => Promise<void>
   updatePatient: (id: string, updates: Partial<Patient>) => Promise<void>
@@ -862,6 +863,15 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       const { error } = await supabase.from('appointments').update(up).eq('id', id);
       if (!error) set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, ...updates } : a) }))
     } catch (err) { console.error(err) }
+  },
+
+  refreshPatientBalance: async (id) => {
+    try {
+      const { data, error } = await supabase.from('patients').select('gift_card_balance').eq('id', id).single()
+      if (error || !data) return
+      const balance = data.gift_card_balance || 0
+      set((state) => ({ patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: balance } : p) }))
+    } catch (err) { console.error('[refreshPatientBalance] Error:', err) }
   },
 
   updatePatientGiftCardBalance: async (id, amountToAdd) => {
