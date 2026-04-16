@@ -235,9 +235,18 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
       description: `El paciente ${finishingApt.patientName || getPatientName(finishingApt.patientId)} pasará a la cola de cobros. ¿Confirmás los servicios y productos cargados?`,
       actionType: "success",
       confirmText: "Sí, Enviar",
-      onConfirm: () => {
-        finishAttention(finishingApt.id, finishingServices, finishingProducts)
-        setFinishingApt(null)
+      onConfirm: async () => {
+        try {
+          await finishAttention(finishingApt.id, finishingServices, finishingProducts)
+          setFinishingApt(null)
+        } catch (err) {
+          confirm({
+            title: "Error al enviar",
+            description: "No se pudo enviar el turno a recepción. Verificá tu conexión e intentá de nuevo.",
+            actionType: "danger",
+            onConfirm: () => {}
+          })
+        }
       }
     })
   }

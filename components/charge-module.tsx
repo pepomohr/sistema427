@@ -53,6 +53,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     addSaleMultipago,
     updatePatientGiftCardBalance,
     fetchOffers,
+    fetchAppointments,
     currentUser,
   } = useClinicStore()
 
@@ -108,6 +109,14 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   useEffect(() => {
     if (typeof fetchOffers === "function") fetchOffers()
   }, [fetchOffers])
+
+  // Polling de turnos cada 20 segundos como fallback al Realtime
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof fetchAppointments === "function") fetchAppointments()
+    }, 20000)
+    return () => clearInterval(interval)
+  }, [fetchAppointments])
 
   const handleOpenCheckout = (apt: any) => {
     setActiveApt(apt)

@@ -230,7 +230,7 @@ interface ClinicStore {
   setProfessionalPin: (id: string, pin: string) => Promise<boolean>
   toggleProfessionalActive: (id: string) => void
   startAttention: (id: string) => void
-  finishAttention: (id: string, finalServices: any[], finalProducts: any[]) => void
+  finishAttention: (id: string, finalServices: any[], finalProducts: any[]) => Promise<void>
   completeAppointment: (id: string, paymentMethod: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card", finalTotal: number, extraProducts?: any[], extraSoldBy?: string, paymentSplits?: PaymentSplit[], observations?: string) => void
   cancelAppointment: (id: string) => void
   updateAppointment: (id: string, updates: Partial<Appointment>) => void
@@ -792,16 +792,21 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
     })
   },
 
-  finishAttention: (id, finalServices, finalProducts) => {
+  finishAttention: async (id, finalServices, finalProducts) => {
     let calcTotal = 0;
     finalServices.forEach(s => calcTotal += s.price);
     finalProducts.forEach(p => calcTotal += (p.price * p.quantity));
-    
-    supabase.from('appointments').update({ 
-      status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal 
-    }).eq('id', id).then(() => {
-      set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal } : a) }));
-    })
+
+    const { error } = await supabase.from('appointments').update({
+      status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal
+    }).eq('id', id);
+
+    if (error) {
+      console.error('[finishAttention] Error al actualizar turno en DB:', error)
+      throw new Error(error.message)
+    }
+
+    set((state) => ({ appointments: state.appointments.map(a => a.id === id ? { ...a, status: 'pendiente_cobro', services: finalServices, products: finalProducts, totalAmount: calcTotal } : a) }));
   },
 
   completeAppointment: (id, method, finalTotal, extraProducts: any[] = [], extraSoldBy = "", paymentSplits?: PaymentSplit[], observations?: string) => {
