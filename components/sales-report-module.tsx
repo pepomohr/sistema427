@@ -103,6 +103,8 @@ export function SalesReportModule() {
         if (p) return p.name
       }
     }
+    // 4. Venta directa sin paciente vinculado
+    if (sale.type === "direct") return "Consumidor Final"
     return "-"
   }
 
