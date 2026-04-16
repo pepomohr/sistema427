@@ -863,23 +863,21 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   updatePatientGiftCardBalance: async (id, amountToAdd) => {
-    const { patients } = get();
-    const patient = patients.find(p => p.id === id);
-    if (!patient) return;
-    const currentBalance = patient.giftCardBalance || 0
-    // Nunca puede quedar negativo
-    const newBalance = Math.max(0, currentBalance + amountToAdd)
-    if (amountToAdd < 0 && currentBalance + amountToAdd < 0) {
-      console.warn(`[GiftCard] Saldo insuficiente: tiene $${currentBalance}, intenta usar $${Math.abs(amountToAdd)}`)
-      return
-    }
     try {
-      const { error } = await supabase.from('patients').update({ gift_card_balance: newBalance }).eq('id', id);
-      if (error) {
-        console.error('[GiftCard] Error guardando saldo:', error)
-        throw new Error(error.message)
+      // Siempre leer el balance actual desde la base para no depender del store local
+      const { data: current, error: fetchError } = await supabase
+        .from('patients').select('gift_card_balance').eq('id', id).single()
+      if (fetchError) throw new Error(fetchError.message)
+      const currentBalance = current?.gift_card_balance || 0
+      const newBalance = Math.max(0, currentBalance + amountToAdd)
+      if (amountToAdd < 0 && currentBalance + amountToAdd < 0) {
+        console.warn(`[GiftCard] Saldo insuficiente: tiene $${currentBalance}, intenta usar $${Math.abs(amountToAdd)}`)
+        return
       }
-      set((state) => ({ patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: newBalance } : p) }));
+      const { error } = await supabase.from('patients').update({ gift_card_balance: newBalance }).eq('id', id)
+      if (error) throw new Error(error.message)
+      // Actualizar store local si el paciente ya está cargado
+      set((state) => ({ patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: newBalance } : p) }))
     } catch (err) {
       console.error('[GiftCard] Error:', err)
       throw err
