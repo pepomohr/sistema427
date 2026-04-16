@@ -74,7 +74,7 @@ export function ReportsModule() {
   // Calculate total commissions (solo mes actual)
   const calculateCommissions = useMemo(() => {
     let totalCommissions = 0
-    professionals.forEach((prof) => {
+    professionals.filter(p => p.id !== 'clau').forEach((prof) => {
       const profAppointments = appointments.filter(
         (a) => a.professionalId === prof.id && a.status === "completado" && isThisMonth(a.date)
       )
@@ -154,7 +154,7 @@ export function ReportsModule() {
 
   // Calculate commissions per professional (solo mes actual)
   const commissionsData = useMemo(() => {
-    return professionals.map((prof) => {
+    return professionals.filter(p => p.id !== 'clau').map((prof) => {
       const profAppointments = appointments.filter(
         (a) => a.professionalId === prof.id && a.status === "completado" && isThisMonth(a.date)
       )
@@ -769,7 +769,7 @@ export function ReportsModule() {
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Profesionales</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {professionals.map(prof => {
+                {professionals.filter(p => p.id !== 'clau').map(prof => {
                   const salesCount = prof.monthlySalesCount || 0;
                   const salesAmount = prof.monthlySalesAmount || 0;
                   const pct = calculateCommissionTab(salesCount)

@@ -401,6 +401,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
       const profUpdates: Array<{ id: string; count: number; amount: number }> = []
       const updatedProfessionals = professionals.map(prof => {
+        if (prof.id === 'clau') return prof // CLAU no comisiona
         const soldItems = saleData.items.filter(
           item =>
             item.type === 'product' &&
@@ -494,6 +495,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
       const profUpdates2: Array<{ id: string; count: number; amount: number }> = []
       const updatedProfessionals = professionals.map(prof => {
+        if (prof.id === 'clau') return prof // CLAU no comisiona
         const soldItems = saleData.items.filter(
           item => item.type === 'product' && item.soldBy === prof.id
         )
