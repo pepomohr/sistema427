@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useClinicStore } from "@/lib/store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -27,7 +27,13 @@ const PAYMENT_COLORS: Record<string, string> = {
 }
 
 export function SalesReportModule() {
-  const { sales, patients, professionals, appointments } = useClinicStore()
+  const { sales, patients, professionals, appointments, fetchPatients, fetchSales, fetchAppointments } = useClinicStore()
+
+  useEffect(() => {
+    fetchPatients()
+    fetchSales()
+    fetchAppointments()
+  }, [])
 
   const today = format(new Date(), "yyyy-MM-dd")
   const [dateFrom, setDateFrom] = useState(today)
