@@ -867,10 +867,24 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   refreshPatientBalance: async (id) => {
     try {
-      const { data, error } = await supabase.from('patients').select('gift_card_balance').eq('id', id).single()
+      const { data, error } = await supabase.from('patients').select('*').eq('id', id).single()
       if (error || !data) return
       const balance = data.gift_card_balance || 0
-      set((state) => ({ patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: balance } : p) }))
+      set((state) => {
+        const exists = state.patients.some(p => p.id === id)
+        if (exists) {
+          return { patients: state.patients.map(p => p.id === id ? { ...p, giftCardBalance: balance } : p) }
+        } else {
+          // Paciente no estaba en el store, la agregamos
+          const newPatient = {
+            id: data.id, name: data.name, phone: data.phone, dni: data.dni,
+            email: data.email, birthdate: data.birth_date,
+            createdAt: new Date(data.created_at || Date.now()),
+            notes: data.notes, giftCardBalance: balance
+          }
+          return { patients: [...state.patients, newPatient] }
+        }
+      })
     } catch (err) { console.error('[refreshPatientBalance] Error:', err) }
   },
 
