@@ -135,8 +135,15 @@ export function SalesReportModule() {
   // Cada fila = un ítem dentro de una venta
   const rows = useMemo(() => {
     const result: any[] = []
+    // Map de pacientes para lookup O(1) — construido dentro del memo para evitar stale closure
+    const patientMap = new Map(patients.map((p: any) => [p.id, p.name]))
     filteredSales.forEach(sale => {
-      const patientName = getPatientName(sale)
+      let patientName: string
+      if (sale.patientId && patientMap.has(sale.patientId)) {
+        patientName = patientMap.get(sale.patientId)!
+      } else {
+        patientName = getPatientName(sale)
+      }
       const profName = getProfessionalName(sale)
       const saleDate = new Date(sale.date)
       const saleId = sale.id ? sale.id.slice(0, 8).toUpperCase() : "—"

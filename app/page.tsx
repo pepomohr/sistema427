@@ -38,6 +38,7 @@ export default function Home() {
       }
 
       // Resto de datos en paralelo
+      store.fetchPatients()
       store.fetchOffers()
       store.fetchCombos()
       store.fetchAppointments()
