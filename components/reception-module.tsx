@@ -199,9 +199,16 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   const handleAddPatient = async () => {
     if (newPatient.name && newPatient.phone) {
+      const savedName = newPatient.name
       await addPatient(newPatient)
       setNewPatient({ name: "", phone: "", email: "", dni: "", birthdate: "" })
       setShowNewPatient(false)
+      // Seleccionar el paciente recién creado directamente para poder agendarle un turno al instante
+      const created = useClinicStore.getState().patients.find(p => p.name === savedName)
+      if (created) {
+        setSelectedPatient(created)
+        setSearchQuery(created.name)
+      }
     }
   }
 
