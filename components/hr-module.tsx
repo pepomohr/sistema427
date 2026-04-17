@@ -105,9 +105,6 @@ export function HRModule() {
     return `${d} ${months[Number(m)-1]} ${y}`
   }
 
-  const isProfOnVacation = (prof: Professional, dateStr: string) => {
-    return (prof.vacations || []).some(v => dateStr >= v.from && dateStr <= v.to)
-  }
 
   const handleAddSpecialDate = () => {
     if (!newSpecialDate) return
