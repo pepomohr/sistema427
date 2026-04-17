@@ -103,6 +103,7 @@ export interface Professional {
   pin?: string | null
   schedule?: WeekSchedule
   exceptions?: Record<string, { start: string, end: string }[]>
+  vacations?: { from: string, to: string, note?: string }[]
 }
 
 export type AppointmentStatus = 'programado' | 'confirmado' | 'en_atencion' | 'pendiente_cobro' | 'completado' | 'cancelado'

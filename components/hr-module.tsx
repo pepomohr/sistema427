@@ -55,8 +55,12 @@ export function HRModule() {
   const [selectedProf, setSelectedProf] = useState<Professional | null>(null)
   const [editingSchedule, setEditingSchedule] = useState<WeekSchedule | null>(null)
   const [editingExceptions, setEditingExceptions] = useState<Record<string, { start: string, end: string }[]>>({})
-  const [scheduleTab, setScheduleTab] = useState<'weekly' | 'special'>('weekly')
+  const [editingVacations, setEditingVacations] = useState<{ from: string, to: string, note?: string }[]>([])
+  const [scheduleTab, setScheduleTab] = useState<'weekly' | 'special' | 'vacations'>('weekly')
   const [newSpecialDate, setNewSpecialDate] = useState("")
+  const [newVacFrom, setNewVacFrom] = useState("")
+  const [newVacTo, setNewVacTo] = useState("")
+  const [newVacNote, setNewVacNote] = useState("")
   
   const [newProfData, setNewProfData] = useState<any>({ name: "", shortName: "", specialties: [] as ServiceCategory[], color: "#16A34A", hourlyRate: 50, hourlyRateFacial: '', hourlyRateCorporal: '' })
   const [isCommissionMode, setIsCommissionMode] = useState(true)
@@ -66,21 +70,43 @@ export function HRModule() {
     setSelectedProf(prof)
     setEditingSchedule(prof.schedule || {})
     setEditingExceptions(prof.exceptions || {})
+    setEditingVacations(prof.vacations || [])
     setScheduleTab('weekly')
     setNewSpecialDate("")
+    setNewVacFrom("")
+    setNewVacTo("")
+    setNewVacNote("")
     setShowScheduleModal(true)
   }
 
   const handleSaveSchedule = async () => {
     if (selectedProf && editingSchedule) {
       try {
-        await updateProfessional(selectedProf.id, { schedule: editingSchedule, exceptions: editingExceptions })
+        await updateProfessional(selectedProf.id, { schedule: editingSchedule, exceptions: editingExceptions, vacations: editingVacations })
         setShowScheduleModal(false)
         confirm({ title: "✅ Horarios Guardados", description: "Los cambios fueron guardados correctamente.", actionType: "success", onConfirm: () => {} })
       } catch (err: any) {
         alert(`❌ Error al guardar los horarios: ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`)
       }
     }
+  }
+
+  const handleAddVacation = () => {
+    if (!newVacFrom || !newVacTo || newVacFrom > newVacTo) return
+    setEditingVacations(prev => [...prev, { from: newVacFrom, to: newVacTo, note: newVacNote || undefined }])
+    setNewVacFrom("")
+    setNewVacTo("")
+    setNewVacNote("")
+  }
+
+  const formatDateShort = (dateStr: string) => {
+    const [y, m, d] = dateStr.split('-')
+    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    return `${d} ${months[Number(m)-1]} ${y}`
+  }
+
+  const isProfOnVacation = (prof: Professional, dateStr: string) => {
+    return (prof.vacations || []).some(v => dateStr >= v.from && dateStr <= v.to)
   }
 
   const handleAddSpecialDate = () => {
@@ -384,11 +410,14 @@ export function HRModule() {
 
           {/* TABS */}
           <div className="flex gap-1 mt-4 bg-gray-100 p-1 rounded-lg">
-            <button onClick={() => setScheduleTab('weekly')} className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-colors ${scheduleTab === 'weekly' ? 'bg-white text-[#16A34A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <button onClick={() => setScheduleTab('weekly')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${scheduleTab === 'weekly' ? 'bg-white text-[#16A34A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
               Semanal
             </button>
-            <button onClick={() => setScheduleTab('special')} className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-colors ${scheduleTab === 'special' ? 'bg-white text-[#16A34A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              Fechas Especiales {Object.keys(editingExceptions).length > 0 && <span className="ml-1 bg-[#16A34A] text-white text-xs rounded-full px-1.5">{Object.keys(editingExceptions).length}</span>}
+            <button onClick={() => setScheduleTab('special')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${scheduleTab === 'special' ? 'bg-white text-[#16A34A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              Especiales {Object.keys(editingExceptions).length > 0 && <span className="ml-1 bg-[#16A34A] text-white text-xs rounded-full px-1.5">{Object.keys(editingExceptions).length}</span>}
+            </button>
+            <button onClick={() => setScheduleTab('vacations')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${scheduleTab === 'vacations' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              Ausencias {editingVacations.length > 0 && <span className="ml-1 bg-orange-500 text-white text-xs rounded-full px-1.5">{editingVacations.length}</span>}
             </button>
           </div>
 
@@ -526,6 +555,91 @@ export function HRModule() {
                       ))}
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB AUSENCIAS / VACACIONES */}
+          {scheduleTab === 'vacations' && (
+            <div className="space-y-4 mt-4">
+              <p className="text-xs text-gray-500">Cargá períodos de vacaciones o ausencias. En esos días la profesional no va a aparecer disponible al agendar turnos.</p>
+
+              {/* AGREGAR NUEVO PERÍODO */}
+              <div className="space-y-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <Label className="text-xs font-bold text-orange-700">Nuevo período de ausencia</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-500">Desde</Label>
+                    <input
+                      type="date"
+                      value={newVacFrom}
+                      onChange={e => setNewVacFrom(e.target.value)}
+                      className="w-full h-9 px-3 text-sm border border-gray-200 rounded-md bg-white text-black font-medium focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-500">Hasta</Label>
+                    <input
+                      type="date"
+                      value={newVacTo}
+                      min={newVacFrom}
+                      onChange={e => setNewVacTo(e.target.value)}
+                      className="w-full h-9 px-3 text-sm border border-gray-200 rounded-md bg-white text-black font-medium focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-gray-500">Motivo <span className="font-normal italic">(opcional)</span></Label>
+                  <Input
+                    value={newVacNote}
+                    onChange={e => setNewVacNote(e.target.value)}
+                    placeholder="Ej: Vacaciones, Licencia, Enfermedad..."
+                    className="h-9 text-sm bg-white"
+                  />
+                </div>
+                <Button
+                  onClick={handleAddVacation}
+                  disabled={!newVacFrom || !newVacTo || newVacFrom > newVacTo}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-9 text-sm"
+                >
+                  <Plus size={16} className="mr-1" /> Agregar Ausencia
+                </Button>
+              </div>
+
+              {/* LISTA DE AUSENCIAS */}
+              {editingVacations.length === 0 ? (
+                <p className="text-center text-gray-400 italic text-sm py-4">Sin ausencias cargadas</p>
+              ) : (
+                <div className="space-y-2">
+                  {editingVacations
+                    .slice()
+                    .sort((a, b) => a.from.localeCompare(b.from))
+                    .map((vac, idx) => {
+                      const realIdx = editingVacations.indexOf(vac)
+                      // calcular días
+                      const fromD = new Date(vac.from + 'T12:00:00')
+                      const toD = new Date(vac.to + 'T12:00:00')
+                      const days = Math.round((toD.getTime() - fromD.getTime()) / 86400000) + 1
+                      return (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <div>
+                            <p className="text-sm font-bold text-orange-800">
+                              {formatDateShort(vac.from)} → {formatDateShort(vac.to)}
+                              <span className="ml-2 text-xs font-normal text-orange-500">({days} día{days !== 1 ? 's' : ''})</span>
+                            </p>
+                            {vac.note && <p className="text-xs text-gray-500 mt-0.5">{vac.note}</p>}
+                          </div>
+                          <Button
+                            variant="ghost" size="sm"
+                            className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                            onClick={() => setEditingVacations(prev => prev.filter((_, i) => i !== realIdx))}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      )
+                    })}
                 </div>
               )}
             </div>
