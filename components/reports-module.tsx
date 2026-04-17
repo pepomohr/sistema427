@@ -42,12 +42,13 @@ export function ReportsModule() {
   const { sales, appointments, professionals, products, services, expenses, addExpense, cashClosures, fetchProfessionals, fetchSales } = useClinicStore()
   const [showNeto, setShowNeto] = useState(false)
 
-  // Refrescar profesionales y ventas al montar y cada 30s para que admin vea datos actualizados
+  // Refrescar al montar y cada 30s para que admin vea datos siempre actualizados
   useEffect(() => {
     if (typeof fetchProfessionals === 'function') fetchProfessionals()
     if (typeof fetchSales === 'function') fetchSales()
     const interval = setInterval(() => {
       if (typeof fetchProfessionals === 'function') fetchProfessionals()
+      if (typeof fetchSales === 'function') fetchSales()
     }, 30000)
     return () => clearInterval(interval)
   }, [])
