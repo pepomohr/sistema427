@@ -613,7 +613,6 @@ export function HRModule() {
                     .slice()
                     .sort((a, b) => a.from.localeCompare(b.from))
                     .map((vac, idx) => {
-                      const realIdx = editingVacations.indexOf(vac)
                       // calcular días
                       const fromD = new Date(vac.from + 'T12:00:00')
                       const toD = new Date(vac.to + 'T12:00:00')
@@ -630,7 +629,7 @@ export function HRModule() {
                           <Button
                             variant="ghost" size="sm"
                             className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
-                            onClick={() => setEditingVacations(prev => prev.filter((_, i) => i !== realIdx))}
+                            onClick={() => setEditingVacations(prev => prev.filter(v => v !== vac))}
                           >
                             <Trash2 size={16} />
                           </Button>
