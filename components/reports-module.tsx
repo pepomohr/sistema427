@@ -66,6 +66,10 @@ export function ReportsModule() {
     }, 0)
   }
 
+  // Profesional en modo comisión por turno: hourlyRate = % a cobrar por turno (sin tarifa facial/corporal)
+  const isAppointmentCommissionMode = (prof: any) =>
+    !prof.hourlyRateFacial && !prof.hourlyRateCorporal && prof.hourlyRate > 0 && prof.hourlyRate <= 100
+
   const handleAddExpense = () => {
     if(newExpenseDesc && newExpenseAmount) {
       addExpense({ description: newExpenseDesc, amount: parseFloat(newExpenseAmount) })
@@ -86,12 +90,18 @@ export function ReportsModule() {
   const calculateCommissions = useMemo(() => {
     let totalCommissions = 0
     professionals.filter(p => p.id !== 'clau').forEach((prof) => {
-      const profAppointments = appointments.filter(
-        (a) => a.professionalId === prof.id && a.status === "completado" && isThisMonth(a.date)
-      )
-      const totalBilled = profAppointments.reduce((sum, a) => sum + getAppointmentCommissionBase(a), 0)
-      const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
-      totalCommissions += totalBilled * (commissionPercent / 100)
+      if (isAppointmentCommissionMode(prof)) {
+        // Modo comisión por turno: % del priceCash de servicios
+        const profAppointments = appointments.filter(
+          (a) => a.professionalId === prof.id && a.status === "completado" && isThisMonth(a.date)
+        )
+        const totalBilled = profAppointments.reduce((sum, a) => sum + getAppointmentCommissionBase(a), 0)
+        totalCommissions += totalBilled * (prof.hourlyRate / 100)
+      } else {
+        // Modo comisión por venta de productos: tabla de niveles
+        const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
+        totalCommissions += (prof.monthlySalesAmount || 0) * (commissionPercent / 100)
+      }
     })
     return totalCommissions
   }, [professionals, appointments])
@@ -124,8 +134,12 @@ export function ReportsModule() {
       dayAppointments.forEach((apt) => {
         const prof = professionals.find((p) => p.id === apt.professionalId)
         if (prof) {
-          const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
-          dayCommissions += getAppointmentCommissionBase(apt) * (commissionPercent / 100)
+          if (isAppointmentCommissionMode(prof)) {
+            dayCommissions += getAppointmentCommissionBase(apt) * (prof.hourlyRate / 100)
+          } else {
+            const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
+            dayCommissions += getAppointmentCommissionBase(apt) * (commissionPercent / 100)
+          }
         }
       })
       
@@ -166,18 +180,31 @@ export function ReportsModule() {
   // Calculate commissions per professional (solo mes actual)
   const commissionsData = useMemo(() => {
     return professionals.filter(p => p.id !== 'clau').map((prof) => {
-      const profAppointments = appointments.filter(
-        (a) => a.professionalId === prof.id && a.status === "completado" && isThisMonth(a.date)
-      )
-      const totalBilled = profAppointments.reduce((sum, a) => sum + getAppointmentCommissionBase(a), 0)
-      const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
-      const commission = totalBilled * (commissionPercent / 100)
-      return {
-        name: prof.name.split(" ").slice(1).join(" ") || prof.shortName,
-        facturado: totalBilled,
-        comision: commission,
-        turnos: profAppointments.length,
-        porcentaje: commissionPercent,
+      if (isAppointmentCommissionMode(prof)) {
+        // Modo comisión por turno: % del priceCash de servicios
+        const profAppointments = appointments.filter(
+          (a) => a.professionalId === prof.id && a.status === "completado" && isThisMonth(a.date)
+        )
+        const totalBilled = profAppointments.reduce((sum, a) => sum + getAppointmentCommissionBase(a), 0)
+        const commission = totalBilled * (prof.hourlyRate / 100)
+        return {
+          name: prof.name.split(" ").slice(1).join(" ") || prof.shortName,
+          facturado: totalBilled,
+          comision: commission,
+          turnos: profAppointments.length,
+          porcentaje: prof.hourlyRate,
+        }
+      } else {
+        // Modo comisión por venta de productos
+        const commissionPercent = calculateCommissionTab(prof.monthlySalesCount)
+        const commission = (prof.monthlySalesAmount || 0) * (commissionPercent / 100)
+        return {
+          name: prof.name.split(" ").slice(1).join(" ") || prof.shortName,
+          facturado: prof.monthlySalesAmount || 0,
+          comision: commission,
+          turnos: 0,
+          porcentaje: commissionPercent,
+        }
       }
     }).sort((a, b) => b.comision - a.comision)
   }, [professionals, appointments])
