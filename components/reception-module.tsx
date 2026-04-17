@@ -437,8 +437,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     const all = getProfessionalsForService(schedulingService) || []
     if (!schedulingDate) return all
     const dateObj = schedulingDate.includes('T') ? new Date(schedulingDate) : new Date(schedulingDate + 'T12:00:00')
+    const dateStr = dateObj.toISOString().split('T')[0] // YYYY-MM-DD
     const dayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dateObj.getDay()]
     return all.filter((p: any) => {
+      // Primero chequear si tiene una fecha especial para ese día exacto
+      if (p.exceptions && p.exceptions[dateStr] && p.exceptions[dateStr].length > 0) return true
+      // Si no, usar el cronograma semanal
       const daySched = p.schedule ? (p.schedule as any)[dayKey] : null
       return daySched && daySched.length > 0
     })

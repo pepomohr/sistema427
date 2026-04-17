@@ -54,6 +54,9 @@ export function HRModule() {
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [selectedProf, setSelectedProf] = useState<Professional | null>(null)
   const [editingSchedule, setEditingSchedule] = useState<WeekSchedule | null>(null)
+  const [editingExceptions, setEditingExceptions] = useState<Record<string, { start: string, end: string }[]>>({})
+  const [scheduleTab, setScheduleTab] = useState<'weekly' | 'special'>('weekly')
+  const [newSpecialDate, setNewSpecialDate] = useState("")
   
   const [newProfData, setNewProfData] = useState<any>({ name: "", shortName: "", specialties: [] as ServiceCategory[], color: "#16A34A", hourlyRate: 50, hourlyRateFacial: '', hourlyRateCorporal: '' })
   const [isCommissionMode, setIsCommissionMode] = useState(true)
@@ -62,19 +65,41 @@ export function HRModule() {
   const handleEditSchedule = (prof: Professional) => {
     setSelectedProf(prof)
     setEditingSchedule(prof.schedule || {})
+    setEditingExceptions(prof.exceptions || {})
+    setScheduleTab('weekly')
+    setNewSpecialDate("")
     setShowScheduleModal(true)
   }
 
   const handleSaveSchedule = async () => {
     if (selectedProf && editingSchedule) {
       try {
-        await updateProfessional(selectedProf.id, { schedule: editingSchedule })
+        await updateProfessional(selectedProf.id, { schedule: editingSchedule, exceptions: editingExceptions })
         setShowScheduleModal(false)
         confirm({ title: "✅ Horarios Guardados", description: "Los cambios fueron guardados correctamente.", actionType: "success", onConfirm: () => {} })
       } catch (err: any) {
         alert(`❌ Error al guardar los horarios: ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`)
       }
     }
+  }
+
+  const handleAddSpecialDate = () => {
+    if (!newSpecialDate) return
+    if (editingExceptions[newSpecialDate]) return // ya existe
+    setEditingExceptions(prev => ({ ...prev, [newSpecialDate]: [{ start: "09:00", end: "18:00" }] }))
+    setNewSpecialDate("")
+  }
+
+  const handleRemoveSpecialDate = (dateKey: string) => {
+    setEditingExceptions(prev => { const next = { ...prev }; delete next[dateKey]; return next })
+  }
+
+  const formatSpecialDate = (dateKey: string) => {
+    const [y, m, d] = dateKey.split('-')
+    const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    const date = new Date(Number(y), Number(m) - 1, Number(d))
+    return `${days[date.getDay()]} ${d} ${months[date.getMonth()]} ${y}`
   }
 
   const toggleSpecialty = (s: ServiceCategory) => {
@@ -354,74 +379,159 @@ export function HRModule() {
       </div>
 
       <Dialog open={showScheduleModal} onOpenChange={setShowScheduleModal}>
-        <DialogContent className="bg-white rounded-xl max-w-sm p-6">
+        <DialogContent className="bg-white rounded-xl max-w-sm p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-center font-bold text-[#16A34A] text-lg uppercase tracking-wide">Cronograma: {selectedProf?.shortName}</DialogTitle></DialogHeader>
-          <div className="space-y-3 mt-4">
-            {DAYS_OF_WEEK.map((day) => {
-              const rawSched = (editingSchedule as any)?.[day.key];
-              const shifts = Array.isArray(rawSched) ? rawSched : (rawSched ? [rawSched] : []);
-              const isActive = shifts.length > 0;
 
-              return (
-                <div key={day.key} className="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+          {/* TABS */}
+          <div className="flex gap-1 mt-4 bg-gray-100 p-1 rounded-lg">
+            <button onClick={() => setScheduleTab('weekly')} className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-colors ${scheduleTab === 'weekly' ? 'bg-white text-[#16A34A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              Semanal
+            </button>
+            <button onClick={() => setScheduleTab('special')} className={`flex-1 py-1.5 text-sm font-bold rounded-md transition-colors ${scheduleTab === 'special' ? 'bg-white text-[#16A34A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              Fechas Especiales {Object.keys(editingExceptions).length > 0 && <span className="ml-1 bg-[#16A34A] text-white text-xs rounded-full px-1.5">{Object.keys(editingExceptions).length}</span>}
+            </button>
+          </div>
+
+          {/* TAB SEMANAL */}
+          {scheduleTab === 'weekly' && (
+            <div className="space-y-3 mt-4">
+              {DAYS_OF_WEEK.map((day) => {
+                const rawSched = (editingSchedule as any)?.[day.key];
+                const shifts = Array.isArray(rawSched) ? rawSched : (rawSched ? [rawSched] : []);
+                const isActive = shifts.length > 0;
+                return (
+                  <div key={day.key} className="flex flex-col gap-2 p-3 border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
                         <Switch checked={isActive} onCheckedChange={(val) => {
-                            const newS = {...editingSchedule} as any; 
-                            if(val) newS[day.key] = [{start: "09:00", end: "18:00"}]; else delete newS[day.key]
-                            setEditingSchedule(newS)
+                          const newS = {...editingSchedule} as any;
+                          if(val) newS[day.key] = [{start: "09:00", end: "18:00"}]; else delete newS[day.key]
+                          setEditingSchedule(newS)
                         }} />
                         <span className="text-sm font-semibold w-20">{day.label}</span>
-                    </div>
-                    {isActive && (
+                      </div>
+                      {isActive && (
                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-[#16A34A] hover:bg-green-50" onClick={() => {
-                            const newS = {...editingSchedule} as any;
-                            newS[day.key] = [...shifts, {start: "16:00", end: "20:00"}];
-                            setEditingSchedule(newS);
+                          const newS = {...editingSchedule} as any;
+                          newS[day.key] = [...shifts, {start: "16:00", end: "20:00"}];
+                          setEditingSchedule(newS);
                         }}>
-                            <Plus size={16} />
+                          <Plus size={16} />
                         </Button>
-                    )}
-                  </div>
-                  
-                  {isActive && shifts.map((sched: any, index: number) => (
+                      )}
+                    </div>
+                    {isActive && shifts.map((sched: any, index: number) => (
                       <div key={index} className="flex items-center gap-2 justify-end pl-8">
                         <Select value={sched.start} onValueChange={(v) => {
-                            const newS = {...editingSchedule} as any;
-                            newS[day.key][index] = {...sched, start: v};
-                            setEditingSchedule(newS);
+                          const newS = {...editingSchedule} as any;
+                          newS[day.key][index] = {...sched, start: v};
+                          setEditingSchedule(newS);
                         }}>
-                            <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue/></SelectTrigger>
-                            <SelectContent>{TIME_OPTIONS.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}</SelectContent>
+                          <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue/></SelectTrigger>
+                          <SelectContent>{TIME_OPTIONS.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}</SelectContent>
                         </Select>
                         <span className="text-xs text-gray-500">a</span>
                         <Select value={sched.end} onValueChange={(v) => {
-                            const newS = {...editingSchedule} as any;
-                            newS[day.key][index] = {...sched, end: v};
-                            setEditingSchedule(newS);
+                          const newS = {...editingSchedule} as any;
+                          newS[day.key][index] = {...sched, end: v};
+                          setEditingSchedule(newS);
                         }}>
-                            <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue/></SelectTrigger>
-                            <SelectContent>{TIME_OPTIONS.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}</SelectContent>
+                          <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue/></SelectTrigger>
+                          <SelectContent>{TIME_OPTIONS.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}</SelectContent>
                         </Select>
-                        
                         {index > 0 ? (
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => {
-                                const newS = {...editingSchedule} as any;
-                                newS[day.key] = shifts.filter((_: any, i: number) => i !== index);
-                                setEditingSchedule(newS);
-                            }}>
-                                <Trash2 size={16} />
-                            </Button>
-                        ) : (
-                            <div className="w-8"></div>
-                        )}
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => {
+                            const newS = {...editingSchedule} as any;
+                            newS[day.key] = shifts.filter((_: any, i: number) => i !== index);
+                            setEditingSchedule(newS);
+                          }}>
+                            <Trash2 size={16} />
+                          </Button>
+                        ) : <div className="w-8"></div>}
                       </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* TAB FECHAS ESPECIALES */}
+          {scheduleTab === 'special' && (
+            <div className="space-y-4 mt-4">
+              <p className="text-xs text-gray-500">Agregá días puntuales (sábados de jornada, feriados, etc.) con horarios específicos. Estos tienen prioridad sobre el cronograma semanal.</p>
+
+              {/* AGREGAR NUEVA FECHA */}
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-xs font-bold text-gray-600">Nueva fecha</Label>
+                  <input
+                    type="date"
+                    value={newSpecialDate}
+                    onChange={e => setNewSpecialDate(e.target.value)}
+                    className="w-full h-9 px-3 text-sm border border-gray-200 rounded-md bg-white text-black font-medium focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
+                  />
+                </div>
+                <Button onClick={handleAddSpecialDate} disabled={!newSpecialDate} className="bg-[#16A34A] hover:bg-[#15803d] text-white h-9 px-3 font-bold">
+                  <Plus size={16} />
+                </Button>
+              </div>
+
+              {/* LISTA DE FECHAS ESPECIALES */}
+              {Object.keys(editingExceptions).length === 0 ? (
+                <p className="text-center text-gray-400 italic text-sm py-4">Sin fechas especiales cargadas</p>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(editingExceptions).sort(([a], [b]) => a.localeCompare(b)).map(([dateKey, shifts]) => (
+                    <div key={dateKey} className="border border-emerald-200 bg-emerald-50/50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-emerald-800">{formatSpecialDate(dateKey)}</span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-[#16A34A] hover:bg-green-100" onClick={() => {
+                            setEditingExceptions(prev => ({ ...prev, [dateKey]: [...shifts, { start: "16:00", end: "20:00" }] }))
+                          }}>
+                            <Plus size={14} />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleRemoveSpecialDate(dateKey)}>
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </div>
+                      {shifts.map((sched, index) => (
+                        <div key={index} className="flex items-center gap-2 justify-end">
+                          <Select value={sched.start} onValueChange={(v) => {
+                            const updated = shifts.map((s, i) => i === index ? { ...s, start: v } : s)
+                            setEditingExceptions(prev => ({ ...prev, [dateKey]: updated }))
+                          }}>
+                            <SelectTrigger className="w-[80px] h-8 text-xs bg-white"><SelectValue/></SelectTrigger>
+                            <SelectContent>{TIME_OPTIONS.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}</SelectContent>
+                          </Select>
+                          <span className="text-xs text-gray-500">a</span>
+                          <Select value={sched.end} onValueChange={(v) => {
+                            const updated = shifts.map((s, i) => i === index ? { ...s, end: v } : s)
+                            setEditingExceptions(prev => ({ ...prev, [dateKey]: updated }))
+                          }}>
+                            <SelectTrigger className="w-[80px] h-8 text-xs bg-white"><SelectValue/></SelectTrigger>
+                            <SelectContent>{TIME_OPTIONS.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}</SelectContent>
+                          </Select>
+                          {index > 0 ? (
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => {
+                              const updated = shifts.filter((_, i) => i !== index)
+                              setEditingExceptions(prev => ({ ...prev, [dateKey]: updated }))
+                            }}>
+                              <Trash2 size={14} />
+                            </Button>
+                          ) : <div className="w-8"></div>}
+                        </div>
+                      ))}
+                    </div>
                   ))}
                 </div>
-              )
-            })}
-            <Button onClick={handleSaveSchedule} className="w-full bg-[#16A34A] hover:bg-[#15803d] text-white font-bold h-12 rounded-lg mt-4">Guardar Cronograma</Button>
-          </div>
+              )}
+            </div>
+          )}
+
+          <Button onClick={handleSaveSchedule} className="w-full bg-[#16A34A] hover:bg-[#15803d] text-white font-bold h-12 rounded-lg mt-4">Guardar Cronograma</Button>
         </DialogContent>
       </Dialog>
 
