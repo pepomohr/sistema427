@@ -227,7 +227,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
   const handleConfirmFinish = () => {
     if (finishingServices.length === 0) {
-      alert("Debes dejar al menos un servicio cargado.")
+      confirm({ title: "Sin servicios", description: "Debés dejar al menos un servicio cargado.", actionType: "info", onConfirm: () => {} })
       return
     }
     confirm({
@@ -573,7 +573,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
                 <Button
                   onClick={async () => {
                     if (bal < directSaleTotal) {
-                      alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${directSaleTotal.toLocaleString('es-AR')}`)
+                      confirm({ title: "Saldo insuficiente", description: `Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${directSaleTotal.toLocaleString('es-AR')}`, actionType: "info", onConfirm: () => {} })
                       return
                     }
                     if (!currentProfessional) return

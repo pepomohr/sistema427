@@ -86,7 +86,7 @@ export function HRModule() {
         setShowScheduleModal(false)
         confirm({ title: "✅ Horarios Guardados", description: "Los cambios fueron guardados correctamente.", actionType: "success", onConfirm: () => {} })
       } catch (err: any) {
-        alert(`❌ Error al guardar los horarios: ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`)
+        confirm({ title: "Error al guardar", description: err?.message || "No se pudieron guardar los horarios. Intentá de nuevo.", actionType: "danger", onConfirm: () => {} })
       }
     }
   }
@@ -142,7 +142,7 @@ export function HRModule() {
           await resetProfessionalPin(p.id); 
           confirm({title: "PIN Borrado", description: "El acceso ha sido reseteado exitosamente.", actionType:"success", onConfirm:()=>{}}) 
         } catch (error) {
-          alert("Error al resetear el PIN. Verificá la conexión.");
+          confirm({ title: "Error al resetear PIN", description: "No se pudo resetear el PIN. Verificá la conexión.", actionType: "danger", onConfirm: () => {} })
         } finally {
           setResettingPinId(null);
         }
@@ -235,7 +235,7 @@ export function HRModule() {
       ),
       confirmText: "Aprobar y Registrar",
       onConfirm: () => {
-        alert(`Liquidación de $${totalPay} guardada correctamente.`);
+        setTimeout(() => confirm({ title: "Liquidación Guardada", description: `La liquidación de $${totalPay.toLocaleString('es-AR')} fue registrada correctamente.`, actionType: "success", onConfirm: () => {} }), 150)
       }
     });
   }

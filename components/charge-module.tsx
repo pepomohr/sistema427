@@ -181,17 +181,15 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
       const aptPat = patients.find(p => p.id === activeApt?.patientId)
       const bal = aptPat?.giftCardBalance || 0
       if (bal <= 0) {
-        alert('Este paciente no tiene saldo a favor.')
+        confirm({ title: "Sin saldo a favor", description: "Este paciente no tiene saldo a favor.", actionType: "info", onConfirm: () => {} })
         return
       }
       if (bal >= totals.total && secondPaymentMethod && parseFloat(secondPaymentAmount) > 0) {
-        // Saldo cubre todo el turno → no puede usarse como pago parcial
-        alert(`El saldo disponible ($${bal.toLocaleString('es-AR')}) cubre el total del turno. No se puede dividir el pago: el saldo a favor debe cubrir el total completo.`)
+        confirm({ title: "Pago no válido", description: `El saldo disponible ($${bal.toLocaleString('es-AR')}) cubre el total del turno. No se puede dividir el pago: el saldo a favor debe cubrir el total completo.`, actionType: "info", onConfirm: () => {} })
         return
       }
       if (bal < totals.total && !secondPaymentMethod) {
-        // Saldo no alcanza y no hay segundo método
-        alert(`Saldo insuficiente para cubrir el turno completo ($${totals.total.toLocaleString('es-AR')}). Disponible: $${bal.toLocaleString('es-AR')}. Seleccioná un segundo método de pago por la diferencia de $${(totals.total - bal).toLocaleString('es-AR')}.`)
+        confirm({ title: "Saldo insuficiente", description: `Saldo insuficiente para cubrir el turno completo ($${totals.total.toLocaleString('es-AR')}). Disponible: $${bal.toLocaleString('es-AR')}. Seleccioná un segundo método de pago por la diferencia de $${(totals.total - bal).toLocaleString('es-AR')}.`, actionType: "info", onConfirm: () => {} })
         return
       }
     }
@@ -241,16 +239,19 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
 
   const handleProcessDirectSale = async (method: "efectivo" | "tarjeta" | "transferencia" | "qr" | "gift_card") => {
     if (!directSalePatient) {
-      alert("Seleccioná el paciente antes de procesar la venta.")
+      confirm({ title: "Falta el paciente", description: "Seleccioná el paciente antes de procesar la venta.", actionType: "info", onConfirm: () => {} })
       return
     }
     const missingSeller = directSaleItems.some(i => i.type === 'product' && !i.soldBy)
-    if (missingSeller) { alert("Por favor, selecciona qué profesional vendió cada producto."); return; }
+    if (missingSeller) {
+      confirm({ title: "Falta el vendedor", description: "Por favor, seleccioná qué profesional vendió cada producto.", actionType: "info", onConfirm: () => {} })
+      return
+    }
     if (directSaleItems.length > 0) {
       const hasInvalidGiftCardAmount = directSaleItems.some(i => isGiftCardGeneralItem(i) && !(typeof i.customUnitPrice === "number" && i.customUnitPrice > 0))
       if (hasInvalidGiftCardAmount) {
-        alert("Ingresá un monto válido para la Gift Card General.");
-        return;
+        confirm({ title: "Monto inválido", description: "Ingresá un monto válido para la Gift Card General.", actionType: "info", onConfirm: () => {} })
+        return
       }
 
       // Para gift_card se cobra precio efectivo (es dinero del paciente)
@@ -788,11 +789,11 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   disabled={!directSalePaymentMethod}
                   onClick={async () => {
                     if ((directSalePaymentMethod as any) === 'gift_card') {
-                      if (!directSalePatient) { alert("Seleccioná el paciente primero."); return }
+                      if (!directSalePatient) { confirm({ title: "Falta el paciente", description: "Seleccioná el paciente primero.", actionType: "info", onConfirm: () => {} }); return }
                       const dsPat = patients.find(p => p.id === directSalePatient)
                       const bal = dsPat?.giftCardBalance || 0
                       if (bal < directSaleDisplayTotal) {
-                        alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${directSaleDisplayTotal.toLocaleString('es-AR')}`)
+                        confirm({ title: "Saldo insuficiente", description: `Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${directSaleDisplayTotal.toLocaleString('es-AR')}`, actionType: "info", onConfirm: () => {} })
                         return
                       }
                       const pacienteCapturado = directSalePatient

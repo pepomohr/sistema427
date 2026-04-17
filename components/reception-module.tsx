@@ -225,7 +225,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       try {
         await updatePatientGiftCardBalance(selectedPatient.id, giftCardAmount);
       } catch (err: any) {
-        alert(`❌ Error al guardar el saldo a favor: ${err?.message || 'Error desconocido'}. El saldo NO fue acreditado.`)
+        confirm({ title: "Error al acreditar saldo", description: `${err?.message || 'Error desconocido'}. El saldo NO fue acreditado.`, actionType: "danger", onConfirm: () => {} })
         return
       }
 
@@ -1242,7 +1242,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                             if (checkoutPaymentMethod === 'gift_card') {
                               const bal = patients.find(p => p.id === selectedPatient?.id)?.giftCardBalance || 0
                               if (bal < finalToPay) {
-                                alert(`Saldo insuficiente. Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${finalToPay.toLocaleString('es-AR')}`)
+                                confirm({ title: "Saldo insuficiente", description: `Disponible: $${bal.toLocaleString('es-AR')}, necesario: $${finalToPay.toLocaleString('es-AR')}`, actionType: "info", onConfirm: () => {} })
                                 return
                               }
                             }
