@@ -774,8 +774,9 @@ export function ReportsModule() {
                   const salesAmount = prof.monthlySalesAmount || 0;
                   const pct = calculateCommissionTab(salesCount)
                   const commission = salesAmount * pct / 100
-                  const nextTarget = salesCount < 21 ? 21 : salesCount < 31 ? 31 : 31
-                  const progressValue = Math.min((salesCount / nextTarget) * 100, 100);
+                  const atMaxLevel = salesCount >= 31
+                  const nextTarget = salesCount < 21 ? 21 : salesCount < 31 ? 31 : salesCount
+                  const progressValue = atMaxLevel ? 100 : Math.min((salesCount / nextTarget) * 100, 100);
                   const levelLabel = pct === 10 ? 'Nivel 3 — 10%' : pct === 7.5 ? 'Nivel 2 — 7.5%' : pct === 5 ? 'Nivel 1 — 5%' : 'Sin nivel'
                   return (
                     <Card key={prof.id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -795,7 +796,7 @@ export function ReportsModule() {
                         <div className="space-y-2 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                           <div className="flex justify-between text-xs font-medium text-gray-500">
                             <span>${salesAmount.toLocaleString('es-AR')} vendidos</span>
-                            <span className="font-bold text-emerald-600">{salesCount} / {nextTarget}</span>
+                            <span className="font-bold text-emerald-600">{atMaxLevel ? `${salesCount} ✓ máx.` : `${salesCount} / ${nextTarget}`}</span>
                           </div>
                           <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-[#16A34A]" />
                           {pct > 0 && (
