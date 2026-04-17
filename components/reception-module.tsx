@@ -99,6 +99,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     startAttention,
     cancelAppointment,
     updatePatientGiftCardBalance,
+    setPatientGiftCardBalance,
     addSale,
     addSaleMultipago
   } = useClinicStore()
@@ -152,6 +153,9 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const [showGiftCardLoader, setShowGiftCardLoader] = useState(false)
   const [giftCardAmount, setGiftCardAmount] = useState<number | "">("")
   const [giftCardPaymentMethod, setGiftCardPaymentMethod] = useState<"efectivo" | "tarjeta" | "transferencia" | "qr" | "">("")
+  const [editingBalance, setEditingBalance] = useState(false)
+  const [editBalanceValue, setEditBalanceValue] = useState<string>("")
+  const [savingBalance, setSavingBalance] = useState(false)
 
   // Edit Appointment
   const [editAppointmentData, setEditAppointmentData] = useState<any>(null)
@@ -432,7 +436,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     if (directSaleOfferId) {
       const offer = useClinicStore.getState().offers.find(o => o.id === directSaleOfferId)
       if (offer) {
-        return Math.max(0, rawTotal * (1 - offer.discountPercentage / 100))
+        // Descuento siempre sobre precio lista
+        const listaTotal = directSaleCart.reduce((acc, item: any) => {
+          const p = typeof item.customUnitPrice === 'number' && item.customUnitPrice > 0
+            ? item.customUnitPrice
+            : (item.product?.priceList || item.product?.priceCash || 0)
+          return acc + p * item.quantity
+        }, 0)
+        return Math.max(0, listaTotal * (1 - offer.discountPercentage / 100))
       }
     }
     return rawTotal
@@ -928,10 +939,48 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         <p className="text-[10px] text-gray-400 font-bold uppercase">Saldo favor</p>
                         {(() => {
                           const liveBal = patients.find(p => p.id === selectedPatient.id)?.giftCardBalance || 0
+                          if (editingBalance) {
+                            return (
+                              <div className="flex items-center gap-1 justify-center mt-1">
+                                <input
+                                  type="number"
+                                  value={editBalanceValue}
+                                  onChange={e => setEditBalanceValue(e.target.value)}
+                                  className="w-20 text-sm font-bold text-center border border-emerald-400 rounded px-1 py-0.5 focus:outline-none"
+                                  autoFocus
+                                  onKeyDown={async e => {
+                                    if (e.key === 'Enter') {
+                                      setSavingBalance(true)
+                                      try { await setPatientGiftCardBalance(selectedPatient.id, Number(editBalanceValue)); setEditingBalance(false) }
+                                      catch { /* ignore */ } finally { setSavingBalance(false) }
+                                    }
+                                    if (e.key === 'Escape') setEditingBalance(false)
+                                  }}
+                                />
+                                <button
+                                  disabled={savingBalance}
+                                  onClick={async () => {
+                                    setSavingBalance(true)
+                                    try { await setPatientGiftCardBalance(selectedPatient.id, Number(editBalanceValue)); setEditingBalance(false) }
+                                    catch { /* ignore */ } finally { setSavingBalance(false) }
+                                  }}
+                                  className="text-emerald-600 hover:text-emerald-800 font-bold text-xs px-1"
+                                >✓</button>
+                                <button onClick={() => setEditingBalance(false)} className="text-gray-400 hover:text-gray-600 text-xs px-1">✕</button>
+                              </div>
+                            )
+                          }
                           return (
-                            <p className={`text-lg font-black ${liveBal > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
-                              ${liveBal.toLocaleString()}
-                            </p>
+                            <div className="flex items-center gap-1 justify-center">
+                              <p className={`text-lg font-black ${liveBal > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                ${liveBal.toLocaleString()}
+                              </p>
+                              <button
+                                onClick={() => { setEditBalanceValue(String(liveBal)); setEditingBalance(true) }}
+                                className="text-gray-300 hover:text-gray-500 ml-0.5"
+                                title="Corregir saldo"
+                              >✏️</button>
+                            </div>
                           )
                         })()}
                       </div>
@@ -1177,7 +1226,8 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                   if (checkoutOfferId) {
                     const offer = offers.find(o => o.id === checkoutOfferId);
                     if (offer) {
-                      discountedTotal = chosenTotalOriginal * (1 - offer.discountPercentage / 100);
+                      // Descuento siempre sobre precio lista
+                      discountedTotal = subtotalList * (1 - offer.discountPercentage / 100);
                     }
                   }
                   

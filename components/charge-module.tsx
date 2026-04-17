@@ -168,7 +168,14 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     let finalTotal = subtotal
     if (selectedOfferId && selectedOfferId !== "none") {
       const offer = offers.find(o => o.id === selectedOfferId)
-      if (offer) finalTotal = subtotal * (1 - offer.discountPercentage / 100)
+      if (offer) {
+        // Descuento siempre sobre precio lista (no precio efectivo)
+        let listaSubtotal = 0
+        ;(activeApt.services || []).forEach((s: any) => { listaSubtotal += (s.price || 0) })
+        ;(activeApt.products || []).forEach((p: any) => { listaSubtotal += (p.price || 0) * p.quantity })
+        extraProducts.forEach((p: any) => { listaSubtotal += (p.priceList || 0) * p.quantity })
+        finalTotal = listaSubtotal * (1 - offer.discountPercentage / 100)
+      }
     }
     const alreadyPaid = activeApt.paidAmount || 0
     const pending = Math.max(0, Math.round(finalTotal) - alreadyPaid)

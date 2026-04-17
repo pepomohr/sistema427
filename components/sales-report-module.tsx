@@ -203,6 +203,33 @@ export function SalesReportModule() {
     }))
   })
 
+  const handleExportCSV = () => {
+    const headers = ["Fecha","Hora","ID","Paciente","Profesional","Origen","Ítem","Tipo","Cantidad","PrecioUnitario","Subtotal","FormaPago","EsGiftCard","TotalVenta","Observaciones"]
+    const csvRows = rows.map((r: any) => [
+      format(r.date, "dd/MM/yyyy"),
+      format(r.date, "HH:mm"),
+      r.isFirstItem ? r.saleId : "",
+      r.isFirstItem ? r.patientName : "",
+      r.isFirstItem ? r.profName : "",
+      r.isFirstItem ? (r.isAppointment ? "Turno" : "Venta Directa") : "",
+      `"${r.itemName}"`,
+      r.itemType === "service" ? "Servicio" : "Producto",
+      r.quantity,
+      r.price / r.quantity,
+      r.price,
+      r.isFirstItem ? (PAYMENT_LABELS[r.split1?.method || r.paymentMethod] || r.paymentMethod || "") : "",
+      r.isFirstItem ? ((r.split1?.method || r.paymentMethod) === "gift_card" ? "Sí" : "No") : "",
+      r.isFirstItem ? r.saleTotal : "",
+      r.isFirstItem ? `"${r.observations}"` : "",
+    ].join(","))
+    const csv = [headers.join(","), ...csvRows].join("\n")
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url; a.download = `ventas_${dateFrom}_${dateTo}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleExportPDF = async () => {
     if (typeof window === 'undefined') return
     try {
@@ -287,8 +314,11 @@ export function SalesReportModule() {
             <Label className="text-xs font-bold text-gray-600 whitespace-nowrap">Hasta</Label>
             <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border-0 p-0 h-auto text-sm font-bold text-black w-36 focus-visible:ring-0" />
           </div>
+          <Button onClick={handleExportCSV} variant="outline" className="border-blue-500 text-blue-600 font-bold gap-2 hover:bg-blue-500 hover:text-white">
+            <Download className="h-4 w-4" /> CSV (Google Sheets)
+          </Button>
           <Button onClick={handleExportPDF} variant="outline" className="border-[#16A34A] text-[#16A34A] font-bold gap-2 hover:bg-[#16A34A] hover:text-white">
-            <Download className="h-4 w-4" /> Descargar PDF
+            <Download className="h-4 w-4" /> PDF
           </Button>
         </div>
       </div>
