@@ -758,16 +758,15 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   updateService: async (id, updates) => {
-    try {
-      const up: any = {}
-      if (updates.name !== undefined) up.name = updates.name
-      if (updates.price !== undefined) up.price = updates.price
-      if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
-      if (updates.category !== undefined) up.category = updates.category
-      if (updates.duration !== undefined) up.duration = Number(updates.duration)
-      const { error } = await supabase.from('services').update(up).eq('id', id)
-      if (!error) set(state => ({ services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) }))
-    } catch (err) {}
+    const up: any = {}
+    if (updates.name !== undefined) up.name = updates.name
+    if (updates.price !== undefined) up.price = updates.price
+    if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
+    if (updates.category !== undefined) up.category = updates.category
+    if (updates.duration !== undefined) up.duration = Number(updates.duration)
+    const { error } = await supabase.from('services').update(up).eq('id', id)
+    if (error) throw new Error(error.message)
+    set(state => ({ services: state.services.map(s => s.id === id ? { ...s, ...updates } : s) }))
   },
 
   deleteService: async (id) => {
@@ -785,16 +784,15 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   updateProduct: async (id, updates) => {
-    try {
-      const up: any = {}
-      if (updates.name !== undefined) up.name = updates.name
-      if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
-      if (updates.priceList !== undefined) up.price_list = updates.priceList
-      if (updates.stock !== undefined) up.stock = updates.stock
-      if (updates.category !== undefined) up.category = updates.category
-      const { error } = await supabase.from('products').update(up).eq('id', id)
-      if (!error) set(state => ({ products: state.products.map(p => p.id === id ? { ...p, ...updates } : p) }))
-    } catch (err) {}
+    const up: any = {}
+    if (updates.name !== undefined) up.name = updates.name
+    if (updates.priceCash !== undefined) up.price_cash = updates.priceCash
+    if (updates.priceList !== undefined) up.price_list = updates.priceList
+    if (updates.stock !== undefined) up.stock = updates.stock
+    if (updates.category !== undefined) up.category = updates.category
+    const { error } = await supabase.from('products').update(up).eq('id', id)
+    if (error) throw new Error(error.message)
+    set(state => ({ products: state.products.map(p => p.id === id ? { ...p, ...updates } : p) }))
   },
 
   deleteProduct: async (id) => {

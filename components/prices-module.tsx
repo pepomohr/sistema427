@@ -7,33 +7,52 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DollarSign, Search, Check, X, Pencil } from "lucide-react"
+import { DollarSign, Search, Check, X, Pencil, Loader2 } from "lucide-react"
 
 export function PricesModule() {
   const { services, products, updateService, updateProduct } = useClinicStore()
   const [search, setSearch] = useState("")
 
-  // Editing state: { id, type, priceCash, price/priceList }
+  // Editing state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editCash, setEditCash] = useState<string>("")
   const [editList, setEditList] = useState<string>("")
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const startEdit = (id: string, cash: number, list: number) => {
     setEditingId(id)
     setEditCash(String(cash || 0))
     setEditList(String(list || 0))
+    setSaveError(null)
   }
 
-  const cancelEdit = () => { setEditingId(null); setEditCash(""); setEditList("") }
+  const cancelEdit = () => { setEditingId(null); setEditCash(""); setEditList(""); setSaveError(null) }
 
   const saveService = async (id: string) => {
-    await updateService(id, { priceCash: Number(editCash), price: Number(editList) })
-    cancelEdit()
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await updateService(id, { priceCash: Number(editCash), price: Number(editList) })
+      cancelEdit()
+    } catch (err: any) {
+      setSaveError(err?.message || "Error al guardar. Intentá de nuevo.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const saveProduct = async (id: string) => {
-    await updateProduct(id, { priceCash: Number(editCash), priceList: Number(editList) })
-    cancelEdit()
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await updateProduct(id, { priceCash: Number(editCash), priceList: Number(editList) })
+      cancelEdit()
+    } catch (err: any) {
+      setSaveError(err?.message || "Error al guardar. Intentá de nuevo.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const filteredServices = useMemo(() =>
@@ -46,26 +65,33 @@ export function PricesModule() {
       .sort((a, b) => a.name.localeCompare(b.name)),
     [products, search])
 
-  const EditRow = ({ id, cash, list, onSave }: { id: string, cash: number, list: number, onSave: (id: string) => void }) => (
-    <div className="flex items-center gap-2 mt-2">
-      <div className="flex-1 space-y-1">
-        <p className="text-[10px] text-gray-400 font-bold uppercase">Precio Efectivo</p>
-        <Input type="number" value={editCash} onChange={e => setEditCash(e.target.value)}
-          className="h-8 text-sm border-emerald-400 font-bold text-black" autoFocus />
+  const EditRow = ({ id, onSave }: { id: string, onSave: (id: string) => void }) => (
+    <div className="mt-2 space-y-2">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 space-y-1">
+          <p className="text-[10px] text-gray-400 font-bold uppercase">Precio Efectivo</p>
+          <Input type="number" value={editCash} onChange={e => setEditCash(e.target.value)}
+            className="h-8 text-sm border-emerald-400 font-bold text-black" autoFocus />
+        </div>
+        <div className="flex-1 space-y-1">
+          <p className="text-[10px] text-gray-400 font-bold uppercase">Precio Lista</p>
+          <Input type="number" value={editList} onChange={e => setEditList(e.target.value)}
+            className="h-8 text-sm border-blue-400 font-bold text-black" />
+        </div>
+        <div className="flex gap-1 mt-4">
+          <Button size="sm" onClick={() => onSave(id)} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 h-8 w-8 p-0">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          </Button>
+          <Button size="sm" variant="outline" onClick={cancelEdit} disabled={saving} className="h-8 w-8 p-0 border-gray-300">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-      <div className="flex-1 space-y-1">
-        <p className="text-[10px] text-gray-400 font-bold uppercase">Precio Lista</p>
-        <Input type="number" value={editList} onChange={e => setEditList(e.target.value)}
-          className="h-8 text-sm border-blue-400 font-bold text-black" />
-      </div>
-      <div className="flex gap-1 mt-4">
-        <Button size="sm" onClick={() => onSave(id)} className="bg-emerald-600 hover:bg-emerald-700 h-8 w-8 p-0">
-          <Check className="h-4 w-4" />
-        </Button>
-        <Button size="sm" variant="outline" onClick={cancelEdit} className="h-8 w-8 p-0 border-gray-300">
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+      {saveError && (
+        <p className="text-xs text-red-500 font-semibold bg-red-50 border border-red-200 rounded px-2 py-1">
+          ❌ {saveError}
+        </p>
+      )}
     </div>
   )
 
@@ -115,7 +141,7 @@ export function PricesModule() {
                       )}
                     </div>
                     {editingId === svc.id && (
-                      <EditRow id={svc.id} cash={svc.priceCash || 0} list={svc.price || 0} onSave={saveService} />
+                      <EditRow id={svc.id} onSave={saveService} />
                     )}
                   </div>
                 ))}
@@ -156,7 +182,7 @@ export function PricesModule() {
                       )}
                     </div>
                     {editingId === prod.id && (
-                      <EditRow id={prod.id} cash={prod.priceCash || 0} list={prod.priceList || 0} onSave={saveProduct} />
+                      <EditRow id={prod.id} onSave={saveProduct} />
                     )}
                   </div>
                 ))}

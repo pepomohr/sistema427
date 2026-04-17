@@ -60,12 +60,16 @@ export function SystemConfigModule() {
   }
 
   const handleSaveService = async () => {
-    if (editingServiceId) {
-      await updateService(editingServiceId, svcForm)
-    } else {
-      await addService(svcForm)
+    try {
+      if (editingServiceId) {
+        await updateService(editingServiceId, svcForm)
+      } else {
+        await addService(svcForm)
+      }
+      setShowServiceDialog(false)
+    } catch (err: any) {
+      alert(`❌ Error al guardar el servicio: ${err?.message || 'Error desconocido'}. Intentá de nuevo.`)
     }
-    setShowServiceDialog(false)
   }
 
   const handleOpenProduct = (prod?: any) => {
@@ -80,12 +84,16 @@ export function SystemConfigModule() {
   }
 
   const handleSaveProduct = async () => {
-    if (editingProductId) {
-      await updateProduct(editingProductId, prodForm)
-    } else {
-      await addProduct(prodForm)
+    try {
+      if (editingProductId) {
+        await updateProduct(editingProductId, prodForm)
+      } else {
+        await addProduct(prodForm)
+      }
+      setShowProductDialog(false)
+    } catch (err: any) {
+      alert(`❌ Error al guardar el producto: ${err?.message || 'Error desconocido'}. Intentá de nuevo.`)
     }
-    setShowProductDialog(false)
   }
 
   const handleOpenOffer = (off?: any) => {
