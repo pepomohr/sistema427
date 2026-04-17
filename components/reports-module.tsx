@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useClinicStore, calculateCommissionTab } from "@/lib/store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -39,8 +39,18 @@ import {
 } from "recharts"
 
 export function ReportsModule() {
-  const { sales, appointments, professionals, products, services, expenses, addExpense, cashClosures } = useClinicStore()
+  const { sales, appointments, professionals, products, services, expenses, addExpense, cashClosures, fetchProfessionals, fetchSales } = useClinicStore()
   const [showNeto, setShowNeto] = useState(false)
+
+  // Refrescar profesionales y ventas al montar y cada 30s para que admin vea datos actualizados
+  useEffect(() => {
+    if (typeof fetchProfessionals === 'function') fetchProfessionals()
+    if (typeof fetchSales === 'function') fetchSales()
+    const interval = setInterval(() => {
+      if (typeof fetchProfessionals === 'function') fetchProfessionals()
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [])
   const [newExpenseDesc, setNewExpenseDesc] = useState("")
   const [newExpenseAmount, setNewExpenseAmount] = useState("")
   const now = new Date()
