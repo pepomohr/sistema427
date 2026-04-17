@@ -68,7 +68,7 @@ export function SystemConfigModule() {
       }
       setShowServiceDialog(false)
     } catch (err: any) {
-      alert(`❌ Error al guardar el servicio: ${err?.message || 'Error desconocido'}. Intentá de nuevo.`)
+      confirm({ title: "Error al guardar", description: err?.message || "No se pudo guardar el servicio. Intentá de nuevo.", actionType: "danger", onConfirm: () => {} })
     }
   }
 
@@ -92,7 +92,7 @@ export function SystemConfigModule() {
       }
       setShowProductDialog(false)
     } catch (err: any) {
-      alert(`❌ Error al guardar el producto: ${err?.message || 'Error desconocido'}. Intentá de nuevo.`)
+      confirm({ title: "Error al guardar", description: err?.message || "No se pudo guardar el producto. Intentá de nuevo.", actionType: "danger", onConfirm: () => {} })
     }
   }
 
