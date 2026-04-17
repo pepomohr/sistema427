@@ -539,7 +539,16 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       professionals: state.professionals.map(p => p.id === id ? { ...p, ...updates } : p)
     }));
     try {
-      const { error } = await supabase.from('professionals').update(updates).eq('id', id)
+      // 'vacations' no existe como columna separada en Supabase:
+      // la guardamos embebida dentro del JSONB 'schedule' como clave '_vacations'
+      const supabaseUpdates: any = { ...updates }
+      if ('vacations' in supabaseUpdates) {
+        const prof = get().professionals.find(p => p.id === id)
+        const currentSchedule = supabaseUpdates.schedule ?? prof?.schedule ?? {}
+        supabaseUpdates.schedule = { ...currentSchedule, _vacations: supabaseUpdates.vacations }
+        delete supabaseUpdates.vacations
+      }
+      const { error } = await supabase.from('professionals').update(supabaseUpdates).eq('id', id)
       if (error) {
         console.error('[updateProfessional] Error guardando en Supabase:', error)
         throw new Error(error.message)
@@ -668,7 +677,15 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   fetchProfessionals: async () => {
     try {
       const { data, error } = await supabase.from('professionals').select('*');
-      if (!error && data) set({ professionals: data });
+      if (!error && data) set({
+        professionals: data.map((p: any) => ({
+          ...p,
+          // vacations se guarda embebida en schedule._vacations si no existe como columna propia
+          vacations: p.vacations ?? (p.schedule && p.schedule._vacations) ?? [],
+          // también limpiar _vacations del objeto schedule para no contaminar el horario semanal
+          schedule: p.schedule ? (({ _vacations, ...rest }) => rest)(p.schedule) : p.schedule,
+        }))
+      });
     } catch (err) { console.error(err); }
   },
 
