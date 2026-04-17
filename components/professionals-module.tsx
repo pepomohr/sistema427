@@ -53,6 +53,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     fetchAppointments,
     addAppointment,
     updatePatientGiftCardBalance,
+    searchPatients,
   } = useClinicStore()
 
   const activeTab = view
@@ -67,6 +68,8 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const [schedulingPaidAmount, setSchedulingPaidAmount] = useState<number | "">("")
   const [schedulingPatientSearch, setSchedulingPatientSearch] = useState("")
   const [schedulingPatientMenuOpen, setSchedulingPatientMenuOpen] = useState(false)
+  const [schedPatientResults, setSchedPatientResults] = useState<any[]>([])
+  const [schedPatientLoading, setSchedPatientLoading] = useState(false)
 
   // Nuevo Paciente
   const [showNewPatientDialog, setShowNewPatientDialog] = useState(false)
@@ -92,6 +95,18 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
   const [directSalePatientId, setDirectSalePatientId] = useState<string>("")
 
   const { confirm, ConfirmDialog } = useConfirm()
+
+  // Búsqueda de pacientes en DB para el modal de agendar turno
+  useEffect(() => {
+    if (schedulingPatientSearch.length < 2) { setSchedPatientResults([]); return }
+    const timer = setTimeout(async () => {
+      setSchedPatientLoading(true)
+      const results = await searchPatients(schedulingPatientSearch)
+      setSchedPatientResults(results)
+      setSchedPatientLoading(false)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [schedulingPatientSearch])
 
   useEffect(() => {
     if (typeof fetchServices === 'function') fetchServices()
@@ -217,6 +232,8 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     setShowScheduleDialog(false)
     setSchedulingPatientSearch("")
     setSchedulingPatientId("")
+    setSchedPatientResults([])
+    setSchedulingPatientMenuOpen(false)
   }
 
   const openFinishModal = (apt: any) => {
@@ -787,10 +804,12 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
               />
               {schedulingPatientMenuOpen && (
                 <div className="absolute top-full left-0 w-full bg-white border shadow-xl rounded-md max-h-[150px] overflow-y-auto z-50">
-                  {patients.filter(p => p.name.toLowerCase().includes(schedulingPatientSearch.toLowerCase())).map(p => (
+                  {schedPatientLoading && <p className="p-3 text-xs text-gray-400 italic">Buscando...</p>}
+                  {!schedPatientLoading && schedPatientResults.map(p => (
                     <button key={p.id} onClick={() => { setSchedulingPatientId(p.id); setSchedulingPatientSearch(p.name); setSchedulingPatientMenuOpen(false) }} className="w-full text-left p-3 text-sm border-b hover:bg-emerald-50">{p.name}</button>
                   ))}
-                  {patients.filter(p => p.name.toLowerCase().includes(schedulingPatientSearch.toLowerCase())).length === 0 && <p className="p-3 text-xs text-gray-400 italic">No se encontraron resultados.</p>}
+                  {!schedPatientLoading && schedulingPatientSearch.length >= 2 && schedPatientResults.length === 0 && <p className="p-3 text-xs text-gray-400 italic">No se encontraron resultados.</p>}
+                  {!schedPatientLoading && schedulingPatientSearch.length < 2 && <p className="p-3 text-xs text-gray-400 italic">Escribí al menos 2 letras...</p>}
                 </div>
               )}
             </div>
