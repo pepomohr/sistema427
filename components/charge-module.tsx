@@ -54,6 +54,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
     updatePatientGiftCardBalance,
     fetchOffers,
     fetchAppointments,
+    searchPatients,
     currentUser,
   } = useClinicStore()
 
@@ -75,6 +76,8 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   const [directSalePatient, setDirectSalePatient] = useState("")
   const [directSalePatientSearch, setDirectSalePatientSearch] = useState("")
   const [directSalePatientMenuOpen, setDirectSalePatientMenuOpen] = useState(false)
+  const [directSalePatientResults, setDirectSalePatientResults] = useState<any[]>([])
+  const [directSalePatientLoading, setDirectSalePatientLoading] = useState(false)
   const [directSaleItems, setDirectSaleItems] = useState<any[]>([])
   const [directSaleProductSearch, setDirectSaleProductSearch] = useState("")
   const [directSaleProductMenuOpen, setDirectSaleProductMenuOpen] = useState(false)
@@ -111,6 +114,20 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   useEffect(() => {
     if (typeof fetchOffers === "function") fetchOffers()
   }, [fetchOffers])
+
+  // Búsqueda de paciente en Venta Directa — consulta DB directamente (no solo store local)
+  useEffect(() => {
+    if (directSalePatientSearch.length < 2) { setDirectSalePatientResults([]); return }
+    setDirectSalePatientLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchPatients(directSalePatientSearch)
+        setDirectSalePatientResults(results || [])
+      } catch { setDirectSalePatientResults([]) }
+      finally { setDirectSalePatientLoading(false) }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [directSalePatientSearch])
 
   // Polling de turnos cada 20 segundos como fallback al Realtime
   useEffect(() => {
@@ -552,7 +569,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
 
       {/* MODAL: Venta Directa (AHORA CON TOPE DE ALTURA Y SCROLL) */}
       <Dialog open={showDirectSaleModal} onOpenChange={(open) => {
-        if (!open) { setDirectSalePatient(""); setDirectSalePatientSearch(""); setDirectSaleItems([]); setDirectSalePaymentMethod(""); setDirectSaleSecondMethod(""); setDirectSaleSecondAmount(""); setDirectSaleOfferId("") }
+        if (!open) { setDirectSalePatient(""); setDirectSalePatientSearch(""); setDirectSalePatientResults([]); setDirectSaleItems([]); setDirectSalePaymentMethod(""); setDirectSaleSecondMethod(""); setDirectSaleSecondAmount(""); setDirectSaleOfferId("") }
         setShowDirectSaleModal(open)
       }}>
         {/* EL CAMBIO ESTÁ ACÁ: max-h-[85vh] y overflow-y-auto */}
@@ -572,32 +589,26 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                 />
                 {directSalePatientMenuOpen && directSalePatientSearch.length >= 2 && (
                   <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
-                    {patients
-                      .filter(p => {
-                        const q = directSalePatientSearch.toLowerCase()
-                        return p.name.toLowerCase().includes(q) || (p.dni && p.dni.toLowerCase().includes(q))
-                      })
-                      .slice(0, 20)
-                      .map(p => (
-                        <div
-                          key={p.id}
-                          className="px-3 py-2 hover:bg-green-50 cursor-pointer text-sm font-medium text-black"
-                          onMouseDown={() => {
-                            setDirectSalePatient(p.id)
-                            setDirectSalePatientSearch(p.name + (p.dni ? ` - DNI ${p.dni}` : ""))
-                            setDirectSalePatientMenuOpen(false)
-                            useClinicStore.getState().refreshPatientBalance(p.id)
-                          }}
-                        >
-                          {p.name}{p.dni ? ` - DNI ${p.dni}` : ""}
-                        </div>
-                      ))}
-                    {patients.filter(p => {
-                      const q = directSalePatientSearch.toLowerCase()
-                      return p.name.toLowerCase().includes(q) || (p.dni && p.dni.toLowerCase().includes(q))
-                    }).length === 0 && (
+                    {directSalePatientLoading && (
+                      <div className="px-3 py-2 text-sm text-gray-400 italic">Buscando...</div>
+                    )}
+                    {!directSalePatientLoading && directSalePatientResults.length === 0 && (
                       <div className="px-3 py-2 text-sm text-gray-400 italic">Sin resultados</div>
                     )}
+                    {!directSalePatientLoading && directSalePatientResults.map((p: any) => (
+                      <div
+                        key={p.id}
+                        className="px-3 py-2 hover:bg-green-50 cursor-pointer text-sm font-medium text-black"
+                        onMouseDown={() => {
+                          setDirectSalePatient(p.id)
+                          setDirectSalePatientSearch(p.name + (p.dni ? ` - DNI ${p.dni}` : ""))
+                          setDirectSalePatientMenuOpen(false)
+                          useClinicStore.getState().refreshPatientBalance(p.id)
+                        }}
+                      >
+                        {p.name}{p.dni ? ` - DNI ${p.dni}` : ""}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
