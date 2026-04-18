@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ClipboardList, Calendar, Download, Stethoscope, ShoppingBag } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ClipboardList, Calendar, Download, Stethoscope, ShoppingBag, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react"
 import { format } from "date-fns"
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -38,6 +39,23 @@ export function SalesReportModule() {
   const today = format(new Date(), "yyyy-MM-dd")
   const [dateFrom, setDateFrom] = useState(today)
   const [dateTo, setDateTo] = useState(today)
+
+  // Ordenamiento y filtros de tabla
+  type SortField = 'fecha' | 'hora' | 'paciente' | 'profesional' | 'pago' | 'total'
+  const [sortField, setSortField] = useState<SortField>('fecha')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [filterPago, setFilterPago] = useState('')
+  const [filterProf, setFilterProf] = useState('')
+  const [filterTipo, setFilterTipo] = useState('')
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir('asc') }
+  }
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />
+    return sortDir === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-[#16A34A]" /> : <ArrowDown className="h-3 w-3 ml-1 text-[#16A34A]" />
+  }
 
   const setQuickFilter = (filter: "hoy" | "ayer" | "7dias" | "mes") => {
     const now = new Date()
@@ -203,6 +221,47 @@ export function SalesReportModule() {
     }))
   })
 
+  // Agrupar filas por saleId, aplicar filtros y ordenamiento
+  const displayRows = useMemo(() => {
+    // Agrupar
+    const groups: Record<string, any[]> = {}
+    const order: string[] = []
+    rows.forEach((row: any) => {
+      if (!groups[row.saleId]) { groups[row.saleId] = []; order.push(row.saleId) }
+      groups[row.saleId].push(row)
+    })
+    // Filtrar por grupo (primer item = datos de la venta)
+    let keys = order.filter(k => {
+      const r = groups[k][0]
+      if (filterPago && (r.split1?.method || r.paymentMethod) !== filterPago) return false
+      if (filterProf && r.profName !== filterProf) return false
+      if (filterTipo === 'turno' && !r.isAppointment) return false
+      if (filterTipo === 'directa' && r.isAppointment) return false
+      return true
+    })
+    // Ordenar grupos
+    keys = [...keys].sort((a, b) => {
+      const ra = groups[a][0], rb = groups[b][0]
+      let va: any, vb: any
+      if (sortField === 'fecha' || sortField === 'hora') { va = ra.date.getTime(); vb = rb.date.getTime() }
+      else if (sortField === 'paciente') { va = ra.patientName?.toLowerCase() || ''; vb = rb.patientName?.toLowerCase() || '' }
+      else if (sortField === 'profesional') { va = ra.profName?.toLowerCase() || ''; vb = rb.profName?.toLowerCase() || '' }
+      else if (sortField === 'pago') { va = ra.split1?.method || ra.paymentMethod || ''; vb = rb.split1?.method || rb.paymentMethod || '' }
+      else if (sortField === 'total') { va = ra.saleTotal; vb = rb.saleTotal }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1
+      if (va > vb) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+    return keys.flatMap(k => groups[k])
+  }, [rows, sortField, sortDir, filterPago, filterProf, filterTipo])
+
+  // Totales sobre filas filtradas/ordenadas
+  const displayTotal = displayRows.filter((r: any) => r.isFirstItem && (r.split1?.method || r.paymentMethod) !== 'gift_card').reduce((sum: number, r: any) => sum + r.saleTotal, 0)
+
+  // Opciones únicas para filtros
+  const paymentOptions = useMemo(() => [...new Set(rows.filter((r: any) => r.isFirstItem).map((r: any) => r.split1?.method || r.paymentMethod).filter(Boolean))], [rows])
+  const profOptions = useMemo(() => [...new Set(rows.filter((r: any) => r.isFirstItem).map((r: any) => r.profName).filter(Boolean))], [rows])
+
   const handleExportCSV = () => {
     const headers = ["Fecha","Hora","ID","Paciente","Profesional","Origen","Ítem","Tipo","Cantidad","PrecioUnitario","Subtotal","FormaPago","EsGiftCard","TotalVenta","Observaciones"]
     const csvRows = rows.map((r: any) => [
@@ -354,38 +413,86 @@ export function SalesReportModule() {
       {/* Tabla */}
       <Card className="bg-white border-gray-200 shadow-sm">
         <CardHeader className="pb-2 border-b border-gray-100">
-          <CardTitle className="text-sm font-black text-gray-700 flex items-center justify-between">
-            <span>Total: <span className="text-[#16A34A] text-lg">${totalAmount.toLocaleString()}</span></span>
-            <span className="text-xs text-gray-400 font-normal">
-              Generado el {format(new Date(), "dd/MM/yyyy - HH:mm")} hs
+          <CardTitle className="text-sm font-black text-gray-700 flex items-center justify-between flex-wrap gap-2">
+            <span>Total filtrado: <span className="text-[#16A34A] text-lg">${displayTotal.toLocaleString()}</span>
+              {(filterPago || filterProf || filterTipo) && <span className="text-xs text-gray-400 ml-2 font-normal">({displayRows.filter((r:any)=>r.isFirstItem).length} ventas)</span>}
             </span>
+            <span className="text-xs text-gray-400 font-normal">Generado el {format(new Date(), "dd/MM/yyyy - HH:mm")} hs</span>
           </CardTitle>
+          {/* Barra de filtros */}
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Select value={filterPago || "__all__"} onValueChange={v => setFilterPago(v === "__all__" ? "" : v)}>
+              <SelectTrigger className="h-8 text-xs w-40 border-gray-300">
+                <SelectValue placeholder="Forma de pago" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todos los pagos</SelectItem>
+                {paymentOptions.map((p: string) => <SelectItem key={p} value={p}>{PAYMENT_LABELS[p] || p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterProf || "__all__"} onValueChange={v => setFilterProf(v === "__all__" ? "" : v)}>
+              <SelectTrigger className="h-8 text-xs w-40 border-gray-300">
+                <SelectValue placeholder="Profesional" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todos</SelectItem>
+                {profOptions.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterTipo || "__all__"} onValueChange={v => setFilterTipo(v === "__all__" ? "" : v)}>
+              <SelectTrigger className="h-8 text-xs w-36 border-gray-300">
+                <SelectValue placeholder="Origen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todos</SelectItem>
+                <SelectItem value="turno">Turno</SelectItem>
+                <SelectItem value="directa">Venta Directa</SelectItem>
+              </SelectContent>
+            </Select>
+            {(filterPago || filterProf || filterTipo) && (
+              <Button variant="ghost" size="sm" onClick={() => { setFilterPago(''); setFilterProf(''); setFilterTipo('') }} className="h-8 text-xs text-gray-500 hover:text-red-500 gap-1">
+                <X className="h-3 w-3" /> Limpiar filtros
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {rows.length === 0 ? (
             <p className="text-center text-gray-400 py-12 font-medium">No hay ventas en el período seleccionado</p>
+          ) : displayRows.length === 0 ? (
+            <p className="text-center text-gray-400 py-12 font-medium">Ninguna venta coincide con los filtros aplicados</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Venta</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Fecha</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Paciente</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Profesional</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap cursor-pointer select-none hover:text-[#16A34A]" onClick={() => handleSort('fecha')}>
+                      <span className="flex items-center">Fecha/Hora <SortIcon field="fecha" /></span>
+                    </th>
+                    <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap cursor-pointer select-none hover:text-[#16A34A]" onClick={() => handleSort('paciente')}>
+                      <span className="flex items-center">Paciente <SortIcon field="paciente" /></span>
+                    </th>
+                    <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap cursor-pointer select-none hover:text-[#16A34A]" onClick={() => handleSort('profesional')}>
+                      <span className="flex items-center">Profesional <SortIcon field="profesional" /></span>
+                    </th>
                     <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Origen</th>
                     <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Descripción</th>
                     <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Tipo</th>
                     <th className="text-right px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Cant.</th>
                     <th className="text-right px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Precio</th>
-                    <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Pago 1</th>
+                    <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap cursor-pointer select-none hover:text-[#16A34A]" onClick={() => handleSort('pago')}>
+                      <span className="flex items-center">Pago 1 <SortIcon field="pago" /></span>
+                    </th>
                     <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Pago 2</th>
-                    <th className="text-right px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Total</th>
+                    <th className="text-right px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap cursor-pointer select-none hover:text-[#16A34A]" onClick={() => handleSort('total')}>
+                      <span className="flex items-center justify-end">Total <SortIcon field="total" /></span>
+                    </th>
                     <th className="text-left px-3 py-2 font-black text-gray-600 uppercase whitespace-nowrap">Observaciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row: any, i: number) => (
+                  {displayRows.map((row: any, i: number) => (
                     <tr key={i} className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${row.isFirstItem && i > 0 ? 'border-t-2 border-t-gray-300' : ''}`}>
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
                         {row.isFirstItem
@@ -455,8 +562,10 @@ export function SalesReportModule() {
                 </tbody>
                 <tfoot>
                   <tr className="bg-gray-50 border-t-2 border-gray-300">
-                    <td colSpan={8} className="px-3 py-3 font-black text-right text-gray-700 uppercase text-xs">Total período:</td>
-                    <td className="px-3 py-3 text-right font-black text-[#16A34A] text-base">${totalAmount.toLocaleString()}</td>
+                    <td colSpan={8} className="px-3 py-3 font-black text-right text-gray-700 uppercase text-xs">
+                      {(filterPago || filterProf || filterTipo) ? "Total filtrado:" : "Total período:"}
+                    </td>
+                    <td className="px-3 py-3 text-right font-black text-[#16A34A] text-base">${displayTotal.toLocaleString()}</td>
                     <td colSpan={4}></td>
                   </tr>
                 </tfoot>
