@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:docs.faceit.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(python -c \"from PIL import Image; img = Image.open\\(r'C:\\\\Users\\\\Administrador\\\\OneDrive\\\\Desktop\\\\faceit-extension\\\\icon.jpeg'\\); img.resize\\(\\(128,128\\)\\).save\\(r'C:\\\\Users\\\\Administrador\\\\OneDrive\\\\Desktop\\\\faceit-extension\\\\icon128.png'\\); img.resize\\(\\(48,48\\)\\).save\\(r'C:\\\\Users\\\\Administrador\\\\OneDrive\\\\Desktop\\\\faceit-extension\\\\icon48.png'\\); img.resize\\(\\(16,16\\)\\).save\\(r'C:\\\\Users\\\\Administrador\\\\OneDrive\\\\Desktop\\\\faceit-extension\\\\icon16.png'\\); print\\('OK'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -c \"from PIL import Image; img = Image.open\\(r'C:\\\\Users\\\\Administrador\\\\OneDrive\\\\Desktop\\\\faceit-extension\\\\icon.jpeg'\\); img.resize\\(\\(128,128\\), Image.LANCZOS\\).save\\(r'C:\\\\Users\\\\Administrador\\\\OneDrive\\\\Desktop\\\\faceit-extension\\\\icon128.png'\\); img.resize\\(\\(48,48\\), Image.LANCZOS\\).save\\(r'C:\\\\Users\\\\Administrador\\\\OneDrive\\\\Desktop\\\\faceit-extension\\\\icon48.png'\\); img.resize\\(\\(16,16\\), Image.LANCZOS\\).save\\(r'C:\\\\Users\\\\Administrador\\\\OneDrive\\\\Desktop\\\\faceit-extension\\\\icon16.png'\\); print\\('OK'\\)\")",
+      "Bash(powershell Compress-Archive -Path faceit-extension -DestinationPath rival-tracker.zip -Force)",
+      "Read(//c/Users/Administrador/OneDrive/Desktop/**)",
+      "Bash(npx create-next-app@latest club-belgrano --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npm install *)",
+      "Read(//c/Users/Administrador/OneDrive - PC/**)",
+      "Read(//c/Users/Administrador/**)",
+      "Bash(npm create *)",
+      "Bash(npx tailwindcss *)",
+      "Bash(npm run *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(sed -i \"s|'/icons/|'/ |g\" /c/Users/Administrador/club-belgrano/src/data/disciplinas.ts)",
+      "Bash(sed -i \"s|icon: '/ |icon: '/|g\" /c/Users/Administrador/club-belgrano/src/data/disciplinas.ts)",
+      "Bash(python3 -c ' *)",
+      "Read(//c/c/Users/Administrador/club-belgrano/src/data/**)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}
