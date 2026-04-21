@@ -1683,58 +1683,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                 <CashClosureModule receptionistName={currentUser.name} />
               )}
 
-              {/* === RESUMEN GENERAL DIARIO (PARA TODA LA CLÍNICA) === */}
-              {(() => {
-                const today = new Date().toDateString();
-                const todaysSales = sales.filter((s) => s.date.toDateString() === today);
-                
-                let totalIncome = 0;
-                const byMethod: Record<string, number> = { efectivo: 0, transferencia: 0, tarjeta: 0, qr: 0, gift_card: 0 };
-                
-                todaysSales.forEach(s => {
-                  if (s.paymentMethod !== 'gift_card') {
-                     totalIncome += s.total;
-                  }
-                  if (byMethod[s.paymentMethod] !== undefined) {
-                     byMethod[s.paymentMethod] += s.total;
-                  }
-                });
-
-                return (
-                  <Card className="bg-white text-foreground border border-gray-200 shadow-xl rounded-2xl mt-4">
-                    <CardHeader>
-                      <CardTitle className="text-[#16A34A] flex items-center gap-2 text-2xl">
-                        Cierre de Caja Diario General
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="bg-gradient-to-br from-[#16A34A] to-[#14532D] p-8 rounded-2xl border border-emerald-500/30 text-center shadow-lg relative overflow-hidden">
-                        <p className="relative z-10 text-xs sm:text-sm text-emerald-100/90 font-bold uppercase tracking-widest mb-2">Ingresos Totales (Dinero Real)</p>
-                        <p className="relative z-10 text-5xl sm:text-6xl font-black text-white drop-shadow-md">${totalIncome.toLocaleString()}</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
-                           <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Efectivo</p>
-                           <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.efectivo.toLocaleString()}</p>
-                        </div>
-                        <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
-                           <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Transferencia</p>
-                           <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.transferencia.toLocaleString()}</p>
-                        </div>
-                        <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
-                           <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">Tarjeta</p>
-                           <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.tarjeta.toLocaleString()}</p>
-                        </div>
-                        <div className="bg-white p-5 rounded-2xl border border-gray-100 text-center shadow-sm">
-                           <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase mb-2">QR</p>
-                           <p className="text-xl sm:text-2xl font-extrabold text-foreground">${byMethod.qr.toLocaleString()}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })()}
             </div>
           )}
 
