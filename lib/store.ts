@@ -613,12 +613,13 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   addPatient: async (patient) => {
+    const cleanDate = patient.birthdate?.trim()
     const { data, error } = await supabase.from('patients').insert([{
         name: patient.name,
         phone: patient.phone?.trim() || null,
         dni: patient.dni?.trim() || null,
         email: patient.email?.trim() || null,
-        birth_date: patient.birthdate || null,
+        ...(cleanDate ? { birth_date: cleanDate } : {}),
       }]).select().single();
     if (error) {
       const msg = error.message || ''
@@ -641,12 +642,13 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   updatePatient: async (id, updates) => {
+    const cleanDate = updates.birthdate?.trim()
     const { error } = await supabase.from('patients').update({
         name: updates.name,
         phone: updates.phone?.trim() || null,
         dni: updates.dni?.trim() || null,
         email: updates.email?.trim() || null,
-        birth_date: updates.birthdate || null,
+        birth_date: cleanDate || null,
         notes: updates.notes || null,
       }).eq('id', id);
     if (error) {
