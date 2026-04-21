@@ -10,10 +10,10 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
-import { 
-  BarChart3, 
-  TrendingUp, 
-  DollarSign, 
+import {
+  BarChart3,
+  TrendingUp,
+  DollarSign,
   Calendar,
   Award,
   Package,
@@ -21,7 +21,11 @@ import {
   Minus,
   ArrowDownRight,
   ArrowUpRight,
-  Target
+  Target,
+  Clock,
+  ArrowLeft,
+  X,
+  FileText
 } from "lucide-react"
 import { format } from "date-fns"
 import {
@@ -59,6 +63,7 @@ export function ReportsModule() {
   const now = new Date()
   const [closureFilterMonth, setClosureFilterMonth] = useState(now.getMonth())
   const [closureFilterYear, setClosureFilterYear] = useState(now.getFullYear())
+  const [selectedClosure, setSelectedClosure] = useState<any>(null)
 
   const getAppointmentCommissionBase = (apt: any) => {
     if (!Array.isArray(apt?.services)) return 0
@@ -1005,7 +1010,11 @@ export function ReportsModule() {
                             const isGeneral = String(c.receptionistName).startsWith("[GENERAL]")
                             const displayName = isGeneral ? String(c.receptionistName).replace("[GENERAL] ", "") : c.receptionistName
                             return (
-                              <div key={c.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-center justify-between gap-4">
+                              <div
+                                key={c.id}
+                                onClick={() => setSelectedClosure(c)}
+                                className="bg-gray-50 hover:bg-emerald-50 rounded-lg p-3 border border-gray-200 hover:border-emerald-200 flex items-center justify-between gap-4 cursor-pointer transition-colors group"
+                              >
                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                   <span className="text-xs font-bold text-gray-500 whitespace-nowrap">
                                     {format(new Date(c.dateFrom), "dd/MM")}
@@ -1017,9 +1026,11 @@ export function ReportsModule() {
                                   <span className="text-xs text-gray-400 whitespace-nowrap">
                                     {format(new Date(c.dateFrom), "HH:mm")}→{format(new Date(c.dateTo), "HH:mm")}
                                   </span>
-                                  {c.observations && <span className="text-xs text-gray-400 italic truncate">"{c.observations}"</span>}
                                 </div>
-                                <span className="font-black text-emerald-600 whitespace-nowrap">${c.total.toLocaleString()}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-black text-emerald-600 whitespace-nowrap">${c.total.toLocaleString()}</span>
+                                  <FileText className="h-3.5 w-3.5 text-gray-300 group-hover:text-emerald-400 transition-colors" />
+                                </div>
                               </div>
                             )
                           })}
@@ -1032,6 +1043,72 @@ export function ReportsModule() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* MODAL DETALLE DE CIERRE */}
+      {selectedClosure && (() => {
+        const c = selectedClosure
+        const isGeneral = String(c.receptionistName).startsWith("[GENERAL]")
+        const displayName = isGeneral
+          ? String(c.receptionistName).replace("[GENERAL] ", "")
+          : c.receptionistName
+        return (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setSelectedClosure(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="bg-emerald-50 border-b border-emerald-100 px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setSelectedClosure(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                  <div>
+                    <p className="text-emerald-800 font-black text-base">Detalle del Cierre</p>
+                    <p className="text-emerald-600 text-xs">{format(new Date(c.createdAt), "dd/MM/yyyy 'a las' HH:mm")}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isGeneral
+                    ? <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-1 rounded-full border border-blue-200">GENERAL · {displayName}</span>
+                    : <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-1 rounded-full border border-emerald-200">{displayName}</span>
+                  }
+                  <button onClick={() => setSelectedClosure(null)} className="text-gray-300 hover:text-gray-500 transition-colors">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex items-center gap-2 text-gray-500 text-sm bg-gray-50 rounded-lg px-4 py-2">
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <span className="font-medium">{format(new Date(c.dateFrom), "dd/MM/yyyy")}</span>
+                  <span className="text-gray-400">·</span>
+                  <span>{format(new Date(c.dateFrom), "HH:mm")} → {format(new Date(c.dateTo), "HH:mm")}</span>
+                </div>
+                <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-xl p-5 text-center shadow-md">
+                  <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mb-1">Total recaudado</p>
+                  <p className="text-white text-4xl font-black">${c.total.toLocaleString()}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Efectivo", val: c.amountEfectivo, color: "text-emerald-600" },
+                    { label: "Transferencia", val: c.amountTransferencia, color: "text-blue-600" },
+                    { label: "Tarjeta", val: c.amountTarjeta, color: "text-purple-600" },
+                    { label: "QR", val: c.amountQr, color: "text-orange-500" },
+                  ].map(m => (
+                    <div key={m.label} className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-center">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{m.label}</p>
+                      <p className={`text-xl font-black ${m.color}`}>${(m.val || 0).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+                {c.observations && (
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                    <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-1">Observaciones</p>
+                    <p className="text-sm text-amber-900 italic">"{c.observations}"</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
