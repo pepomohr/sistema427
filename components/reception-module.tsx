@@ -235,9 +235,13 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
   const handleUpdatePatient = async () => {
     if (editPatientData?.name && editPatientData?.phone) {
-      await updatePatient(editPatientData.id, editPatientData)
-      setSelectedPatient(editPatientData)
-      setShowEditPatient(false)
+      try {
+        await updatePatient(editPatientData.id, editPatientData)
+        setSelectedPatient(editPatientData)
+        setShowEditPatient(false)
+      } catch (err: any) {
+        confirm({ title: "Error al guardar paciente", description: `No se pudieron guardar los cambios. ${err?.message || 'Error desconocido'}.`, actionType: "danger", onConfirm: () => {} })
+      }
     }
   }
 
@@ -667,25 +671,28 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       title: "Confirmar Turno",
       description: `Estás por agendar a ${selectedPatient.name} con ${profName} para un ${service.name} a las ${schedulingTime}hs.`,
       actionType: "success",
-      onConfirm: () => {
-        addAppointment({
-          patientId: selectedPatient.id,
-          patientName: selectedPatient.name,
-          professionalId: schedulingProfessional,
-          date: new Date(schedulingDate + 'T12:00:00'),
-          time: schedulingTime,
-          services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
-          products: [],
-          status: "programado",
-          totalAmount: service.price,
-          paidAmount: Number(schedulingPaidAmount) || 0,
-        })
-        
-        setSchedulingService("")
-        setSchedulingProfessional("")
-        setSchedulingTime("")
-        setSchedulingPaidAmount("")
-        setActivePanel(null)
+      onConfirm: async () => {
+        try {
+          await addAppointment({
+            patientId: selectedPatient.id,
+            patientName: selectedPatient.name,
+            professionalId: schedulingProfessional,
+            date: new Date(schedulingDate + 'T12:00:00'),
+            time: schedulingTime,
+            services: [{ serviceId: service.id, serviceName: service.name, price: service.price, priceCash: (service as any).priceCash || service.price }],
+            products: [],
+            status: "programado",
+            totalAmount: service.price,
+            paidAmount: Number(schedulingPaidAmount) || 0,
+          })
+          setSchedulingService("")
+          setSchedulingProfessional("")
+          setSchedulingTime("")
+          setSchedulingPaidAmount("")
+          setActivePanel(null)
+        } catch (err: any) {
+          setTimeout(() => confirm({ title: "Error al agendar turno", description: `No se pudo guardar el turno. ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`, actionType: "danger", onConfirm: () => {} }), 150)
+        }
       }
     })
   }
@@ -1454,22 +1461,27 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         return acc + (getDirectSaleUnitPrice(item) * item.quantity)
                       }, 0)
 
-                      await addSale({
-                        type: 'direct',
-                        items: directSaleCart.map(i => ({
-                          type: i.type,
-                          itemId: i.product.id,
-                          itemName: i.product.name,
-                          price: getDirectSaleUnitPrice(i),
-                          priceCashReference: i.product.priceCash || i.product.priceList, // siempre precio cash para comisión
-                          quantity: i.quantity,
-                          soldBy: directSaleProf || "recepcion"
-                        })),
-                        total: Math.round(directSaleTotal),
-                        paymentMethod: directSalePaymentMethod as any,
-                        processedBy: "Recepción",
-                        patientId: selectedPatient?.id,
-                      })
+                      try {
+                        await addSale({
+                          type: 'direct',
+                          items: directSaleCart.map(i => ({
+                            type: i.type,
+                            itemId: i.product.id,
+                            itemName: i.product.name,
+                            price: getDirectSaleUnitPrice(i),
+                            priceCashReference: i.product.priceCash || i.product.priceList,
+                            quantity: i.quantity,
+                            soldBy: directSaleProf || "recepcion"
+                          })),
+                          total: Math.round(directSaleTotal),
+                          paymentMethod: directSalePaymentMethod as any,
+                          processedBy: "Recepción",
+                          patientId: selectedPatient?.id,
+                        })
+                      } catch (err: any) {
+                        confirm({ title: "Error al registrar venta", description: `La venta no se pudo guardar. ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`, actionType: "danger", onConfirm: () => {} })
+                        return
+                      }
 
                       if (selectedPatient && giftCardCredit > 0) {
                         await updatePatientGiftCardBalance(selectedPatient.id, giftCardCredit)

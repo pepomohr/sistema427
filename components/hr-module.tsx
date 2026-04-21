@@ -701,9 +701,13 @@ export function HRModule() {
                             finalData.hourlyRate = null;
                         }
                     }
-                    await addProfessional(finalData); 
-                    setShowNewModal(false); 
-                    confirm({title:"Alta Exitosa", actionType:"success", onConfirm:()=>{}}) 
+                    try {
+                      await addProfessional(finalData);
+                      setShowNewModal(false);
+                      confirm({title:"Alta Exitosa", actionType:"success", onConfirm:()=>{}})
+                    } catch (err: any) {
+                      confirm({title:"Error al dar de alta", description: `No se pudo crear el profesional. ${err?.message || 'Error desconocido'}.`, actionType:"danger", onConfirm:()=>{}})
+                    } 
                 }} className="w-full bg-[#16A34A] hover:bg-[#15803d] text-white font-bold mt-2">Dar de Alta</Button>
             </div>
         </DialogContent>

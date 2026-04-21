@@ -212,28 +212,32 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
     return allPossibleSlots.filter(s => !blockedTimes.has(s)).sort()
   }, [currentProfessional, schedulingDate, appointments, services])
 
-  const handleScheduleAppointment = () => {
+  const handleScheduleAppointment = async () => {
     if (!schedulingPatientId || !currentProfessional || !schedulingService || !schedulingTime) return
     const service = services.find((s) => s.id === schedulingService)
     const finalDate = new Date(schedulingDate + 'T12:00:00')
     finalDate.setMinutes(finalDate.getMinutes() + finalDate.getTimezoneOffset())
-    addAppointment({
-      patientId: schedulingPatientId,
-      patientName: getPatientName(schedulingPatientId),
-      professionalId: currentProfessional.id,
-      date: finalDate,
-      time: schedulingTime,
-      services: [{ serviceId: service?.id, serviceName: service?.name, price: service?.price, priceCash: (service as any)?.priceCash || service?.price }],
-      products: [],
-      status: "programado",
-      totalAmount: service?.price || 0,
-      paidAmount: Number(schedulingPaidAmount) || 0,
-    })
-    setShowScheduleDialog(false)
-    setSchedulingPatientSearch("")
-    setSchedulingPatientId("")
-    setSchedPatientResults([])
-    setSchedulingPatientMenuOpen(false)
+    try {
+      await addAppointment({
+        patientId: schedulingPatientId,
+        patientName: getPatientName(schedulingPatientId),
+        professionalId: currentProfessional.id,
+        date: finalDate,
+        time: schedulingTime,
+        services: [{ serviceId: service?.id, serviceName: service?.name, price: service?.price, priceCash: (service as any)?.priceCash || service?.price }],
+        products: [],
+        status: "programado",
+        totalAmount: service?.price || 0,
+        paidAmount: Number(schedulingPaidAmount) || 0,
+      })
+      setShowScheduleDialog(false)
+      setSchedulingPatientSearch("")
+      setSchedulingPatientId("")
+      setSchedPatientResults([])
+      setSchedulingPatientMenuOpen(false)
+    } catch (err: any) {
+      confirm({ title: "Error al agendar turno", description: `No se pudo guardar el turno. ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`, actionType: "danger", onConfirm: () => {} })
+    }
   }
 
   const openFinishModal = (apt: any) => {

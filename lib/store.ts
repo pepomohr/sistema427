@@ -447,7 +447,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           products: currentProducts
         }
       })
-    } catch (err) { console.error("Error al guardar venta:", err); }
+    } catch (err) { console.error("Error al guardar venta:", err); throw err }
   },
 
   // ============================================
@@ -525,7 +525,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         })
         return { sales: [...state.sales, newSale], professionals: updatedProfessionals, products: currentProducts }
       })
-    } catch (err) { console.error("Error addSaleMultipago:", err); }
+    } catch (err) { console.error("Error addSaleMultipago:", err); throw err }
   },
 
   updateHourlyRate: (id, rate) => {
@@ -580,26 +580,24 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   addProfessional: async (prof) => {
-    try {
-      const { data, error } = await supabase
-        .from('professionals')
-        .insert([{
-          id: crypto.randomUUID(),
-          name: prof.name,
-          shortName: prof.shortName,
-          specialties: prof.specialties,
-          isActive: prof.isActive,
-          hourlyRate: prof.hourlyRate,
-          hourlyRateFacial: prof.hourlyRateFacial || 0,
-          hourlyRateCorporal: prof.hourlyRateCorporal || 0,
-          monthlySalesCount: 0,
-          monthlySalesAmount: 0,
-          color: prof.color,
-          pin: null
-        }]).select().single();
-        
-      if (!error && data) set(state => ({ professionals: [...state.professionals, data] }));
-    } catch(err) {}
+    const { data, error } = await supabase
+      .from('professionals')
+      .insert([{
+        id: crypto.randomUUID(),
+        name: prof.name,
+        shortName: prof.shortName,
+        specialties: prof.specialties,
+        isActive: prof.isActive,
+        hourlyRate: prof.hourlyRate,
+        hourlyRateFacial: prof.hourlyRateFacial || 0,
+        hourlyRateCorporal: prof.hourlyRateCorporal || 0,
+        monthlySalesCount: 0,
+        monthlySalesAmount: 0,
+        color: prof.color,
+        pin: null
+      }]).select().single();
+    if (error) throw new Error(error.message)
+    if (data) set(state => ({ professionals: [...state.professionals, data] }));
   },
 
   toggleProfessionalActive: (id) => {
@@ -631,31 +629,27 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   updatePatient: async (id, updates) => {
-    try {
-      const { error } = await supabase.from('patients').update({
-          name: updates.name, dni: updates.dni, phone: updates.phone,
-          email: updates.email, birth_date: updates.birthdate, notes: updates.notes
-        }).eq('id', id);
-      if (!error) {
-        set(state => ({ patients: state.patients.map(p => p.id === id ? { ...p, ...updates } : p) }));
-      }
-    } catch (err) { console.error(err); }
+    const { error } = await supabase.from('patients').update({
+        name: updates.name, dni: updates.dni, phone: updates.phone,
+        email: updates.email, birth_date: updates.birthdate, notes: updates.notes
+      }).eq('id', id);
+    if (error) throw new Error(error.message)
+    set(state => ({ patients: state.patients.map(p => p.id === id ? { ...p, ...updates } : p) }));
   },
 
   addAppointment: async (appointment) => {
-    try {
-      const { data, error } = await supabase.from('appointments').insert([{
-          patientId: appointment.patientId, patientName: appointment.patientName,
-          professionalId: appointment.professionalId,
-          date: format(appointment.date, "yyyy-MM-dd'T'12:00:00.000'Z'"),
-          time: appointment.time, services: appointment.services,
-          products: appointment.products || [], status: appointment.status,
-          totalAmount: appointment.totalAmount, paidAmount: appointment.paidAmount
-        }]).select().single();
-      if (!error && data) {
-        set(state => ({ appointments: [...state.appointments, { ...data, date: new Date(data.date) }] }));
-      }
-    } catch (err) { console.error(err); }
+    const { data, error } = await supabase.from('appointments').insert([{
+        patientId: appointment.patientId, patientName: appointment.patientName,
+        professionalId: appointment.professionalId,
+        date: format(appointment.date, "yyyy-MM-dd'T'12:00:00.000'Z'"),
+        time: appointment.time, services: appointment.services,
+        products: appointment.products || [], status: appointment.status,
+        totalAmount: appointment.totalAmount, paidAmount: appointment.paidAmount
+      }]).select().single();
+    if (error) throw new Error(error.message)
+    if (data) {
+      set(state => ({ appointments: [...state.appointments, { ...data, date: new Date(data.date) }] }));
+    }
   },
 
   fetchAppointments: async () => {
