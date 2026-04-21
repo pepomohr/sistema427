@@ -615,12 +615,21 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   addPatient: async (patient) => {
     const { data, error } = await supabase.from('patients').insert([{
         name: patient.name,
-        phone: patient.phone,
+        phone: patient.phone?.trim() || null,
         dni: patient.dni?.trim() || null,
         email: patient.email?.trim() || null,
         birth_date: patient.birthdate || null,
       }]).select().single();
-    if (error) throw new Error(error.message)
+    if (error) {
+      const msg = error.message || ''
+      if (msg.includes('patients_dni_key') || (msg.includes('unique') && msg.includes('dni')))
+        throw new Error('Ya existe un paciente con ese DNI. Verificá el número o dejá el campo vacío.')
+      if (msg.includes('patients_phone_key') || (msg.includes('unique') && msg.includes('phone')))
+        throw new Error('Ya existe un paciente con ese teléfono.')
+      if (msg.includes('duplicate key') || msg.includes('unique'))
+        throw new Error('Ya existe un paciente con esos datos (DNI o teléfono duplicado).')
+      throw new Error(`No se pudo guardar el paciente: ${msg}`)
+    }
     if (data) {
       const np = {
         id: data.id, name: data.name, phone: data.phone, dni: data.dni, email: data.email,
@@ -634,13 +643,20 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   updatePatient: async (id, updates) => {
     const { error } = await supabase.from('patients').update({
         name: updates.name,
-        phone: updates.phone,
+        phone: updates.phone?.trim() || null,
         dni: updates.dni?.trim() || null,
         email: updates.email?.trim() || null,
         birth_date: updates.birthdate || null,
         notes: updates.notes || null,
       }).eq('id', id);
-    if (error) throw new Error(error.message)
+    if (error) {
+      const msg = error.message || ''
+      if (msg.includes('patients_dni_key') || (msg.includes('unique') && msg.includes('dni')))
+        throw new Error('Ya existe otro paciente con ese DNI.')
+      if (msg.includes('duplicate key') || msg.includes('unique'))
+        throw new Error('Ya existe otro paciente con esos datos (DNI duplicado).')
+      throw new Error(`No se pudo guardar: ${msg}`)
+    }
     set(state => ({ patients: state.patients.map(p => p.id === id ? { ...p, ...updates } : p) }));
   },
 
