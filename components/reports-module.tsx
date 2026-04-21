@@ -39,16 +39,18 @@ import {
 } from "recharts"
 
 export function ReportsModule() {
-  const { sales, appointments, professionals, products, services, expenses, addExpense, cashClosures, fetchProfessionals, fetchSales } = useClinicStore()
+  const { sales, appointments, professionals, products, services, expenses, addExpense, cashClosures, fetchProfessionals, fetchSales, fetchAppointments } = useClinicStore()
   const [showNeto, setShowNeto] = useState(false)
 
   // Refrescar al montar y cada 30s para que admin vea datos siempre actualizados
   useEffect(() => {
     if (typeof fetchProfessionals === 'function') fetchProfessionals()
     if (typeof fetchSales === 'function') fetchSales()
+    if (typeof fetchAppointments === 'function') fetchAppointments()
     const interval = setInterval(() => {
       if (typeof fetchProfessionals === 'function') fetchProfessionals()
       if (typeof fetchSales === 'function') fetchSales()
+      if (typeof fetchAppointments === 'function') fetchAppointments()
     }, 30000)
     return () => clearInterval(interval)
   }, [])
@@ -743,7 +745,7 @@ export function ReportsModule() {
               // Agrupar por processedBy los productos cuyo soldBy no es un profesional
               const recepMap: Record<string, { count: number, amount: number }> = {}
               monthSales.forEach(sale => {
-                const name = sale.processedBy || 'Recepción'
+                const name = 'Recepción'
                 ;(sale.items || []).forEach((item: any) => {
                   if (
                     item.type === 'product' &&

@@ -9,17 +9,15 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useConfirm } from "@/hooks/use-confirm"
-import { Lock, Calculator, Clock, CalendarDays, User, Users, History, ChevronDown, ChevronUp } from "lucide-react"
+import { Lock, Calculator, Clock, CalendarDays, History, ChevronDown, ChevronUp } from "lucide-react"
 import { format } from "date-fns"
 
-type ClosureMode = "propio" | "general"
 type ShiftPreset = "mañana" | "tarde" | "completo" | "custom"
 
 export function CashClosureModule({ receptionistName }: { receptionistName: string }) {
   const { sales, cashClosures, addCashClosure } = useClinicStore()
   const { confirm, ConfirmDialog } = useConfirm()
 
-  const [mode, setMode] = useState<ClosureMode>("propio")
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0])
   const [timeFrom, setTimeFrom] = useState<string>("08:00")
   const [timeTo, setTimeTo] = useState<string>("14:00")
@@ -48,7 +46,6 @@ export function CashClosureModule({ receptionistName }: { receptionistName: stri
       if (saleDate.toDateString() !== filterDateStr) return false
       const saleTimeInMins = saleDate.getHours() * 60 + saleDate.getMinutes()
       if (saleTimeInMins < fromInMins || saleTimeInMins > toInMins) return false
-      if (mode === "propio" && s.processedBy !== receptionistName) return false
       return true
     })
 
@@ -73,7 +70,7 @@ export function CashClosureModule({ receptionistName }: { receptionistName: stri
     })
 
     return metrics
-  }, [sales, selectedDate, timeFrom, timeTo, mode, receptionistName])
+  }, [sales, selectedDate, timeFrom, timeTo, receptionistName])
 
   const historialFiltrado = useMemo(() => {
     if (!cashClosures) return []
@@ -85,7 +82,7 @@ export function CashClosureModule({ receptionistName }: { receptionistName: stri
   const handleSubmitClosure = () => {
     confirm({
       title: "Confirmar Cierre de Caja",
-      description: `¿Confirmás el cierre ${mode === "propio" ? "de tu turno" : "GENERAL"} con un total de $${closureMetrics.total.toLocaleString()}?`,
+      description: `¿Confirmás el cierre GENERAL con un total de $${closureMetrics.total.toLocaleString()}?`,
       actionType: "success",
       onConfirm: async () => {
         const dateFromReal = new Date(`${selectedDate}T${timeFrom}:00`)
@@ -93,7 +90,7 @@ export function CashClosureModule({ receptionistName }: { receptionistName: stri
 
         try {
           await addCashClosure({
-            receptionistName: mode === "general" ? `[GENERAL] ${receptionistName}` : receptionistName,
+            receptionistName: `[GENERAL] ${receptionistName}`,
             dateFrom: dateFromReal,
             dateTo: dateToReal,
             amountEfectivo: closureMetrics.efectivo,
@@ -124,32 +121,6 @@ export function CashClosureModule({ receptionistName }: { receptionistName: stri
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6 space-y-5">
-
-          {/* MODO: MI TURNO / GENERAL */}
-          <div className="space-y-2">
-            <Label className="text-gray-600 font-bold uppercase text-xs">Modo de Cierre</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant={mode === "propio" ? "default" : "outline"}
-                onClick={() => setMode("propio")}
-                className={`font-bold gap-2 ${mode === "propio" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "border-gray-300 text-black"}`}
-              >
-                <User className="h-4 w-4" /> MI TURNO
-              </Button>
-              <Button
-                variant={mode === "general" ? "default" : "outline"}
-                onClick={() => setMode("general")}
-                className={`font-bold gap-2 ${mode === "general" ? "bg-blue-600 hover:bg-blue-700 text-white" : "border-gray-300 text-black"}`}
-              >
-                <Users className="h-4 w-4" /> CIERRE GENERAL
-              </Button>
-            </div>
-            <p className="text-xs text-gray-400 italic">
-              {mode === "propio"
-                ? `Solo ventas registradas por: ${receptionistName}`
-                : "Todas las ventas del día (ambas recepcionistas)"}
-            </p>
-          </div>
 
           {/* TURNO PRESET */}
           <div className="space-y-2">
