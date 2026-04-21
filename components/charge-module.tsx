@@ -292,17 +292,22 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
         splits.push({ method: method as any, amount: total })
       }
 
-      await addSaleMultipago({
-        type: "direct",
-        items: saleItems as any,
-        total,
-        paymentMethod: method,
-        paymentSplits: splits,
-        observations: directSaleObservations || undefined,
-        patientId: directSalePatient || undefined,
-        source: 'recepcion',
-        processedBy: currentUser?.name || "Recepción"
-      })
+      try {
+        await addSaleMultipago({
+          type: "direct",
+          items: saleItems as any,
+          total,
+          paymentMethod: method,
+          paymentSplits: splits,
+          observations: directSaleObservations || undefined,
+          patientId: directSalePatient || undefined,
+          source: 'recepcion',
+          processedBy: currentUser?.name || "Recepción"
+        })
+      } catch (err: any) {
+        confirm({ title: "Error al registrar venta", description: `La venta no se pudo guardar. ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`, actionType: "danger", onConfirm: () => {} })
+        return
+      }
       if (giftCardAmount > 0 && directSalePatient) {
         await updatePatientGiftCardBalance(directSalePatient, giftCardAmount)
       }

@@ -91,19 +91,22 @@ export function CashClosureModule({ receptionistName }: { receptionistName: stri
         const dateFromReal = new Date(`${selectedDate}T${timeFrom}:00`)
         const dateToReal = new Date(`${selectedDate}T${timeTo}:00`)
 
-        await addCashClosure({
-          receptionistName: mode === "general" ? `[GENERAL] ${receptionistName}` : receptionistName,
-          dateFrom: dateFromReal,
-          dateTo: dateToReal,
-          amountEfectivo: closureMetrics.efectivo,
-          amountTransferencia: closureMetrics.transferencia,
-          amountTarjeta: closureMetrics.tarjeta,
-          amountQr: closureMetrics.qr,
-          total: closureMetrics.total,
-          observations: observations || undefined
-        })
-
-        setObservations("")
+        try {
+          await addCashClosure({
+            receptionistName: mode === "general" ? `[GENERAL] ${receptionistName}` : receptionistName,
+            dateFrom: dateFromReal,
+            dateTo: dateToReal,
+            amountEfectivo: closureMetrics.efectivo,
+            amountTransferencia: closureMetrics.transferencia,
+            amountTarjeta: closureMetrics.tarjeta,
+            amountQr: closureMetrics.qr,
+            total: closureMetrics.total,
+            observations: observations || undefined
+          })
+          setObservations("")
+        } catch (err: any) {
+          setTimeout(() => confirm({ title: "Error al guardar cierre", description: `El cierre de caja no se pudo guardar. ${err?.message || 'Error desconocido'}.`, actionType: "danger", onConfirm: () => {} }), 150)
+        }
       }
     })
   }

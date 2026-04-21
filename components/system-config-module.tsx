@@ -108,12 +108,16 @@ export function SystemConfigModule() {
   }
 
   const handleSaveOffer = async () => {
-    if (editingOfferId) {
-      updateOffer(editingOfferId, offerForm)
-    } else {
-      addOffer(offerForm)
+    try {
+      if (editingOfferId) {
+        await updateOffer(editingOfferId, offerForm)
+      } else {
+        await addOffer(offerForm)
+      }
+      setShowOfferDialog(false)
+    } catch (err: any) {
+      confirm({ title: "Error al guardar oferta", description: err?.message || 'Error desconocido', actionType: "danger", onConfirm: () => {} })
     }
-    setShowOfferDialog(false)
   }
 
   const handleOpenCombo = (combo?: any) => {
@@ -128,12 +132,16 @@ export function SystemConfigModule() {
   }
 
   const handleSaveCombo = async () => {
-    if (editingComboId) {
-      updateCombo(editingComboId, comboForm)
-    } else {
-      addCombo(comboForm)
+    try {
+      if (editingComboId) {
+        await updateCombo(editingComboId, comboForm)
+      } else {
+        await addCombo(comboForm)
+      }
+      setShowComboDialog(false)
+    } catch (err: any) {
+      confirm({ title: "Error al guardar combo", description: err?.message || 'Error desconocido', actionType: "danger", onConfirm: () => {} })
     }
-    setShowComboDialog(false)
   }
 
   const handleAddComboItem = () => {
