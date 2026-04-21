@@ -204,7 +204,17 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const handleAddPatient = async () => {
     if (newPatient.name && newPatient.phone) {
       const savedName = newPatient.name
-      await addPatient(newPatient)
+      try {
+        await addPatient(newPatient)
+      } catch (err: any) {
+        confirm({
+          title: "Error al crear paciente",
+          description: `No se pudo guardar "${savedName}". ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`,
+          actionType: "danger",
+          onConfirm: () => {}
+        })
+        return // NO cerrar el formulario, que pueda reintentar
+      }
       setNewPatient({ name: "", phone: "", email: "", dni: "", birthdate: "" })
       setShowNewPatient(false)
       // Seleccionar el paciente recién creado directamente para poder agendarle un turno al instante

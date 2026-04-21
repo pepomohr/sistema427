@@ -615,20 +615,19 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   addPatient: async (patient) => {
-    try {
-      const { data, error } = await supabase.from('patients').insert([{
-          name: patient.name, dni: patient.dni, phone: patient.phone,
-          email: patient.email, birth_date: patient.birthdate
-        }]).select().single();
-        
-      if (!error && data) {
-        const np = {
-          id: data.id, name: data.name, phone: data.phone, dni: data.dni, email: data.email,
-          birthdate: data.birth_date, createdAt: new Date(data.created_at || Date.now()), notes: data.notes
-        };
-        set(state => ({ patients: [...state.patients, np] }));
-      }
-    } catch (err) { console.error(err); }
+    const { data, error } = await supabase.from('patients').insert([{
+        name: patient.name, dni: patient.dni, phone: patient.phone,
+        email: patient.email, birth_date: patient.birthdate
+      }]).select().single();
+    if (error) throw new Error(error.message)
+    if (data) {
+      const np = {
+        id: data.id, name: data.name, phone: data.phone, dni: data.dni, email: data.email,
+        birthdate: data.birth_date, createdAt: new Date(data.created_at || Date.now()), notes: data.notes,
+        giftCardBalance: 0
+      };
+      set(state => ({ patients: [...state.patients, np] }));
+    }
   },
 
   updatePatient: async (id, updates) => {
@@ -692,7 +691,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   fetchPatients: async () => {
     try {
-      const { data, error } = await supabase.from('patients').select('*').limit(1300);
+      const { data, error } = await supabase.from('patients').select('*').order('created_at', { ascending: false }).limit(1300);
       if (!error && data) {
         set({ patients: data.map((p: any) => ({
             id: p.id, name: p.name, phone: p.phone, dni: p.dni, email: p.email,
