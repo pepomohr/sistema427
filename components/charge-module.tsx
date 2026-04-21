@@ -191,7 +191,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
         confirm({ title: "Sin saldo a favor", description: "Este paciente no tiene saldo a favor.", actionType: "info", onConfirm: () => {} })
         return
       }
-      if (bal >= totals.total && secondPaymentMethod && parseFloat(secondPaymentAmount) > 0) {
+      if (bal >= totals.total && secondPaymentMethod && (Number(secondPaymentAmount) || 0) > 0) {
         confirm({ title: "Pago no válido", description: `El saldo disponible ($${bal.toLocaleString('es-AR')}) cubre el total del turno. No se puede dividir el pago: el saldo a favor debe cubrir el total completo.`, actionType: "info", onConfirm: () => {} })
         return
       }
@@ -203,7 +203,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
 
     // Armar los splits de pago
     const splits: PaymentSplit[] = []
-    const secondAmt = secondPaymentAmount ? parseFloat(secondPaymentAmount) : 0
+    const secondAmt = secondPaymentAmount ? (Number(secondPaymentAmount) || 0) : 0
     if (paymentMethod === 'gift_card' && secondPaymentMethod && secondAmt > 0) {
       // Saldo < total: gift_card cubre lo que puede, resto con segundo método
       const aptPat = patients.find(p => p.id === activeApt?.patientId)
@@ -283,7 +283,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
 
       // Armar splits de pago para venta directa
       const splits: PaymentSplit[] = []
-      const secondAmt = directSaleSecondAmount ? parseFloat(directSaleSecondAmount) : 0
+      const secondAmt = Number(directSaleSecondAmount) || 0
       if (directSaleSecondMethod && secondAmt > 0) {
         const firstAmt = Math.max(0, total - secondAmt)
         splits.push({ method: method as any, amount: firstAmt })
@@ -560,10 +560,10 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
                   )}
                   <p className="text-sm font-black uppercase">Total a Cobrar</p>
                   <p className="text-5xl font-black">${totals.total.toLocaleString()}</p>
-                  {secondPaymentMethod && secondPaymentAmount && parseFloat(secondPaymentAmount) > 0 && (
+                  {secondPaymentMethod && secondPaymentAmount && (Number(secondPaymentAmount) || 0) > 0 && (
                     <div className="text-xs text-gray-500 space-y-0.5 mt-1">
-                      <p>{paymentLabels[paymentMethod]}: ${Math.max(0, totals.total - parseFloat(secondPaymentAmount)).toLocaleString()}</p>
-                      <p>{paymentLabels[secondPaymentMethod]}: ${parseFloat(secondPaymentAmount).toLocaleString()}</p>
+                      <p>{paymentLabels[paymentMethod]}: ${Math.max(0, totals.total - (Number(secondPaymentAmount) || 0)).toLocaleString()}</p>
+                      <p>{paymentLabels[secondPaymentMethod]}: ${(Number(secondPaymentAmount) || 0).toLocaleString()}</p>
                     </div>
                   )}
                 </div>

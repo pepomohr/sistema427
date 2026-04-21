@@ -178,6 +178,12 @@ export interface Expense {
 // HELPERS & LOGIC
 // ============================================
 
+// Sanitiza cualquier valor a número seguro (nunca NaN ni Infinity)
+const safeNum = (val: any, fallback = 0): number => {
+  const n = Number(val)
+  return isFinite(n) ? n : fallback
+}
+
 export const getCategoryDisplayName = (category: string): string => {
   const names: Record<string, string> = {
     'Facial': 'Facial/Escote',
@@ -300,7 +306,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   addExpense: async (expenseData) => {
-    const { data, error } = await supabase.from('expenses').insert([{ description: expenseData.description, amount: expenseData.amount }]).select().single()
+    const { data, error } = await supabase.from('expenses').insert([{ description: expenseData.description, amount: safeNum(expenseData.amount) }]).select().single()
     if (error) throw new Error(error.message)
     if (data) {
       const newExpense = { id: data.id, description: data.description, amount: Number(data.amount), date: new Date(data.date) }
@@ -669,7 +675,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         date: format(appointment.date, "yyyy-MM-dd'T'12:00:00.000'Z'"),
         time: appointment.time, services: appointment.services,
         products: appointment.products || [], status: appointment.status,
-        totalAmount: appointment.totalAmount, paidAmount: appointment.paidAmount
+        totalAmount: safeNum(appointment.totalAmount), paidAmount: safeNum(appointment.paidAmount)
       }]).select().single();
     if (error) throw new Error(error.message)
     if (data) {
@@ -1039,11 +1045,11 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         receptionist_name: closure.receptionistName,
         date_from: closure.dateFrom.toISOString(),
         date_to: closure.dateTo.toISOString(),
-        amount_efectivo: closure.amountEfectivo,
-        amount_transferencia: closure.amountTransferencia,
-        amount_tarjeta: closure.amountTarjeta,
-        amount_qr: closure.amountQr,
-        total: closure.total,
+        amount_efectivo: safeNum(closure.amountEfectivo),
+        amount_transferencia: safeNum(closure.amountTransferencia),
+        amount_tarjeta: safeNum(closure.amountTarjeta),
+        amount_qr: safeNum(closure.amountQr),
+        total: safeNum(closure.total),
         observations: closure.observations,
       }]).select().single();
       if (error) throw new Error(error.message)
