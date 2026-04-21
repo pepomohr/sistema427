@@ -614,8 +614,11 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   addPatient: async (patient) => {
     const { data, error } = await supabase.from('patients').insert([{
-        name: patient.name, dni: patient.dni, phone: patient.phone,
-        email: patient.email, birth_date: patient.birthdate
+        name: patient.name,
+        phone: patient.phone,
+        dni: patient.dni?.trim() || null,
+        email: patient.email?.trim() || null,
+        birth_date: patient.birthdate || null,
       }]).select().single();
     if (error) throw new Error(error.message)
     if (data) {
@@ -630,8 +633,12 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
 
   updatePatient: async (id, updates) => {
     const { error } = await supabase.from('patients').update({
-        name: updates.name, dni: updates.dni, phone: updates.phone,
-        email: updates.email, birth_date: updates.birthdate, notes: updates.notes
+        name: updates.name,
+        phone: updates.phone,
+        dni: updates.dni?.trim() || null,
+        email: updates.email?.trim() || null,
+        birth_date: updates.birthdate || null,
+        notes: updates.notes || null,
       }).eq('id', id);
     if (error) throw new Error(error.message)
     set(state => ({ patients: state.patients.map(p => p.id === id ? { ...p, ...updates } : p) }));
