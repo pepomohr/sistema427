@@ -107,6 +107,7 @@ export default function Home() {
       const newSession = { id: Date.now().toString(), name, role }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession))
       setCurrentUser(newSession)
+      if (role === "admin") registerPushSubscription('admin')
     }
   }
   
