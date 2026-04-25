@@ -797,11 +797,11 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       )}
 
       {showGiftCardLoader && selectedPatient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <Card className="w-full max-w-md bg-white border-l-4 border-l-[#16A34A] shadow-2xl rounded-2xl">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[#16A34A]">
-                   <Gift className="h-5 w-5" /> 
+                   <Gift className="h-5 w-5" />
                    Acreditar Saldo a Favor (Gift Card)
                 </CardTitle>
             </CardHeader>

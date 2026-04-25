@@ -28,7 +28,7 @@ export function CashClosureModule({ receptionistName }: { receptionistName: stri
 
   const setPreset = (preset: ShiftPreset) => {
     setShiftPreset(preset)
-    if (preset === "mañana") { setTimeFrom("08:00"); setTimeTo("14:00") }
+    if (preset === "mañana") { setTimeFrom("08:00"); setTimeTo("13:59") }
     else if (preset === "tarde") { setTimeFrom("14:00"); setTimeTo("21:00") }
     else if (preset === "completo") { setTimeFrom("00:00"); setTimeTo("23:59") }
   }
