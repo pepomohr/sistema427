@@ -68,31 +68,31 @@ export default function Home() {
   }, []) // <-- ESTE ARRAY VACÍO ES LA CLAVE QUE FALTABA
 
   // EFECTO 2: Recuperar sesión guardada
+  // No esperamos a que carguen los profesionales — confiamos en el localStorage
+  // (si la profesional fue desactivada, el admin puede hacer logout manual)
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        const session = JSON.parse(stored)
-        const profs = useClinicStore.getState().professionals
-        const professional = profs.find(p => p.id === session.professionalId)
-        
-        if (professional && professional.isActive) {
-          setCurrentUser({
-            id: session.professionalId,
-            name: session.name,
-            role: session.role,
-            professionalId: session.professionalId,
-          })
-        } else if (session.role === 'admin' || session.role === 'recepcion') {
-           setCurrentUser({
-            id: session.id || Date.now().toString(),
-            name: session.name,
-            role: session.role,
-          })
-        }
-      } catch {
+    if (!stored) return
+    try {
+      const session = JSON.parse(stored)
+      if (session.role === 'profesional' && session.professionalId && session.name) {
+        setCurrentUser({
+          id: session.professionalId,
+          name: session.name,
+          role: 'profesional',
+          professionalId: session.professionalId,
+        })
+      } else if ((session.role === 'admin' || session.role === 'recepcion') && session.name) {
+        setCurrentUser({
+          id: session.id || Date.now().toString(),
+          name: session.name,
+          role: session.role,
+        })
+      } else {
         localStorage.removeItem(STORAGE_KEY)
       }
+    } catch {
+      localStorage.removeItem(STORAGE_KEY)
     }
   }, [setCurrentUser])
   
