@@ -1455,7 +1455,32 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                     </div>
                     <p className="text-sm text-emerald-100 uppercase tracking-widest">Total a cobrar</p>
                     <p className="text-4xl font-extrabold text-white">${Math.round(directSaleTotal).toLocaleString()}</p>
-                    <Button className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold" onClick={async () => {
+
+                    {/* Método de pago */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["efectivo","transferencia","tarjeta","qr"] as const).map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setDirectSalePaymentMethod(m as any)}
+                          className={`py-2 rounded-lg text-sm font-bold border-2 transition-colors ${
+                            directSalePaymentMethod === m
+                              ? "bg-white text-emerald-700 border-white"
+                              : "bg-transparent text-emerald-100 border-emerald-400/50 hover:border-white"
+                          }`}
+                        >
+                          {m === "efectivo" ? "💵 Efectivo"
+                            : m === "transferencia" ? "🏦 Transferencia"
+                            : m === "tarjeta" ? "💳 Tarjeta"
+                            : "📱 QR"}
+                        </button>
+                      ))}
+                    </div>
+
+                    <Button
+                      className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white font-bold disabled:opacity-50"
+                      disabled={!directSalePaymentMethod}
+                      onClick={async () => {
                       const giftCardCredit = directSaleCart.reduce((acc, item) => {
                         if (!isGeneralGiftCardProduct(item)) return acc
                         return acc + (getDirectSaleUnitPrice(item) * item.quantity)
@@ -1492,6 +1517,7 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       }
 
                       setDirectSaleCart([])
+                      setDirectSalePaymentMethod("")
                     }}>
                       Confirmar Venta
                     </Button>
