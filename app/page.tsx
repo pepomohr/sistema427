@@ -6,6 +6,7 @@ import { LoginScreen } from "@/components/login-screen"
 import { ProfessionalSelectScreen } from "@/components/professional-select-screen"
 import { MainLayout } from "@/components/main-layout"
 import Loader from "@/components/loader"
+import { registerServiceWorker, registerPushSubscription } from "@/lib/push-notifications"
 
 const STORAGE_KEY = "c427_professional_session"
 const RESET_MONTH_KEY = "c427_last_sales_reset"
@@ -15,6 +16,9 @@ export default function Home() {
   const [showProfessionalSelect, setShowProfessionalSelect] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   
+  // Registrar service worker al iniciar
+  useEffect(() => { registerServiceWorker() }, [])
+
   // EFECTO 1: Carga de datos y Realtime (Array vacío para que corra UNA sola vez y no haga bucle)
   useEffect(() => {
     const store = useClinicStore.getState()
@@ -113,9 +117,12 @@ export default function Home() {
     
     const session = { professionalId, name: professional.name, role: "profesional" as UserRole }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
-    
+
     setCurrentUser({ id: professionalId, name: professional.name, role: "profesional", professionalId })
     setShowProfessionalSelect(false)
+
+    // Suscribir notificaciones push para esta profesional en este dispositivo
+    registerPushSubscription(professionalId)
   }
   
   const handleLogout = () => {

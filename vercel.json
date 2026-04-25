@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/notify-professionals",
+      "schedule": "0 23 * * *"
+    }
+  ]
+}
