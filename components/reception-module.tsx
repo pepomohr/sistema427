@@ -520,10 +520,16 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
   const isAptOutsideSchedule = (apt: any): boolean => {
     const prof = professionals.find(p => p.id === apt.professionalId)
     if (!prof?.schedule) return false
+    // Solo aplica si la profesional tiene al menos un día configurado
+    const hasAnySchedule = Object.values(prof.schedule as any).some((d: any) =>
+      Array.isArray(d) ? d.length > 0 : d?.start
+    )
+    if (!hasAnySchedule) return false
     const dateObj = new Date(apt.date)
     const dayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dateObj.getDay()]
     const daySchedule = (prof.schedule as any)[dayKey]
-    if (!daySchedule || daySchedule.length === 0) return false
+    // Si no tiene horario ese día → turno mal programado
+    if (!daySchedule || daySchedule.length === 0) return true
     const [aptH, aptM] = (apt.time || '00:00').split(':').map(Number)
     const aptMins = aptH * 60 + aptM
     return !daySchedule.some(({ start, end }: any) => {
