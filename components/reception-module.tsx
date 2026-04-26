@@ -552,8 +552,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
     const allPossibleSlots: string[] = []
 
+    // Verificar si la profesional tiene algún día configurado en su cronograma
+    const hasAnySchedule = professional.schedule &&
+      Object.values(professional.schedule as any).some((d: any) => Array.isArray(d) ? d.length > 0 : d?.start)
+
     if (daySchedule && daySchedule.length > 0) {
-      // Only generate slots within the professional's working hours
+      // Generar slots solo dentro del horario de la profesional ese día
       daySchedule.forEach(({ start, end }: { start: string, end: string }) => {
         const [startH, startM] = start.split(':').map(Number)
         const [endH, endM] = end.split(':').map(Number)
@@ -565,14 +569,15 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           allPossibleSlots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
         }
       })
-    } else {
-      // No schedule configured = show all 9-21 with correct step
+    } else if (!hasAnySchedule) {
+      // Solo si NO tiene ningún día configurado, mostrar todos los slots (profesional nueva sin horario)
       for (let m = 9 * 60; m < 21 * 60; m += stepMinutes) {
         const h = Math.floor(m / 60)
         const min = m % 60
         allPossibleSlots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
       }
     }
+    // Si tiene schedule pero ese día no trabaja → allPossibleSlots queda vacío → no hay slots disponibles
 
     const dateForFilter = (
       schedulingDate.includes('T')

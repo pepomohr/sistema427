@@ -191,17 +191,30 @@ export function HRModule() {
       const hasBothRates = p.hourlyRateFacial !== null && p.hourlyRateFacial !== undefined && rateFacial !== rateCorporal;
 
       if (hasBothRates) {
-          // CORRECCIÓN: Lógica adaptada para buscar categorías dentro del array services de Appointment
-          const corporalAppointments = appointments?.filter(a => a.professionalId === p.id && a.services?.some(s => s.category === 'Corporales')) || [];
-          const corporalHours = corporalAppointments.length; 
-          const normalHours = Math.max(0, weeklyHours - corporalHours);
-          
-          totalPay = (normalHours * rateFacial) + (corporalHours * rateCorporal);
+          // Filtrar turnos de esta semana (lunes a domingo)
+          const now = new Date()
+          const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1 // 0=lunes
+          const weekStart = new Date(now); weekStart.setDate(now.getDate() - dayOfWeek); weekStart.setHours(0,0,0,0)
+          const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7)
+
+          const weekApts = appointments?.filter(a => {
+            if (a.professionalId !== p.id) return false
+            const d = new Date(a.date)
+            return d >= weekStart && d < weekEnd
+          }) || []
+
+          // Separar por categoría (cada turno = 1 hora)
+          const corporalApts = weekApts.filter(a => a.services?.some((s: any) => s.category === 'Corporales'))
+          const facialApts = weekApts.filter(a => !a.services?.some((s: any) => s.category === 'Corporales'))
+          const corporalHours = corporalApts.length
+          const facialHours = facialApts.length
+
+          totalPay = (facialHours * rateFacial) + (corporalHours * rateCorporal);
 
           detailContent = (
             <span className="block space-y-1 mt-2">
-              <span className="block text-gray-600">Horas faciales a liquidar: {normalHours}</span>
-              <span className="block text-gray-600">Horas corporales a liquidar: {corporalHours}</span>
+              <span className="block text-gray-600">Turnos faciales esta semana: {facialHours} → ${facialHours * rateFacial}</span>
+              <span className="block text-gray-600">Turnos corporales esta semana: {corporalHours} → ${corporalHours * rateCorporal}</span>
               <span className="block text-lg font-black text-gray-900 mt-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
                 Total a Pagar: ${totalPay}
               </span>
