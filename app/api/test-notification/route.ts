@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
       await webpush.sendNotification(
         sub.subscription,
         JSON.stringify({
-          title: '🔔 C427 Clínica',
-          body: 'Nico, así se van a ver las notificaciones 👆',
+          title: 'C427',
+          body: '🎯 Recepción llegó a 155 ventas este mes',
           url: '/',
         })
       )
