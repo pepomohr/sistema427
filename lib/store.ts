@@ -657,7 +657,6 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
         dni: updates.dni?.trim() || null,
         email: updates.email?.trim() || null,
         birth_date: cleanDate || null,
-        notes: updates.notes || null,
       }).eq('id', id);
     if (error) {
       const msg = error.message || ''
