@@ -24,6 +24,10 @@ export async function GET(req: NextRequest) {
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
   const tomorrowStr = tomorrow.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
 
+  // Formato "27/04" para el body
+  const [year, month, day] = tomorrowStr.split('-')
+  const tomorrowDisplay = `${day}/${month}`
+
   const { data: appointments, error: aptError } = await supabase
     .from('appointments')
     .select('*')
@@ -34,59 +38,49 @@ export async function GET(req: NextRequest) {
   if (aptError) return NextResponse.json({ error: aptError.message }, { status: 500 })
   if (!appointments?.length) return NextResponse.json({ ok: true, sent: 0 })
 
-  // Agrupar por profesional
-  const byProf: Record<string, any[]> = {}
-  for (const apt of appointments) {
-    const profId = apt.professional_id || apt.professionalId
-    if (!profId) continue
-    if (!byProf[profId]) byProf[profId] = []
-    byProf[profId].push(apt)
-  }
-
-  const profIds = Object.keys(byProf)
+  // Obtener todos los professional_ids únicos
+  const profIds = [...new Set(appointments.map(a => a.professional_id || a.professionalId).filter(Boolean))]
   if (!profIds.length) return NextResponse.json({ ok: true, sent: 0 })
 
-  const [{ data: subscriptions }, { data: professionals }] = await Promise.all([
+  const [{ data: subscriptions }] = await Promise.all([
     supabase.from('push_subscriptions').select('*').in('professional_id', profIds),
-    supabase.from('professionals').select('id, name').in('id', profIds),
   ])
 
   if (!subscriptions?.length) return NextResponse.json({ ok: true, sent: 0, note: 'No subscriptions' })
 
-  const profNames: Record<string, string> = {}
-  for (const p of professionals ?? []) {
-    profNames[p.id] = p.name.split(' ')[0]
-  }
-
   let sent = 0
 
-  await Promise.all(
-    subscriptions.map(async (sub) => {
-      const apts = byProf[sub.professional_id]
-      if (!apts) return
+  // Una notificación por turno
+  for (const apt of appointments) {
+    const profId = apt.professional_id || apt.professionalId
+    if (!profId) continue
 
-      const firstName = profNames[sub.professional_id] ?? 'Hola'
-      const aptLines = apts
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .map((apt) => {
-          const time = new Date(apt.date).toLocaleTimeString('es-AR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'America/Argentina/Buenos_Aires',
-          })
-          const services = Array.isArray(apt.services)
-            ? apt.services.map((s: any) => s.name || s).join(' + ')
-            : apt.service_name ?? 'Turno'
-          return `${time}hs - ${services}`
-        })
-        .join('\n')
+    const profSubs = subscriptions.filter(s => s.professional_id === profId)
+    if (!profSubs.length) continue
 
+    // Hora del turno
+    const aptDate = new Date(apt.date)
+    const time = aptDate.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Argentina/Buenos_Aires',
+      hour12: false,
+    })
+
+    // Nombre del servicio
+    const serviceName = Array.isArray(apt.services) && apt.services.length > 0
+      ? apt.services.map((s: any) => s.name || s).join(' + ')
+      : apt.service_name ?? 'turno'
+
+    const body = `Mañana ${tomorrowDisplay} tenés un ${serviceName} a las ${time}hs`
+
+    for (const sub of profSubs) {
       try {
         await webpush.sendNotification(
           sub.subscription,
           JSON.stringify({
-            title: `¡Hola ${firstName}! 👋`,
-            body: `Mañana tenés:\n${aptLines}`,
+            title: 'C427',
+            body,
             url: '/',
           })
         )
@@ -96,8 +90,8 @@ export async function GET(req: NextRequest) {
           await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
         }
       }
-    })
-  )
+    }
+  }
 
   return NextResponse.json({ ok: true, sent })
 }

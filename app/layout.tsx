@@ -10,8 +10,9 @@ const lato = Lato({
 });
 
 export const metadata: Metadata = {
-  title: 'Consultorio C427 - Sistema de Gestión',
+  title: 'C427',
   description: 'Sistema de gestión avanzada para Consultorio C427',
+  manifest: '/manifest.json',
   icons: {
     icon: '/images/favicon.png',
     shortcut: '/images/icon-192x192.png',
