@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { UserRole } from "@/lib/store"
 import { Building2, Users, ShieldCheck, Lock } from "lucide-react"
 import Image from "next/image"
@@ -12,40 +12,34 @@ interface LoginScreenProps {
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [showAdminAuth, setShowAdminAuth] = useState(false)
   const [adminPin, setAdminPin] = useState("")
-  const [isSettingPin, setIsSettingPin] = useState(false)
-  const [storedPin, setStoredPin] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
-
-  // Cargar el PIN guardado al iniciar
-  useEffect(() => {
-    const pin = localStorage.getItem("c427_admin_password")
-    if (pin) {
-      setStoredPin(pin)
-    } else {
-      setIsSettingPin(true)
-    }
-  }, [])
 
   const staff = {
     recepcion: ["Luna", "Valen"],
   }
 
-  const handleAdminAccess = () => {
-    if (isSettingPin) {
-      if (adminPin.length >= 4) {
-        localStorage.setItem("c427_admin_password", adminPin)
-        setStoredPin(adminPin)
-        setIsSettingPin(false)
-        onLogin("admin", "Admin")
-      }
-    } else {
-      if (adminPin === storedPin) {
+  const handleAdminAccess = async () => {
+    if (!adminPin.trim()) return
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPin })
+      })
+      if (res.ok) {
         onLogin("admin", "Admin")
       } else {
         setError(true)
-        setTimeout(() => setError(false), 500)
+        setTimeout(() => setError(false), 600)
         setAdminPin("")
       }
+    } catch {
+      setError(true)
+      setTimeout(() => setError(false), 600)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -76,12 +70,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             <div className="bg-secondary/20 p-6 rounded-3xl border border-border space-y-4 animate-in fade-in zoom-in duration-300">
               <div className="text-center space-y-1">
                 <Lock className="mx-auto h-6 w-6 text-primary mb-2" />
-                <h3 className="font-bold text-lg">
-                  {isSettingPin ? "Configurar Acceso Admin" : "Acceso Restringido"}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  {isSettingPin ? "Elegí una contraseña maestra para administración" : "Ingresá la contraseña para continuar"}
-                </p>
+                <h3 className="font-bold text-lg">Acceso Restringido</h3>
+                <p className="text-xs text-muted-foreground">Ingresá la contraseña para continuar</p>
               </div>
               
               <input
@@ -95,16 +85,17 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => {setShowAdminAuth(false); setAdminPin("");}}
+                  onClick={() => {setShowAdminAuth(false); setAdminPin(""); setError(false);}}
                   className="flex-1 py-3 text-sm font-bold text-muted-foreground"
                 >
                   Volver
                 </button>
                 <button
                   onClick={handleAdminAccess}
-                  className="flex-[2] bg-primary text-primary-foreground py-3 rounded-xl font-bold shadow-lg"
+                  disabled={loading || !adminPin.trim()}
+                  className="flex-[2] bg-primary text-primary-foreground py-3 rounded-xl font-bold shadow-lg disabled:opacity-60"
                 >
-                  {isSettingPin ? "Guardar y Entrar" : "Ingresar"}
+                  {loading ? "..." : "Ingresar"}
                 </button>
               </div>
             </div>
