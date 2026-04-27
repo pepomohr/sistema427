@@ -58,14 +58,11 @@ export async function GET(req: NextRequest) {
     const profSubs = subscriptions.filter(s => s.professional_id === profId)
     if (!profSubs.length) continue
 
-    // Hora del turno
-    const aptDate = new Date(apt.date)
-    const time = aptDate.toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Argentina/Buenos_Aires',
-      hour12: false,
-    })
+    // Hora real del turno (campo time = "10:00", no el date que siempre es mediodía UTC)
+    const time = apt.time ?? apt.start_time ?? (() => {
+      const d = new Date(apt.date)
+      return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires', hour12: false })
+    })()
 
     // Nombre del servicio
     const serviceName = Array.isArray(apt.services) && apt.services.length > 0
