@@ -213,6 +213,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           actionType: "danger",
           onConfirm: () => {}
         })
+        // Notificar a admin del error
+        fetch('/api/notify-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `No se guardó el paciente "${savedName}" en la base de datos` })
+        }).catch(() => {})
         return // NO cerrar el formulario, que pueda reintentar
       }
       setNewPatient({ name: "", phone: "", email: "", dni: "", birthdate: "" })
@@ -1522,6 +1528,11 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                         }).catch(() => {})
                       } catch (err: any) {
                         confirm({ title: "Error al registrar venta", description: `La venta no se pudo guardar. ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`, actionType: "danger", onConfirm: () => {} })
+                        fetch('/api/notify-error', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ message: `Error al registrar venta en recepción: ${err?.message || 'Error desconocido'}` })
+                        }).catch(() => {})
                         return
                       }
 

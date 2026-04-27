@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/notify-admin-salary",
       "schedule": "0 13 * * 4"
+    },
+    {
+      "path": "/api/cron/notify-pending",
+      "schedule": "0 23 * * 1-5"
     }
   ]
 }

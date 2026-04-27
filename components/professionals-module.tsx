@@ -317,9 +317,8 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
             type: 'product' as const,
             itemId: i.product.id,
             itemName: i.product.name,
-            // gift_card y efectivo usan precio cash (dinero del paciente = cash)
             price: (directSalePaymentMethod === 'efectivo' || directSalePaymentMethod === 'gift_card') ? i.product.priceCash : i.product.priceList,
-            priceCashReference: i.product.priceCash, // siempre cash para comisión correcta
+            priceCashReference: i.product.priceCash,
             quantity: i.quantity,
             soldBy: currentProfessional.id,
           })),
@@ -328,6 +327,12 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
           processedBy: currentProfessional.shortName,
           patientId: directSalePatientId || undefined,
         })
+        // Milestone de ventas — fire and forget
+        fetch('/api/notify-milestone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ who: currentProfessional.shortName || currentProfessional.name })
+        }).catch(() => {})
         setDirectSaleCart([])
         setDirectSalePaymentMethod("")
         setShowDirectSaleDialog(false)
