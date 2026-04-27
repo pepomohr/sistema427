@@ -42,13 +42,15 @@ const calculateWeeklyHours = (schedule?: WeekSchedule | any) => {
 };
 
 export function HRModule() {
-  const { professionals, updateProfessional, resetProfessionalPin, toggleProfessionalActive, updateHourlyRate, appointments, fetchProfessionals, addProfessional } = useClinicStore()
+  const { professionals, updateProfessional, resetProfessionalPin, toggleProfessionalActive, updateHourlyRate, appointments, sales, services, fetchProfessionals, fetchAppointments, fetchSales, addProfessional } = useClinicStore()
   const { confirm, ConfirmDialog } = useConfirm()
   const [resettingPinId, setResettingPinId] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof fetchProfessionals === 'function') fetchProfessionals()
-  }, [fetchProfessionals])
+    if (typeof fetchAppointments === 'function') fetchAppointments()
+    if (typeof fetchSales === 'function') fetchSales()
+  }, [])
 
   const [showNewModal, setShowNewModal] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
@@ -152,88 +154,144 @@ export function HRModule() {
 
   // --- LÓGICA DE LIQUIDACIÓN ---
   const handleLiquidarSemana = (p: Professional) => {
-    const weeklyHours = calculateWeeklyHours(p.schedule);
-    const isCommission = !p.hourlyRateFacial && !p.hourlyRateCorporal && p.hourlyRate != null && p.hourlyRate <= 100;
+    // Semana: de sábado 00:00 al viernes 23:59 — el sábado se resetea a 0
+    const now = new Date()
+    const dayOfWeek = now.getDay() // 0=Dom, 1=Lun, ..., 5=Vie, 6=Sáb
+    const daysSinceSat = dayOfWeek === 6 ? 0 : dayOfWeek + 1
+    const weekStart = new Date(now)
+    weekStart.setDate(now.getDate() - daysSinceSat)
+    weekStart.setHours(0, 0, 0, 0)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 7)
 
-    let totalPay = 0;
-    let detailContent: React.ReactNode = null;
+    // Tipo de profesional
+    const rateFacial = p.hourlyRateFacial || 0
+    const rateCorporal = p.hourlyRateCorporal || 0
+    const hasBothRates = rateFacial > 0 && rateCorporal > 0
+    const isCommission = !hasBothRates && p.hourlyRate != null && p.hourlyRate > 0 && p.hourlyRate <= 100
+    const isHourly = !hasBothRates && !isCommission && (p.hourlyRate || 0) > 100
 
-    if (isCommission) {
-      const now = new Date()
-      const profAppointments = appointments?.filter(a => {
-        if (a.professionalId !== p.id) return false
-        if (a.status !== 'completado') return false
-        const aptDate = new Date(a.date)
-        return aptDate.getFullYear() === now.getFullYear() && aptDate.getMonth() === now.getMonth()
-      }) || []
-      const totalSales = profAppointments.reduce((acc, a) => acc + (a.paidAmount || a.totalAmount || 0), 0);
-      totalPay = totalSales * (p.hourlyRate! / 100);
+    // Helper: detectar si un turno es corporal (busca en el catálogo si es necesario)
+    const isCorporalApt = (a: any): boolean => {
+      if (Array.isArray(a.services)) {
+        for (const s of a.services) {
+          // Chequeo directo en el turno
+          const cat = (s.category || s.serviceCategory || s.service_category || '').toLowerCase()
+          if (cat === 'corporales' || cat === 'corporal') return true
+          // Si no tiene categoría, buscar en el catálogo por id o nombre
+          const svcInCatalog = (services || []).find(
+            (svc: any) => svc.id === (s.id || s.serviceId || s.itemId) ||
+                          svc.name?.toLowerCase() === (s.name || s.itemName || '').toLowerCase()
+          )
+          if (svcInCatalog) {
+            const catFromCatalog = (svcInCatalog.category || '').toLowerCase()
+            if (catFromCatalog === 'corporales' || catFromCatalog === 'corporal') return true
+          }
+        }
+      }
+      return false
+    }
+
+    // Turnos de esta semana para esta profesional
+    const weekApts = (appointments || []).filter(a => {
+      const profId = a.professionalId || a.professional_id
+      if (profId !== p.id) return false
+      const d = new Date(a.date)
+      return d >= weekStart && d < weekEnd
+    })
+
+    let totalPay = 0
+    let detailContent: React.ReactNode = null
+
+    if (hasBothRates) {
+      // Vero y similares: tarifa diferente facial vs corporal
+      // Fuente: ventas de la semana donde soldBy = nombre de la profesional
+      const weekSales = (sales || []).filter(s => {
+        const d = new Date(s.date)
+        return d >= weekStart && d < weekEnd
+      })
+
+      // Contar servicios corporales y faciales desde ventas (soldBy = p.name)
+      let corporalCount = 0
+      let facialCount = 0
+      for (const sale of weekSales) {
+        if (!Array.isArray(sale.items)) continue
+        for (const item of sale.items) {
+          if (item.type !== 'service') continue
+          const soldBy = (item.soldBy || '').toLowerCase()
+          const profName = (p.name || '').toLowerCase()
+          const profShort = (p.shortName || '').toLowerCase()
+          if (!soldBy.includes(profName) && !soldBy.includes(profShort)) continue
+
+          // Buscar categoría del servicio en catálogo
+          const svcInCatalog = (services || []).find(
+            (svc: any) => svc.id === (item.itemId || item.id) ||
+                          svc.name?.toLowerCase() === (item.itemName || '').toLowerCase()
+          )
+          const cat = (svcInCatalog?.category || '').toLowerCase()
+          if (cat === 'corporales' || cat === 'corporal') {
+            corporalCount++
+          } else {
+            facialCount++
+          }
+        }
+      }
+
+      // Si no hay datos en ventas, caer a turnos del schedule
+      if (corporalCount === 0 && facialCount === 0 && weekApts.length > 0) {
+        const corporalApts = weekApts.filter(isCorporalApt)
+        const facialApts = weekApts.filter(a => !isCorporalApt(a))
+        corporalCount = corporalApts.length
+        facialCount = facialApts.length
+      }
+
+      totalPay = (facialCount * rateFacial) + (corporalCount * rateCorporal)
 
       detailContent = (
         <span className="block space-y-1 mt-2">
-          <span className="block text-gray-600">Turnos atendidos: {profAppointments.length}</span>
-          <span className="block text-gray-600">Facturación Total: ${totalSales}</span>
+          <span className="block text-gray-600">Turnos <b>faciales</b> esta semana: {facialCount} × ${rateFacial} = ${facialCount * rateFacial}</span>
+          <span className="block text-gray-600">Turnos <b>corporales</b> esta semana: {corporalCount} × ${rateCorporal} = ${corporalCount * rateCorporal}</span>
           <span className="block text-lg font-black text-gray-900 mt-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
-            Comisión ({p.hourlyRate}%): ${totalPay.toFixed(2)}
+            Total a Pagar: ${totalPay.toLocaleString('es-AR')}
           </span>
         </span>
-      );
-      
+      )
+
+    } else if (isCommission) {
+      // Comisión %: suma de lo facturado esta semana × porcentaje
+      const completedApts = weekApts.filter(a => a.status === 'completado')
+      const totalRevenue = completedApts.reduce((acc, a) => acc + (a.paidAmount || a.totalAmount || 0), 0)
+      totalPay = totalRevenue * (p.hourlyRate! / 100)
+
+      detailContent = (
+        <span className="block space-y-1 mt-2">
+          <span className="block text-gray-600">Turnos completados esta semana: {completedApts.length}</span>
+          <span className="block text-gray-600">Facturación total: ${totalRevenue.toLocaleString('es-AR')}</span>
+          <span className="block text-lg font-black text-gray-900 mt-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
+            Comisión ({p.hourlyRate}%): ${totalPay.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </span>
+        </span>
+      )
+
     } else {
+      // Tarifa fija por hora según horario configurado
+      const weeklyHours = calculateWeeklyHours(p.schedule)
       if (weeklyHours === 0) {
-        confirm({ title: "Sin horas asignadas", description: `${p.shortName} no tiene horas en su cronograma.`, confirmText: "Cerrar", onConfirm: () => {} });
-        return;
+        confirm({ title: "Sin horas asignadas", description: `${p.shortName} no tiene horas en su cronograma.`, confirmText: "Cerrar", onConfirm: () => {} })
+        return
       }
+      const singleRate = p.hourlyRate || rateFacial || rateCorporal || 0
+      totalPay = weeklyHours * singleRate
 
-      const rateFacial = p.hourlyRateFacial || 0;
-      const rateCorporal = p.hourlyRateCorporal || 0;
-      
-      const hasBothRates = p.hourlyRateFacial !== null && p.hourlyRateFacial !== undefined && rateFacial !== rateCorporal;
-
-      if (hasBothRates) {
-          // Filtrar turnos de esta semana (lunes a domingo)
-          const now = new Date()
-          const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1 // 0=lunes
-          const weekStart = new Date(now); weekStart.setDate(now.getDate() - dayOfWeek); weekStart.setHours(0,0,0,0)
-          const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7)
-
-          const weekApts = appointments?.filter(a => {
-            if (a.professionalId !== p.id) return false
-            const d = new Date(a.date)
-            return d >= weekStart && d < weekEnd
-          }) || []
-
-          // Separar por categoría (cada turno = 1 hora)
-          const corporalApts = weekApts.filter(a => a.services?.some((s: any) => s.category === 'Corporales'))
-          const facialApts = weekApts.filter(a => !a.services?.some((s: any) => s.category === 'Corporales'))
-          const corporalHours = corporalApts.length
-          const facialHours = facialApts.length
-
-          totalPay = (facialHours * rateFacial) + (corporalHours * rateCorporal);
-
-          detailContent = (
-            <span className="block space-y-1 mt-2">
-              <span className="block text-gray-600">Turnos faciales esta semana: {facialHours} → ${facialHours * rateFacial}</span>
-              <span className="block text-gray-600">Turnos corporales esta semana: {corporalHours} → ${corporalHours * rateCorporal}</span>
-              <span className="block text-lg font-black text-gray-900 mt-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
-                Total a Pagar: ${totalPay}
-              </span>
-            </span>
-          );
-      } else {
-          const singleRate = p.hourlyRate || rateFacial || rateCorporal || 0;
-          totalPay = weeklyHours * singleRate;
-
-          detailContent = (
-            <span className="block space-y-1 mt-2">
-              <span className="block text-gray-600">Horas a liquidar: {weeklyHours}</span>
-              <span className="block text-gray-600">A ${singleRate} la hora</span>
-              <span className="block text-lg font-black text-gray-900 mt-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
-                Total a Pagar: ${totalPay}
-              </span>
-            </span>
-          );
-      }
+      detailContent = (
+        <span className="block space-y-1 mt-2">
+          <span className="block text-gray-600">Horas según cronograma: {weeklyHours}</span>
+          <span className="block text-gray-600">Tarifa: ${singleRate}/hora</span>
+          <span className="block text-lg font-black text-gray-900 mt-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
+            Total a Pagar: ${totalPay.toLocaleString('es-AR')}
+          </span>
+        </span>
+      )
     }
 
     confirm({
@@ -250,7 +308,7 @@ export function HRModule() {
       onConfirm: () => {
         setTimeout(() => confirm({ title: "Liquidación Guardada", description: `La liquidación de $${totalPay.toLocaleString('es-AR')} fue registrada correctamente.`, actionType: "success", onConfirm: () => {} }), 150)
       }
-    });
+    })
   }
 
   return (
