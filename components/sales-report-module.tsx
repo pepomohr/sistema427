@@ -161,7 +161,10 @@ export function SalesReportModule() {
   const rows = filteredSales.flatMap(sale => {
     // Nombre del paciente
     let patientName: string
-    if (sale.patientId && patientMap.has(sale.patientId)) {
+    if (sale.patientName) {
+      // Ventas web: nombre guardado directamente (sin FK a pacientes)
+      patientName = sale.patientName
+    } else if (sale.patientId && patientMap.has(sale.patientId)) {
       patientName = patientMap.get(sale.patientId)!
     } else if (sale.appointmentId) {
       const apt = storeAppointments.find((a: any) => a.id === sale.appointmentId)
@@ -196,6 +199,7 @@ export function SalesReportModule() {
     const saleDate = new Date(sale.date)
     const saleId = sale.id ? sale.id.slice(0, 8).toUpperCase() : "—"
     const isAppointment = sale.type === "appointment"
+    const isWebSale = sale.source === "web"
     const splits = sale.paymentSplits || []
     const hasSplit = splits.length > 1
     const split1 = splits[0]
@@ -207,6 +211,7 @@ export function SalesReportModule() {
       patientName,
       profName,
       isAppointment,
+      isWebSale,
       itemName: item.itemName,
       itemType: item.type,
       quantity: item.quantity,
@@ -308,7 +313,7 @@ export function SalesReportModule() {
         r.isFirstItem ? format(r.date, "dd/MM/yy HH:mm") : "",
         r.isFirstItem ? r.patientName : "",
         r.isFirstItem ? r.profName : "",
-        r.isFirstItem ? (r.isAppointment ? "Turno" : "Venta Directa") : "",
+        r.isFirstItem ? (r.isWebSale ? "Web C427" : r.isAppointment ? "Turno" : "Venta Directa") : "",
         r.itemName,
         r.itemType === "service" ? "Servicio" : "Producto",
         r.quantity,
@@ -510,9 +515,11 @@ export function SalesReportModule() {
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         {row.isFirstItem
-                          ? row.isAppointment
-                            ? <Badge className="bg-green-100 text-green-800 border-none text-xs font-bold">Turno</Badge>
-                            : <Badge className="bg-sky-100 text-sky-800 border-none text-xs font-bold">Venta Directa</Badge>
+                          ? row.isWebSale
+                            ? <Badge className="bg-purple-100 text-purple-800 border-none text-xs font-bold">Web C427</Badge>
+                            : row.isAppointment
+                              ? <Badge className="bg-green-100 text-green-800 border-none text-xs font-bold">Turno</Badge>
+                              : <Badge className="bg-sky-100 text-sky-800 border-none text-xs font-bold">Venta Directa</Badge>
                           : ""}
                       </td>
                       <td className="px-3 py-2 font-bold text-black max-w-[180px]">

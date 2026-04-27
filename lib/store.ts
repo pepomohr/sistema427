@@ -145,8 +145,9 @@ export interface Sale {
   paymentSplits?: PaymentSplit[]
   usedOfferId?: string
   observations?: string
-  source?: 'recepcion' | 'gabinete'
+  source?: 'recepcion' | 'gabinete' | 'web'
   patientId?: string
+  patientName?: string  // Para ventas web donde no hay patient_id (futuro: vincular con usuario)
   appointmentId?: string
   date: Date
   processedBy: string
@@ -325,6 +326,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           paymentMethod: s.payment_method, paymentSplits: s.payment_splits || [],
           usedOfferId: s.used_offer_id, observations: s.observations,
           source: s.source || 'recepcion', patientId: s.patient_id,
+          patientName: s.patient_name || undefined,
           appointmentId: s.appointment_id, processedBy: s.processed_by,
           type: s.type, date: new Date(s.date)
         })) })
@@ -1083,7 +1085,8 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
       paymentMethod: s.payment_method, paymentSplits: s.payment_splits || [],
       usedOfferId: s.used_offer_id, observations: s.observations,
       source: s.source || 'recepcion', processedBy: s.processed_by,
-      patientId: s.patient_id, appointmentId: s.appointment_id,
+      patientId: s.patient_id, patientName: s.patient_name || undefined,
+      appointmentId: s.appointment_id,
       type: s.type, date: new Date(s.date)
     })
 
