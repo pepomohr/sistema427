@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
+import { saveAdminNotification } from '@/lib/save-admin-notification'
 
-// Llamado desde el cliente cuando falla un guardado importante
 export async function POST(req: NextRequest) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,17 +25,12 @@ export async function POST(req: NextRequest) {
 
   if (!subscriptions?.length) return NextResponse.json({ ok: false, reason: 'no admin subscriptions' })
 
+  const title = 'C427 — Error del sistema'
+
   let sent = 0
   for (const sub of subscriptions) {
     try {
-      await webpush.sendNotification(
-        sub.subscription,
-        JSON.stringify({
-          title: '⚠️ C427 — Error del sistema',
-          body: message,
-          url: '/',
-        })
-      )
+      await webpush.sendNotification(sub.subscription, JSON.stringify({ title, body: message, url: '/' }))
       sent++
     } catch (err: any) {
       if (err.statusCode === 404 || err.statusCode === 410) {
@@ -43,6 +38,8 @@ export async function POST(req: NextRequest) {
       }
     }
   }
+
+  await saveAdminNotification(supabase, title, message)
 
   return NextResponse.json({ ok: true, sent })
 }

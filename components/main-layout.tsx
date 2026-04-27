@@ -71,13 +71,61 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [dismissedLowStock, setDismissedLowStock] = useState(false)
   const [notifStatus, setNotifStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown')
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
 
-  // Para admin: detectar estado de notificaciones
+  // Para admin: detectar estado y cargar historial
   useEffect(() => {
     if (user.role !== 'admin') return
     if (!('Notification' in window)) return
     setNotifStatus(Notification.permission as any)
+    fetchNotifications()
   }, [user.role])
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch('/api/admin-notifications')
+      if (!res.ok) return
+      const data = await res.json()
+      const notifs = data.notifications || []
+      setNotifications(notifs)
+      setUnreadCount(notifs.filter((n: any) => !n.read).length)
+    } catch {}
+  }
+
+  const handleBellClick = async () => {
+    if (notifStatus !== 'granted') {
+      await registerServiceWorker()
+      await registerPushSubscription('admin')
+      setNotifStatus(Notification.permission as any)
+      return
+    }
+    // Abrir panel
+    setNotifPanelOpen(prev => !prev)
+    if (!notifPanelOpen) {
+      await fetchNotifications()
+      // Marcar como leídas
+      if (unreadCount > 0) {
+        fetch('/api/admin-notifications', { method: 'PATCH' }).catch(() => {})
+        setUnreadCount(0)
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+      }
+    }
+  }
+
+  const formatNotifTime = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - d.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    const diffHrs = Math.floor(diffMin / 60)
+    const diffDays = Math.floor(diffHrs / 24)
+    if (diffMin < 1) return 'Ahora'
+    if (diffMin < 60) return `hace ${diffMin}m`
+    if (diffHrs < 24) return `hace ${diffHrs}h`
+    return `hace ${diffDays}d`
+  }
 
   const handleEnableNotifications = async () => {
     await registerServiceWorker()
@@ -160,22 +208,59 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
               Hola, <span className="font-medium">{user.name}</span>
             </span>
 
-            {/* Botón notificaciones — solo admin */}
+            {/* Campana de notificaciones — solo admin */}
             {user.role === 'admin' && (
-              <button
-                onClick={handleEnableNotifications}
-                title={notifStatus === 'granted' ? 'Notificaciones activas' : 'Activar notificaciones'}
-                className={`relative p-2 rounded-lg transition-colors ${
-                  notifStatus === 'granted'
-                    ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
-                    : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
-                }`}
-              >
-                {notifStatus === 'granted' ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-                {notifStatus !== 'granted' && (
-                  <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
+              <div className="relative">
+                <button
+                  onClick={handleBellClick}
+                  title={notifStatus === 'granted' ? 'Centro de notificaciones' : 'Activar notificaciones'}
+                  className={`relative p-2 rounded-lg transition-colors ${
+                    notifStatus === 'granted'
+                      ? 'text-[#B68C5C] hover:bg-amber-50'
+                      : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                  }`}
+                >
+                  {notifStatus === 'granted' ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+                  {notifStatus !== 'granted' && (
+                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
+                  )}
+                  {notifStatus === 'granted' && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Panel de notificaciones */}
+                {notifPanelOpen && notifStatus === 'granted' && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setNotifPanelOpen(false)} />
+                    <div className="absolute right-0 top-10 z-50 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+                        <span className="font-bold text-sm text-gray-800">Centro de notificaciones</span>
+                        <button onClick={() => setNotifPanelOpen(false)} className="text-gray-400 hover:text-gray-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
+                        {notifications.length === 0 ? (
+                          <div className="py-10 text-center text-sm text-gray-400">Sin notificaciones aún</div>
+                        ) : (
+                          notifications.map((n: any) => (
+                            <div key={n.id} className={`px-4 py-3 ${n.read ? 'bg-white' : 'bg-amber-50/60'}`}>
+                              <div className="flex items-start justify-between gap-2">
+                                <span className="font-semibold text-xs text-gray-800 leading-tight">{n.title}</span>
+                                <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">{formatNotifTime(n.created_at)}</span>
+                              </div>
+                              {n.body && <p className="text-xs text-gray-500 mt-0.5 leading-snug">{n.body}</p>}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
-              </button>
+              </div>
             )}
 
             <Button

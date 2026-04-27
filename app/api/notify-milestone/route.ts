@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
+import { saveAdminNotification } from '@/lib/save-admin-notification'
 
 export async function POST(req: NextRequest) {
   const supabase = createClient(
@@ -17,7 +18,6 @@ export async function POST(req: NextRequest) {
   const { who } = await req.json()
   if (!who) return NextResponse.json({ ok: false, reason: 'missing who' })
 
-  // Contar ventas del mes actual para esta persona
   const now = new Date()
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
@@ -32,8 +32,6 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ ok: false, error: error.message })
 
   const total = count ?? 0
-
-  // Solo notificar en múltiplos de 10
   if (total === 0 || total % 10 !== 0) {
     return NextResponse.json({ ok: false, reason: 'not a milestone', count: total })
   }
@@ -48,17 +46,15 @@ export async function POST(req: NextRequest) {
   }
 
   const isMax = total >= 30
+  const title = 'C427'
   const body = isMax
-    ? `🏆 ${who} alcanzó el nivel máximo de comisiones con ${total} ventas`
-    : `🎯 ${who} llegó a ${total} ventas este mes`
+    ? `${who} alcanzó el nivel máximo de comisiones con ${total} ventas`
+    : `${who} llegó a ${total} ventas este mes`
 
   let sent = 0
   for (const sub of subscriptions) {
     try {
-      await webpush.sendNotification(
-        sub.subscription,
-        JSON.stringify({ title: 'C427', body, url: '/' })
-      )
+      await webpush.sendNotification(sub.subscription, JSON.stringify({ title, body, url: '/' }))
       sent++
     } catch (err: any) {
       if (err.statusCode === 404 || err.statusCode === 410) {
@@ -66,6 +62,8 @@ export async function POST(req: NextRequest) {
       }
     }
   }
+
+  if (sent > 0) await saveAdminNotification(supabase, title, body)
 
   return NextResponse.json({ ok: true, sent, count: total })
 }

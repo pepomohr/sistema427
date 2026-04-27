@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
+import { saveAdminNotification } from '@/lib/save-admin-notification'
 
-// Corre a las 23:00 UTC = 20:00 AR — avisa si quedaron pacientes sin cobrar
 export async function GET(req: NextRequest) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,10 +20,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Hoy en Argentina
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
 
-  // Buscar turnos de hoy que NO están completados ni cancelados
   const { data: pending, error } = await supabase
     .from('appointments')
     .select('id, patient_name, professional_id, date, status')
@@ -43,15 +41,13 @@ export async function GET(req: NextRequest) {
 
   const names = pending.map(a => a.patient_name || 'Paciente').slice(0, 3).join(', ')
   const extra = pending.length > 3 ? ` y ${pending.length - 3} más` : ''
+  const title = 'C427 — Pendientes de cobro'
   const body = `Quedaron ${pending.length} paciente${pending.length > 1 ? 's' : ''} sin cobrar: ${names}${extra}`
 
   let sent = 0
   for (const sub of subscriptions) {
     try {
-      await webpush.sendNotification(
-        sub.subscription,
-        JSON.stringify({ title: 'C427 — Pendientes de cobro', body, url: '/' })
-      )
+      await webpush.sendNotification(sub.subscription, JSON.stringify({ title, body, url: '/' }))
       sent++
     } catch (err: any) {
       if (err.statusCode === 404 || err.statusCode === 410) {
@@ -59,6 +55,8 @@ export async function GET(req: NextRequest) {
       }
     }
   }
+
+  if (sent > 0) await saveAdminNotification(supabase, title, body)
 
   return NextResponse.json({ ok: true, sent, pending: pending.length })
 }
