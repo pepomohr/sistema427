@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import type { User, UserRole } from "@/lib/store"
 import { useClinicStore } from "@/lib/store"
 import Image from "next/image"
@@ -20,8 +20,11 @@ import {
   Settings,
   ClipboardList,
   AlertTriangle,
-  DollarSign
+  DollarSign,
+  Bell,
+  BellOff
 } from "lucide-react"
+import { registerServiceWorker, registerPushSubscription } from "@/lib/push-notifications"
 import { ReceptionModule } from "@/components/reception-module"
 import { ProfessionalsModule } from "@/components/professionals-module"
 import { ChargeModule } from "@/components/charge-module"
@@ -67,6 +70,20 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabId>(availableTabs[0]?.id || "recepcion-busqueda")
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [dismissedLowStock, setDismissedLowStock] = useState(false)
+  const [notifStatus, setNotifStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown')
+
+  // Para admin: detectar estado de notificaciones
+  useEffect(() => {
+    if (user.role !== 'admin') return
+    if (!('Notification' in window)) return
+    setNotifStatus(Notification.permission as any)
+  }, [user.role])
+
+  const handleEnableNotifications = async () => {
+    await registerServiceWorker()
+    await registerPushSubscription('admin')
+    setNotifStatus(Notification.permission as any)
+  }
 
   const { products } = useClinicStore()
   const lowStockProducts = useMemo(
@@ -142,6 +159,25 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
             <span className="hidden sm:inline-block text-sm text-foreground">
               Hola, <span className="font-medium">{user.name}</span>
             </span>
+
+            {/* Botón notificaciones — solo admin */}
+            {user.role === 'admin' && (
+              <button
+                onClick={handleEnableNotifications}
+                title={notifStatus === 'granted' ? 'Notificaciones activas' : 'Activar notificaciones'}
+                className={`relative p-2 rounded-lg transition-colors ${
+                  notifStatus === 'granted'
+                    ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                    : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                }`}
+              >
+                {notifStatus === 'granted' ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+                {notifStatus !== 'granted' && (
+                  <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
+                )}
+              </button>
+            )}
+
             <Button
               variant="outline"
               size="sm"

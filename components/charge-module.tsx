@@ -304,6 +304,13 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
           source: 'recepcion',
           processedBy: currentUser?.name || "Recepción"
         })
+        // Milestone de comisiones — fire and forget
+        const whoName = currentUser?.name || "Recepción"
+        fetch('/api/notify-milestone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ who: whoName })
+        }).catch(() => {})
       } catch (err: any) {
         confirm({ title: "Error al registrar venta", description: `La venta no se pudo guardar. ${err?.message || 'Error desconocido'}. Por favor intentá de nuevo.`, actionType: "danger", onConfirm: () => {} })
         return
