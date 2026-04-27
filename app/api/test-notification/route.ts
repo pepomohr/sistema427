@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
       await webpush.sendNotification(
         sub.subscription,
         JSON.stringify({
-          title: 'C427',
-          body: '🎯 Recepción llegó a 155 ventas este mes',
+          title: 'C427 | Recepción llegó a las 155 ventas!',
+          body: '',
           url: '/',
         })
       )
