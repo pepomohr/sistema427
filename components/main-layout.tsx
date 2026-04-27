@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   DollarSign,
   Bell,
-  BellOff
+  BellOff,
+  Truck
 } from "lucide-react"
 import { registerServiceWorker, registerPushSubscription } from "@/lib/push-notifications"
 import { ReceptionModule } from "@/components/reception-module"
@@ -33,13 +34,14 @@ import { SalesReportModule } from "@/components/sales-report-module"
 import { HRModule } from "@/components/hr-module"
 import { SystemConfigModule } from "@/components/system-config-module"
 import { PricesModule } from "@/components/prices-module"
+import { WholesaleModule } from "@/components/wholesale-module"
 
 interface MainLayoutProps {
   user: User
   onLogout: () => void
 }
 
-type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "ventas" | "precios" | "reportes" | "rrhh" | "config"
+type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "ventas" | "precios" | "reportes" | "rrhh" | "config" | "mayorista"
 
 interface Tab {
   id: TabId
@@ -60,6 +62,7 @@ const allTabs: Tab[] = [
   { id: "cobrar", label: "Cobrar", icon: CreditCard, roles: ["recepción"] },
   { id: "ventas", label: "Ventas", icon: ClipboardList, roles: ["recepción", "admin"] },
   { id: "precios", label: "Precios", icon: DollarSign, roles: ["recepción", "admin"] },
+  { id: "mayorista", label: "Mayorista", icon: Truck, roles: ["recepción", "admin"] },
   { id: "rrhh", label: "RRHH", icon: UserCog, roles: ["admin"] },
   { id: "reportes", label: "Reportes", icon: BarChart3, roles: ["admin"] },
   { id: "config", label: "Configuración", icon: Settings, roles: ["admin"] }
@@ -167,6 +170,8 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
         return <HRModule />
       case "config":
         return <SystemConfigModule />
+      case "mayorista":
+        return <WholesaleModule />
       default:
         return <ReceptionModule activeView="pacientes" />
     }
