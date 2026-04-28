@@ -194,7 +194,7 @@ export function HRModule() {
 
     // Turnos de esta semana para esta profesional
     const weekApts = (appointments || []).filter(a => {
-      const profId = a.professionalId || a.professional_id
+      const profId = a.professionalId
       if (profId !== p.id) return false
       const d = new Date(a.date)
       return d >= weekStart && d < weekEnd
@@ -225,7 +225,7 @@ export function HRModule() {
 
           // Buscar categoría del servicio en catálogo
           const svcInCatalog = (services || []).find(
-            (svc: any) => svc.id === (item.itemId || item.id) ||
+            (svc: any) => svc.id === item.itemId ||
                           svc.name?.toLowerCase() === (item.itemName || '').toLowerCase()
           )
           const cat = (svcInCatalog?.category || '').toLowerCase()
@@ -363,9 +363,9 @@ export function HRModule() {
                               checked={isCommission}
                               onCheckedChange={(val) => {
                                   if (val) {
-                                      updateProfessional(p.id, { hourlyRateFacial: null, hourlyRateCorporal: null, hourlyRate: p.hourlyRate && p.hourlyRate <= 100 ? p.hourlyRate : 50 });
+                                      updateProfessional(p.id, { hourlyRateFacial: undefined, hourlyRateCorporal: undefined, hourlyRate: p.hourlyRate && p.hourlyRate <= 100 ? p.hourlyRate : 50 });
                                   } else {
-                                      updateProfessional(p.id, { hourlyRateFacial: null, hourlyRateCorporal: null, hourlyRate: 3000 });
+                                      updateProfessional(p.id, { hourlyRateFacial: undefined, hourlyRateCorporal: undefined, hourlyRate: 3000 });
                                   }
                               }}
                           />
@@ -380,13 +380,13 @@ export function HRModule() {
                               <div className="flex items-center gap-2 w-full">
                                   <div className="flex flex-1 items-center gap-2 border border-gray-200 bg-white rounded-lg px-2 py-1.5 shadow-sm">
                                       <span className="text-gray-500 text-xs font-bold truncate">Facial $</span>
-                                      <Input type="number" className="w-full h-7 border-none bg-transparent text-gray-900 font-black focus-visible:ring-0 p-0 text-right" value={p.hourlyRateFacial || ''} onChange={e => updateProfessional(p.id, {hourlyRateFacial: parseInt(e.target.value) || null})} />
+                                      <Input type="number" className="w-full h-7 border-none bg-transparent text-gray-900 font-black focus-visible:ring-0 p-0 text-right" value={p.hourlyRateFacial || ''} onChange={e => updateProfessional(p.id, {hourlyRateFacial: parseInt(e.target.value) || undefined})} />
                                   </div>
                                   <div className="flex flex-1 items-center gap-2 border border-gray-200 bg-white rounded-lg px-2 py-1.5 shadow-sm">
                                       <span className="text-gray-500 text-xs font-bold">Corp $</span>
-                                      <Input type="number" className="w-full h-7 border-none bg-transparent text-gray-900 font-black focus-visible:ring-0 p-0 text-right" value={p.hourlyRateCorporal || ''} onChange={e => updateProfessional(p.id, {hourlyRateCorporal: parseInt(e.target.value) || null})} />
+                                      <Input type="number" className="w-full h-7 border-none bg-transparent text-gray-900 font-black focus-visible:ring-0 p-0 text-right" value={p.hourlyRateCorporal || ''} onChange={e => updateProfessional(p.id, {hourlyRateCorporal: parseInt(e.target.value) || undefined})} />
                                   </div>
-                                  <button onClick={() => updateProfessional(p.id, {hourlyRateFacial: null, hourlyRateCorporal: null})} className="text-red-400 hover:text-red-600 transition-colors shrink-0 p-1">
+                                  <button onClick={() => updateProfessional(p.id, {hourlyRateFacial: undefined, hourlyRateCorporal: undefined})} className="text-red-400 hover:text-red-600 transition-colors shrink-0 p-1">
                                       <X size={18} strokeWidth={3}/>
                                   </button>
                               </div>
@@ -775,7 +775,7 @@ export function HRModule() {
                     try {
                       await addProfessional(finalData);
                       setShowNewModal(false);
-                      confirm({title:"Alta Exitosa", actionType:"success", onConfirm:()=>{}})
+                      confirm({title:"Alta Exitosa", description:"El profesional fue dado de alta correctamente.", actionType:"success", onConfirm:()=>{}})
                     } catch (err: any) {
                       confirm({title:"Error al dar de alta", description: `No se pudo crear el profesional. ${err?.message || 'Error desconocido'}.`, actionType:"danger", onConfirm:()=>{}})
                     } 

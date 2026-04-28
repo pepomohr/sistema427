@@ -108,7 +108,7 @@ export function ChargeModule({ onNavigateToReception }: { onNavigateToReception?
   }, [directSaleItems, directSalePaymentMethod, directSaleOfferId, offers])
 
   const pendingCharges = (appointments || []).filter(
-    (a) => a.status === "pendiente_cobro" || a.status === "pending_payment"
+    (a) => a.status === "pendiente_cobro" || (a.status as string) === "pending_payment"
   )
 
   useEffect(() => {

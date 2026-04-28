@@ -5,6 +5,7 @@ import { useClinicStore } from "@/lib/store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Search, FileSpreadsheet } from "lucide-react"
 
 export function ReportsPanel() {
@@ -23,7 +24,7 @@ export function ReportsPanel() {
 
     filteredSales.forEach(sale => {
       // Calculamos la forma de pago (si es multipago, las unimos con un " + ")
-      let formaPago = sale.paymentMethod
+      let formaPago: string = sale.paymentMethod
       if (sale.paymentSplits && sale.paymentSplits.length > 0) {
         formaPago = sale.paymentSplits.map(split => `${split.method}`).join(' + ')
       }

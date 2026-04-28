@@ -11,8 +11,9 @@ import { CheckCircle2, AlertTriangle, Info } from 'lucide-react'
 
 export interface ConfirmConfig {
   title: string
-  description: string
+  description?: React.ReactNode
   actionType?: 'danger' | 'success' | 'info'
+  confirmText?: string
   onConfirm: () => void
 }
 
@@ -20,7 +21,7 @@ export function useConfirm() {
   const [isOpen, setIsOpen] = useState(false)
   const [config, setConfig] = useState<ConfirmConfig>({
     title: '',
-    description: '',
+    description: undefined,
     actionType: 'danger',
     onConfirm: () => {}
   })
@@ -67,7 +68,7 @@ export function useConfirm() {
                 'bg-red-500 hover:bg-red-600'
               }`}
             >
-              {config.actionType === 'info' ? 'Aceptar' : 'Confirmar'}
+              {config.confirmText || (config.actionType === 'info' ? 'Aceptar' : 'Confirmar')}
             </Button>
           </DialogFooter>
         </div>

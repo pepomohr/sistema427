@@ -559,8 +559,14 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
 
     // Get day of week for the selected date
     const dateObj = schedulingDate.includes('T') ? new Date(schedulingDate) : new Date(schedulingDate + 'T12:00:00')
+    const dateStr = dateObj.toISOString().split('T')[0] // YYYY-MM-DD
     const dayKey = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dateObj.getDay()]
-    const daySchedule = professional.schedule ? (professional.schedule as any)[dayKey] : null
+
+    // Excepciones tienen prioridad sobre el cronograma semanal
+    const exceptionSchedule = professional.exceptions?.[dateStr]
+    const daySchedule = exceptionSchedule && exceptionSchedule.length > 0
+      ? exceptionSchedule
+      : (professional.schedule ? (professional.schedule as any)[dayKey] : null)
 
     const allPossibleSlots: string[] = []
 
@@ -568,8 +574,10 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
     const hasAnySchedule = professional.schedule &&
       Object.values(professional.schedule as any).some((d: any) => Array.isArray(d) ? d.length > 0 : d?.start)
 
+    const hasExceptionToday = exceptionSchedule && exceptionSchedule.length > 0
+
     if (daySchedule && daySchedule.length > 0) {
-      // Generar slots solo dentro del horario de la profesional ese día
+      // Generar slots solo dentro del horario de la profesional ese día (o excepción)
       daySchedule.forEach(({ start, end }: { start: string, end: string }) => {
         const [startH, startM] = start.split(':').map(Number)
         const [endH, endM] = end.split(':').map(Number)
@@ -581,15 +589,15 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           allPossibleSlots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
         }
       })
-    } else if (!hasAnySchedule) {
-      // Solo si NO tiene ningún día configurado, mostrar todos los slots (profesional nueva sin horario)
+    } else if (!hasAnySchedule && !hasExceptionToday) {
+      // Solo si NO tiene ningún día configurado ni excepción, mostrar todos los slots (profesional nueva sin horario)
       for (let m = 9 * 60; m < 21 * 60; m += stepMinutes) {
         const h = Math.floor(m / 60)
         const min = m % 60
         allPossibleSlots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
       }
     }
-    // Si tiene schedule pero ese día no trabaja → allPossibleSlots queda vacío → no hay slots disponibles
+    // Si tiene schedule pero ese día no trabaja y no hay excepción → allPossibleSlots queda vacío → no hay slots disponibles
 
     const dateForFilter = (
       schedulingDate.includes('T')
@@ -616,8 +624,6 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
       let aptDuration = 60
       if (Array.isArray(apt.services) && apt.services.length > 0) {
         aptDuration = getServiceDuration(apt.services[0])
-      } else if (apt.serviceId) {
-        aptDuration = getServiceDuration(apt.serviceId)
       }
       const aptEnd = aptStart + aptDuration
 
@@ -1169,6 +1175,12 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
                       ))}
                     </div>
                   </div>
+                )}
+
+                {schedulingProfessional && scheduleSlots.length === 0 && (
+                  <p className="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                    Esta profesional no tiene horario configurado para este día.
+                  </p>
                 )}
 
                 {schedulingProfessional && scheduleSlots.length > 0 && (

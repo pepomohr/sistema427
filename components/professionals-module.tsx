@@ -317,7 +317,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
             type: 'product' as const,
             itemId: i.product.id,
             itemName: i.product.name,
-            price: (directSalePaymentMethod === 'efectivo' || directSalePaymentMethod === 'gift_card') ? i.product.priceCash : i.product.priceList,
+            price: directSalePaymentMethod === 'efectivo' ? i.product.priceCash : i.product.priceList,
             priceCashReference: i.product.priceCash,
             quantity: i.quantity,
             soldBy: currentProfessional.id,
