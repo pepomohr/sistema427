@@ -478,6 +478,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
           observations: saleData.observations || null,
           source: saleData.source || 'recepcion',
           patient_id: saleData.patientId || null,
+          patient_name: saleData.patientName || null,
           appointment_id: saleData.appointmentId || null,
           processed_by: saleData.processedBy,
           type: saleData.type || 'direct'
