@@ -58,10 +58,12 @@ export function WebSaleModule() {
   async function loadPedidosPendientes() {
     setLoadingPedidos(true)
     try {
+      // Solo "paid" = pagos confirmados por MP/tarjeta
+      // Los pending_whatsapp se cargan manualmente cuando se confirma la transferencia
       const { data: orders } = await supabase
         .from("orders")
         .select("id, created_at, total, status, shipping_address")
-        .in("status", ["paid", "pending_whatsapp"])
+        .eq("status", "paid")
         .order("created_at", { ascending: false })
 
       if (!orders?.length) { setPedidos([]); setLoadingPedidos(false); return }
