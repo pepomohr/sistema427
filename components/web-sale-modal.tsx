@@ -84,7 +84,7 @@ export function WebSaleModule() {
             .from("order_items")
             .select("quantity, price, products(name)")
             .eq("order_id", order.id)
-          pedidosSinRegistrar.push({ ...order, order_items: items || [] })
+          pedidosSinRegistrar.push({ ...order, order_items: (items || []) as any })
         }
       }
 

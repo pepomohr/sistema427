@@ -17,17 +17,19 @@ export function PricesModule() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editCash, setEditCash] = useState<string>("")
   const [editList, setEditList] = useState<string>("")
+  const [editStock, setEditStock] = useState<string>("")
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const startEdit = (id: string, cash: number, list: number) => {
+  const startEdit = (id: string, cash: number, list: number, stock?: number) => {
     setEditingId(id)
     setEditCash(String(cash || 0))
     setEditList(String(list || 0))
+    setEditStock(stock !== undefined ? String(stock) : "")
     setSaveError(null)
   }
 
-  const cancelEdit = () => { setEditingId(null); setEditCash(""); setEditList(""); setSaveError(null) }
+  const cancelEdit = () => { setEditingId(null); setEditCash(""); setEditList(""); setEditStock(""); setSaveError(null) }
 
   const saveService = async (id: string) => {
     setSaving(true)
@@ -46,7 +48,9 @@ export function PricesModule() {
     setSaving(true)
     setSaveError(null)
     try {
-      await updateProduct(id, { priceCash: Number(editCash), priceList: Number(editList) })
+      const updates: any = { priceCash: Number(editCash), priceList: Number(editList) }
+      if (editStock !== "") updates.stock = Number(editStock)
+      await updateProduct(id, updates)
       cancelEdit()
     } catch (err: any) {
       setSaveError(err?.message || "Error al guardar. Intentá de nuevo.")
@@ -65,19 +69,26 @@ export function PricesModule() {
       .sort((a, b) => a.name.localeCompare(b.name)),
     [products, search])
 
-  const EditRow = ({ id, onSave }: { id: string, onSave: (id: string) => void }) => (
+  const EditRow = ({ id, onSave, showStock }: { id: string, onSave: (id: string) => void, showStock?: boolean }) => (
     <div className="mt-2 space-y-2">
-      <div className="flex items-center gap-2">
-        <div className="flex-1 space-y-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex-1 min-w-[90px] space-y-1">
           <p className="text-[10px] text-gray-400 font-bold uppercase">Precio Efectivo</p>
           <Input type="number" value={editCash} onChange={e => setEditCash(e.target.value)}
             className="h-8 text-sm border-emerald-400 font-bold text-black" autoFocus />
         </div>
-        <div className="flex-1 space-y-1">
+        <div className="flex-1 min-w-[90px] space-y-1">
           <p className="text-[10px] text-gray-400 font-bold uppercase">Precio Lista</p>
           <Input type="number" value={editList} onChange={e => setEditList(e.target.value)}
             className="h-8 text-sm border-blue-400 font-bold text-black" />
         </div>
+        {showStock && (
+          <div className="w-20 space-y-1">
+            <p className="text-[10px] text-gray-400 font-bold uppercase">Stock</p>
+            <Input type="number" min="0" value={editStock} onChange={e => setEditStock(e.target.value)}
+              className="h-8 text-sm border-orange-400 font-bold text-black" />
+          </div>
+        )}
         <div className="flex gap-1 mt-4">
           <Button size="sm" onClick={() => onSave(id)} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 h-8 w-8 p-0">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -163,8 +174,8 @@ export function PricesModule() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-black truncate">{prod.name}</p>
-                          {typeof prod.stock === 'number' && prod.stock < 3 && (
-                            <Badge className="bg-orange-100 text-orange-700 border-orange-300 text-[10px]">
+                          {typeof prod.stock === 'number' && (
+                            <Badge className={`text-[10px] border ${prod.stock < 3 ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                               Stock: {prod.stock}
                             </Badge>
                           )}
@@ -175,14 +186,14 @@ export function PricesModule() {
                         </div>
                       </div>
                       {editingId !== prod.id && (
-                        <Button variant="ghost" size="sm" onClick={() => startEdit(prod.id, prod.priceCash || 0, prod.priceList || 0)}
+                        <Button variant="ghost" size="sm" onClick={() => startEdit(prod.id, prod.priceCash || 0, prod.priceList || 0, prod.stock ?? 0)}
                           className="text-gray-400 hover:text-[#16A34A] h-8 w-8 p-0">
                           <Pencil className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
                     {editingId === prod.id && (
-                      <EditRow id={prod.id} onSave={saveProduct} />
+                      <EditRow id={prod.id} onSave={saveProduct} showStock />
                     )}
                   </div>
                 ))}
