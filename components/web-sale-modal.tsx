@@ -197,7 +197,7 @@ export function WebSaleModule() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Globe className="h-6 w-6 text-purple-600" />
+          <Globe className="h-6 w-6 text-[#936c43]" />
           <h1 className="text-xl font-black text-gray-800">Ventas Web C427</h1>
         </div>
         <Button variant="outline" size="sm" onClick={loadPedidosPendientes} disabled={loadingPedidos} className="gap-2 text-xs">
@@ -210,7 +210,7 @@ export function WebSaleModule() {
       <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
         <button
           onClick={() => setTab("pendientes")}
-          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all ${tab === "pendientes" ? "bg-white shadow text-purple-700" : "text-gray-500 hover:text-gray-700"}`}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all ${tab === "pendientes" ? "bg-white shadow text-[#936c43]" : "text-gray-500 hover:text-gray-700"}`}
         >
           Pedidos sin registrar
           {!loadingPedidos && pendientesSinRegistrar.length > 0 && (
@@ -219,7 +219,7 @@ export function WebSaleModule() {
         </button>
         <button
           onClick={() => setTab("manual")}
-          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all ${tab === "manual" ? "bg-white shadow text-purple-700" : "text-gray-500 hover:text-gray-700"}`}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-all ${tab === "manual" ? "bg-white shadow text-[#936c43]" : "text-gray-500 hover:text-gray-700"}`}
         >
           Cargar manualmente
         </button>
@@ -274,7 +274,7 @@ export function WebSaleModule() {
                       <span className="font-black text-xl">${Number(pedido.total).toLocaleString("es-AR")}</span>
                       <Button
                         size="sm"
-                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-4"
+                        className="bg-[#936c43] hover:bg-[#7a5530] text-white text-xs px-4"
                         disabled={registrando === pedido.id}
                         onClick={() => registrarPedido(pedido)}
                       >
@@ -368,9 +368,9 @@ export function WebSaleModule() {
             </div>
           </div>
 
-          <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border border-purple-100">
+          <div className="flex justify-between items-center p-3 bg-[#fdf0e3] rounded-lg border border-[#e8d0b0]">
             <span className="font-bold text-sm">Total</span>
-            <span className="font-black text-2xl text-purple-700">${total.toLocaleString("es-AR")}</span>
+            <span className="font-black text-2xl text-[#936c43]">${total.toLocaleString("es-AR")}</span>
           </div>
 
           {error && (
@@ -381,7 +381,7 @@ export function WebSaleModule() {
           )}
 
           <Button
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-5"
+            className="w-full bg-[#936c43] hover:bg-[#7a5530] text-white font-bold py-5"
             onClick={handleGuardarManual}
             disabled={saving || saved}
           >

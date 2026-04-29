@@ -228,11 +228,11 @@ export function WholesaleModule() {
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="bg-green-700 p-2 rounded-xl">
+        <div className="bg-[#936c43] p-2 rounded-xl">
           <Truck className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-green-700">Distribuidora Mayorista</h1>
+          <h1 className="text-xl font-bold text-[#936c43]">Distribuidora Mayorista</h1>
           <p className="text-xs text-muted-foreground">Productos Helue · Ventas B2B</p>
         </div>
       </div>
@@ -250,7 +250,7 @@ export function WholesaleModule() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-green-50 p-1 rounded-2xl">
+      <div className="flex gap-1 bg-[#fdf0e3] p-1 rounded-2xl">
         {tabs.map(t => {
           const Icon = t.icon
           return (
@@ -258,7 +258,7 @@ export function WholesaleModule() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs font-bold transition-all ${
-                tab === t.id ? "bg-green-700 text-white shadow-sm" : "text-green-700 hover:bg-green-100"
+                tab === t.id ? "bg-[#936c43] text-white shadow-sm" : "text-[#936c43] hover:bg-[#fdf0e3]"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -274,15 +274,15 @@ export function WholesaleModule() {
           {/* Columna izquierda: cliente + búsqueda */}
           <div className="space-y-4">
             {/* Selector de cliente */}
-            <Card className="border-green-100">
+            <Card className="border-[#f0dfc8]">
               <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm text-green-700">Cliente</CardTitle>
+                <CardTitle className="text-sm text-[#936c43]">Cliente</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <select
                   value={selectedClientId}
                   onChange={e => setSelectedClientId(e.target.value)}
-                  className="w-full border border-green-200 rounded-xl px-3 py-2 text-sm bg-green-50 focus:outline-none focus:border-green-400"
+                  className="w-full border border-[#e8d0b0] rounded-xl px-3 py-2 text-sm bg-[#fdf0e3] focus:outline-none focus:border-green-400"
                 >
                   <option value="">— Seleccioná un revendedor —</option>
                   {clients.map(c => (
@@ -295,35 +295,35 @@ export function WholesaleModule() {
             </Card>
 
             {/* Buscador de productos */}
-            <Card className="border-green-100">
+            <Card className="border-[#f0dfc8]">
               <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm text-green-700">Agregar productos</CardTitle>
+                <CardTitle className="text-sm text-[#936c43]">Agregar productos</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 space-y-2">
                 <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-green-500" />
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#b8905a]" />
                   <Input
                     placeholder="Buscar producto Helue..."
                     value={productSearch}
                     onChange={e => setProductSearch(e.target.value)}
-                    className="pl-9 border-green-200 bg-green-50"
+                    className="pl-9 border-[#e8d0b0] bg-[#fdf0e3]"
                   />
                 </div>
                 {productSearch && (
-                  <div className="border border-green-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                  <div className="border border-[#f0dfc8] rounded-xl overflow-hidden max-h-48 overflow-y-auto">
                     {filteredProducts.length === 0 ? (
                       <p className="text-xs text-muted-foreground p-3 text-center">Sin resultados con stock disponible</p>
                     ) : filteredProducts.map(p => (
                       <button
                         key={p.id}
                         onClick={() => addToCart(p)}
-                        className="w-full flex items-center justify-between px-3 py-2 hover:bg-green-50 text-left border-b border-green-50 last:border-0 transition-colors"
+                        className="w-full flex items-center justify-between px-3 py-2 hover:bg-[#fdf0e3] text-left border-b border-green-50 last:border-0 transition-colors"
                       >
                         <div>
                           <p className="text-sm font-medium">{p.name}</p>
                           <p className="text-xs text-muted-foreground">{p.sku && `SKU: ${p.sku} · `}Stock: {p.stock}</p>
                         </div>
-                        <span className="text-sm font-bold text-green-700">{fmt(p.price)}</span>
+                        <span className="text-sm font-bold text-[#936c43]">{fmt(p.price)}</span>
                       </button>
                     ))}
                   </div>
@@ -334,9 +334,9 @@ export function WholesaleModule() {
 
           {/* Columna derecha: carrito + pago */}
           <div className="space-y-4">
-            <Card className="border-green-100">
+            <Card className="border-[#f0dfc8]">
               <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-sm text-green-700">Carrito ({cart.length})</CardTitle>
+                <CardTitle className="text-sm text-[#936c43]">Carrito ({cart.length})</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 space-y-2">
                 {cart.length === 0 ? (
@@ -344,26 +344,26 @@ export function WholesaleModule() {
                 ) : (
                   <>
                     {cart.map(item => (
-                      <div key={item.product.id} className="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2">
+                      <div key={item.product.id} className="flex items-center gap-2 bg-[#fdf0e3] rounded-xl px-3 py-2">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{item.product.name}</p>
                           <p className="text-xs text-muted-foreground">{fmt(item.product.price)} c/u · Stock: {item.product.stock}</p>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => updateQty(item.product.id, -1)} className="p-1 rounded-lg bg-white border border-green-200 text-green-700 hover:bg-green-100">
+                          <button onClick={() => updateQty(item.product.id, -1)} className="p-1 rounded-lg bg-white border border-[#e8d0b0] text-[#936c43] hover:bg-[#fdf0e3]">
                             <Minus className="h-3 w-3" />
                           </button>
                           <span className="w-6 text-center text-sm font-bold">{item.quantity}</span>
                           <button
                             onClick={() => updateQty(item.product.id, 1)}
                             disabled={item.quantity >= item.product.stock}
-                            className="p-1 rounded-lg bg-white border border-green-200 text-green-700 hover:bg-green-100 disabled:opacity-40"
+                            className="p-1 rounded-lg bg-white border border-[#e8d0b0] text-[#936c43] hover:bg-[#fdf0e3] disabled:opacity-40"
                           >
                             <Plus className="h-3 w-3" />
                           </button>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-green-700">{fmt(item.product.price * item.quantity)}</p>
+                          <p className="text-sm font-bold text-[#936c43]">{fmt(item.product.price * item.quantity)}</p>
                         </div>
                         <button onClick={() => removeFromCart(item.product.id)} className="text-red-400 hover:text-red-600">
                           <Trash2 className="h-4 w-4" />
@@ -371,10 +371,10 @@ export function WholesaleModule() {
                       </div>
                     ))}
 
-                    <div className="border-t border-green-100 pt-3 space-y-3">
+                    <div className="border-t border-[#f0dfc8] pt-3 space-y-3">
                       <div className="flex justify-between font-bold text-base">
                         <span>Total</span>
-                        <span className="text-green-700">{fmt(cartTotal)}</span>
+                        <span className="text-[#936c43]">{fmt(cartTotal)}</span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -385,7 +385,7 @@ export function WholesaleModule() {
                             placeholder="0"
                             value={paidAmount}
                             onChange={e => setPaidAmount(e.target.value)}
-                            className="border-green-200 bg-green-50 mt-1"
+                            className="border-[#e8d0b0] bg-[#fdf0e3] mt-1"
                           />
                         </div>
                         <div>
@@ -393,7 +393,7 @@ export function WholesaleModule() {
                           <select
                             value={paymentMethod}
                             onChange={e => setPaymentMethod(e.target.value)}
-                            className="w-full border border-green-200 rounded-xl px-3 py-2 text-sm bg-green-50 focus:outline-none mt-1"
+                            className="w-full border border-[#e8d0b0] rounded-xl px-3 py-2 text-sm bg-[#fdf0e3] focus:outline-none mt-1"
                           >
                             {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
                           </select>
@@ -413,13 +413,13 @@ export function WholesaleModule() {
                         placeholder="Observaciones (opcional)"
                         value={observations}
                         onChange={e => setObservations(e.target.value)}
-                        className="border-green-200 bg-green-50 text-sm resize-none h-16"
+                        className="border-[#e8d0b0] bg-[#fdf0e3] text-sm resize-none h-16"
                       />
 
                       <Button
                         onClick={handleProcessSale}
                         disabled={loading || cart.length === 0 || !selectedClientId || paid > cartTotal}
-                        className="w-full bg-green-700 hover:bg-green-800 text-white font-bold"
+                        className="w-full bg-[#936c43] hover:bg-[#7a5530] text-white font-bold"
                       >
                         {loading ? "Procesando..." : `Confirmar Venta · ${fmt(cartTotal)}`}
                       </Button>
@@ -437,17 +437,17 @@ export function WholesaleModule() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-green-500" />
-              <Input placeholder="Buscar revendedor..." value={clientSearch} onChange={e => setClientSearch(e.target.value)} className="pl-9 border-green-200 bg-green-50" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#b8905a]" />
+              <Input placeholder="Buscar revendedor..." value={clientSearch} onChange={e => setClientSearch(e.target.value)} className="pl-9 border-[#e8d0b0] bg-[#fdf0e3]" />
             </div>
-            <Button onClick={() => setShowClientModal(true)} className="bg-green-700 hover:bg-green-800 text-white gap-1">
+            <Button onClick={() => setShowClientModal(true)} className="bg-[#936c43] hover:bg-[#7a5530] text-white gap-1">
               <Plus className="h-4 w-4" /> Nuevo
             </Button>
           </div>
 
           <div className="space-y-2">
             {filteredClients.map(c => (
-              <Card key={c.id} className="border-green-100">
+              <Card key={c.id} className="border-[#f0dfc8]">
                 <CardContent className="px-4 py-3 flex items-center justify-between gap-4">
                   <div>
                     <p className="font-bold text-sm">{c.name}</p>
@@ -471,18 +471,18 @@ export function WholesaleModule() {
           {/* Modal nuevo cliente */}
           {showClientModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <Card className="w-full max-w-sm border-green-200">
+              <Card className="w-full max-w-sm border-[#e8d0b0]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-green-700">Nuevo Revendedor</CardTitle>
+                    <CardTitle className="text-[#936c43]">Nuevo Revendedor</CardTitle>
                     <button onClick={() => setShowClientModal(false)}><X className="h-4 w-4" /></button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div><Label className="text-xs">Nombre *</Label><Input value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} className="border-green-200 bg-green-50 mt-1" /></div>
-                  <div><Label className="text-xs">CUIT</Label><Input value={clientForm.cuit} onChange={e => setClientForm({ ...clientForm, cuit: e.target.value })} className="border-green-200 bg-green-50 mt-1" /></div>
-                  <div><Label className="text-xs">Teléfono</Label><Input value={clientForm.phone} onChange={e => setClientForm({ ...clientForm, phone: e.target.value })} className="border-green-200 bg-green-50 mt-1" /></div>
-                  <Button onClick={handleAddClient} disabled={loading} className="w-full bg-green-700 hover:bg-green-800 text-white">Guardar</Button>
+                  <div><Label className="text-xs">Nombre *</Label><Input value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} className="border-[#e8d0b0] bg-[#fdf0e3] mt-1" /></div>
+                  <div><Label className="text-xs">CUIT</Label><Input value={clientForm.cuit} onChange={e => setClientForm({ ...clientForm, cuit: e.target.value })} className="border-[#e8d0b0] bg-[#fdf0e3] mt-1" /></div>
+                  <div><Label className="text-xs">Teléfono</Label><Input value={clientForm.phone} onChange={e => setClientForm({ ...clientForm, phone: e.target.value })} className="border-[#e8d0b0] bg-[#fdf0e3] mt-1" /></div>
+                  <Button onClick={handleAddClient} disabled={loading} className="w-full bg-[#936c43] hover:bg-[#7a5530] text-white">Guardar</Button>
                 </CardContent>
               </Card>
             </div>
@@ -495,24 +495,24 @@ export function WholesaleModule() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-green-500" />
-              <Input placeholder="Buscar producto..." value={stockSearch} onChange={e => setStockSearch(e.target.value)} className="pl-9 border-green-200 bg-green-50" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#b8905a]" />
+              <Input placeholder="Buscar producto..." value={stockSearch} onChange={e => setStockSearch(e.target.value)} className="pl-9 border-[#e8d0b0] bg-[#fdf0e3]" />
             </div>
-            <Button onClick={() => setShowProductModal(true)} className="bg-green-700 hover:bg-green-800 text-white gap-1">
+            <Button onClick={() => setShowProductModal(true)} className="bg-[#936c43] hover:bg-[#7a5530] text-white gap-1">
               <Plus className="h-4 w-4" /> Nuevo
             </Button>
           </div>
 
           <div className="space-y-2">
             {filteredStock.map(p => (
-              <Card key={p.id} className="border-green-100">
+              <Card key={p.id} className="border-[#f0dfc8]">
                 <CardContent className="px-4 py-3 flex items-center justify-between gap-4">
                   <div className="flex-1">
                     <p className="font-bold text-sm">{p.name}</p>
                     {p.sku && <p className="text-xs text-muted-foreground">SKU: {p.sku}</p>}
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-bold text-green-700">{fmt(p.price)}</p>
+                    <p className="font-bold text-[#936c43]">{fmt(p.price)}</p>
                     {editingStock?.id === p.id ? (
                       <div className="flex items-center gap-1 mt-1">
                         <Input
@@ -528,7 +528,7 @@ export function WholesaleModule() {
                     ) : (
                       <button
                         onClick={() => setEditingStock({ id: p.id, value: String(p.stock) })}
-                        className={`text-xs font-bold mt-1 px-2 py-0.5 rounded-full ${p.stock === 0 ? 'bg-red-100 text-red-600' : p.stock < 5 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}
+                        className={`text-xs font-bold mt-1 px-2 py-0.5 rounded-full ${p.stock === 0 ? 'bg-red-100 text-red-600' : p.stock < 5 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-[#936c43]'}`}
                       >
                         Stock: {p.stock} — editar
                       </button>
@@ -543,21 +543,21 @@ export function WholesaleModule() {
           {/* Modal nuevo producto */}
           {showProductModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <Card className="w-full max-w-sm border-green-200">
+              <Card className="w-full max-w-sm border-[#e8d0b0]">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-green-700">Nuevo Producto Helue</CardTitle>
+                    <CardTitle className="text-[#936c43]">Nuevo Producto Helue</CardTitle>
                     <button onClick={() => setShowProductModal(false)}><X className="h-4 w-4" /></button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div><Label className="text-xs">Nombre *</Label><Input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} className="border-green-200 bg-green-50 mt-1" /></div>
-                  <div><Label className="text-xs">SKU</Label><Input value={productForm.sku} onChange={e => setProductForm({ ...productForm, sku: e.target.value })} className="border-green-200 bg-green-50 mt-1" /></div>
+                  <div><Label className="text-xs">Nombre *</Label><Input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} className="border-[#e8d0b0] bg-[#fdf0e3] mt-1" /></div>
+                  <div><Label className="text-xs">SKU</Label><Input value={productForm.sku} onChange={e => setProductForm({ ...productForm, sku: e.target.value })} className="border-[#e8d0b0] bg-[#fdf0e3] mt-1" /></div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div><Label className="text-xs">Precio ($) *</Label><Input type="number" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} className="border-green-200 bg-green-50 mt-1" /></div>
-                    <div><Label className="text-xs">Stock inicial</Label><Input type="number" value={productForm.stock} onChange={e => setProductForm({ ...productForm, stock: e.target.value })} className="border-green-200 bg-green-50 mt-1" /></div>
+                    <div><Label className="text-xs">Precio ($) *</Label><Input type="number" value={productForm.price} onChange={e => setProductForm({ ...productForm, price: e.target.value })} className="border-[#e8d0b0] bg-[#fdf0e3] mt-1" /></div>
+                    <div><Label className="text-xs">Stock inicial</Label><Input type="number" value={productForm.stock} onChange={e => setProductForm({ ...productForm, stock: e.target.value })} className="border-[#e8d0b0] bg-[#fdf0e3] mt-1" /></div>
                   </div>
-                  <Button onClick={handleAddProduct} disabled={loading} className="w-full bg-green-700 hover:bg-green-800 text-white">Guardar</Button>
+                  <Button onClick={handleAddProduct} disabled={loading} className="w-full bg-[#936c43] hover:bg-[#7a5530] text-white">Guardar</Button>
                 </CardContent>
               </Card>
             </div>
@@ -593,7 +593,7 @@ export function WholesaleModule() {
                   <Button
                     size="sm"
                     onClick={() => { setPayingClientId(c.id); setPaymentForm({ amount: "", method: "Efectivo", notes: "" }) }}
-                    className="bg-green-700 hover:bg-green-800 text-white text-xs gap-1"
+                    className="bg-[#936c43] hover:bg-[#7a5530] text-white text-xs gap-1"
                   >
                     <Plus className="h-3 w-3" /> Asentar Pago
                   </Button>
@@ -601,7 +601,7 @@ export function WholesaleModule() {
                     size="sm"
                     variant="outline"
                     onClick={() => setShowHistoryFor(showHistoryFor === c.id ? null : c.id)}
-                    className="text-xs border-green-200 text-green-700 gap-1"
+                    className="text-xs border-[#e8d0b0] text-[#936c43] gap-1"
                   >
                     <History className="h-3 w-3" /> Historial
                   </Button>
@@ -609,26 +609,26 @@ export function WholesaleModule() {
 
                 {/* Modal asentar pago */}
                 {payingClientId === c.id && (
-                  <div className="bg-green-50 rounded-xl p-3 space-y-2 border border-green-200">
-                    <p className="text-xs font-bold text-green-700">Registrar pago de {c.name}</p>
+                  <div className="bg-[#fdf0e3] rounded-xl p-3 space-y-2 border border-[#e8d0b0]">
+                    <p className="text-xs font-bold text-[#936c43]">Registrar pago de {c.name}</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs">Monto ($)</Label>
-                        <Input type="number" placeholder={String(c.balance)} value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="border-green-200 mt-1 h-8 text-sm" />
+                        <Input type="number" placeholder={String(c.balance)} value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="border-[#e8d0b0] mt-1 h-8 text-sm" />
                       </div>
                       <div>
                         <Label className="text-xs">Método</Label>
-                        <select value={paymentForm.method} onChange={e => setPaymentForm({ ...paymentForm, method: e.target.value })} className="w-full border border-green-200 rounded-lg px-2 py-1.5 text-sm bg-white mt-1">
+                        <select value={paymentForm.method} onChange={e => setPaymentForm({ ...paymentForm, method: e.target.value })} className="w-full border border-[#e8d0b0] rounded-lg px-2 py-1.5 text-sm bg-white mt-1">
                           {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
                         </select>
                       </div>
                     </div>
-                    <Input placeholder="Notas (opcional)" value={paymentForm.notes} onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })} className="border-green-200 h-8 text-sm" />
+                    <Input placeholder="Notas (opcional)" value={paymentForm.notes} onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })} className="border-[#e8d0b0] h-8 text-sm" />
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={handleAddPayment} disabled={loading} className="bg-green-700 hover:bg-green-800 text-white text-xs flex-1">
+                      <Button size="sm" onClick={handleAddPayment} disabled={loading} className="bg-[#936c43] hover:bg-[#7a5530] text-white text-xs flex-1">
                         {loading ? "..." : "Guardar Pago"}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setPayingClientId(null)} className="text-xs border-green-200">Cancelar</Button>
+                      <Button size="sm" variant="outline" onClick={() => setPayingClientId(null)} className="text-xs border-[#e8d0b0]">Cancelar</Button>
                     </div>
                   </div>
                 )}

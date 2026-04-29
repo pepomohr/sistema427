@@ -516,7 +516,7 @@ export function SalesReportModule() {
                       <td className="px-3 py-2 whitespace-nowrap">
                         {row.isFirstItem
                           ? row.isWebSale
-                            ? <Badge className="bg-purple-100 text-purple-800 border-none text-xs font-bold">Web C427</Badge>
+                            ? <Badge className="border-none text-xs font-bold" style={{ backgroundColor: '#fdf0e3', color: '#936c43' }}>Web C427</Badge>
                             : row.isAppointment
                               ? <Badge className="bg-green-100 text-green-800 border-none text-xs font-bold">Turno</Badge>
                               : <Badge className="bg-sky-100 text-sky-800 border-none text-xs font-bold">Venta Directa</Badge>
