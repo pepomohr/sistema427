@@ -754,7 +754,8 @@ export function ReportsModule() {
                 ;(sale.items || []).forEach((item: any) => {
                   if (
                     item.type === 'product' &&
-                    (!item.soldBy || !profIds.has(item.soldBy))
+                    (!item.soldBy || !profIds.has(item.soldBy)) &&
+                    sale.source !== 'web'
                   ) {
                     if (!recepMap[name]) recepMap[name] = { count: 0, amount: 0 }
                     recepMap[name].count += item.quantity || 1
