@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ClipboardList, Calendar, Download, Stethoscope, ShoppingBag, ArrowUpDown, ArrowUp, ArrowDown, X, Globe } from "lucide-react"
-import { WebSaleModal } from "@/components/web-sale-modal"
+import { ClipboardList, Calendar, Download, Stethoscope, ShoppingBag, ArrowUpDown, ArrowUp, ArrowDown, X } from "lucide-react"
 import { format } from "date-fns"
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -37,7 +36,6 @@ export function SalesReportModule() {
     fetchAppointments()
   }, [])
 
-  const [showWebSaleModal, setShowWebSaleModal] = useState(false)
   const today = format(new Date(), "yyyy-MM-dd")
   const [dateFrom, setDateFrom] = useState(today)
   const [dateTo, setDateTo] = useState(today)
@@ -380,9 +378,6 @@ export function SalesReportModule() {
             <Label className="text-xs font-bold text-gray-600 whitespace-nowrap">Hasta</Label>
             <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="border-0 p-0 h-auto text-sm font-bold text-black w-36 focus-visible:ring-0" />
           </div>
-          <Button onClick={() => setShowWebSaleModal(true)} variant="outline" className="border-purple-500 text-purple-600 font-bold gap-2 hover:bg-purple-600 hover:text-white">
-            <Globe className="h-4 w-4" /> Ventas Web
-          </Button>
           <Button onClick={handleExportCSV} variant="outline" className="border-blue-500 text-blue-600 font-bold gap-2 hover:bg-blue-500 hover:text-white">
             <Download className="h-4 w-4" /> CSV (Google Sheets)
           </Button>
@@ -587,7 +582,6 @@ export function SalesReportModule() {
         </CardContent>
       </Card>
 
-      <WebSaleModal open={showWebSaleModal} onClose={() => setShowWebSaleModal(false)} />
     </div>
   )
 }

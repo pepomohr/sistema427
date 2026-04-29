@@ -23,7 +23,8 @@ import {
   DollarSign,
   Bell,
   BellOff,
-  Truck
+  Truck,
+  Globe
 } from "lucide-react"
 import { registerServiceWorker, registerPushSubscription } from "@/lib/push-notifications"
 import { ReceptionModule } from "@/components/reception-module"
@@ -35,13 +36,14 @@ import { HRModule } from "@/components/hr-module"
 import { SystemConfigModule } from "@/components/system-config-module"
 import { PricesModule } from "@/components/prices-module"
 import { WholesaleModule } from "@/components/wholesale-module"
+import { WebSaleModule } from "@/components/web-sale-modal"
 
 interface MainLayoutProps {
   user: User
   onLogout: () => void
 }
 
-type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "ventas" | "precios" | "reportes" | "rrhh" | "config" | "mayorista"
+type TabId = "recepcion-busqueda" | "recepcion-agenda" | "recepcion-caja" | "recepcion-comisiones" | "agenda" | "atencion" | "comisiones" | "cobrar" | "ventas" | "ventas-web" | "precios" | "reportes" | "rrhh" | "config" | "mayorista"
 
 interface Tab {
   id: TabId
@@ -60,6 +62,7 @@ const allTabs: Tab[] = [
   { id: "atencion", label: "Atención", icon: Stethoscope, roles: ["profesional"] }, // Solo profesionales
   { id: "comisiones", label: "Comisiones", icon: Award, roles: ["profesional"] }, // Solo profesionales
   { id: "cobrar", label: "Cobrar", icon: CreditCard, roles: ["recepción"] },
+  { id: "ventas-web", label: "Ventas Web", icon: Globe, roles: ["recepción", "admin"] },
   { id: "ventas", label: "Ventas", icon: ClipboardList, roles: ["recepción", "admin"] },
   { id: "precios", label: "Precios", icon: DollarSign, roles: ["recepción", "admin"] },
   { id: "mayorista", label: "Mayorista", icon: Truck, roles: ["recepción", "admin"] },
@@ -160,6 +163,8 @@ export function MainLayout({ user, onLogout }: MainLayoutProps) {
         return <ProfessionalsModule view="comisiones" professionalId={user.professionalId} />
       case "cobrar":
         return <ChargeModule />
+      case "ventas-web":
+        return <WebSaleModule />
       case "ventas":
         return <SalesReportModule />
       case "precios":
