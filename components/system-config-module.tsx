@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useConfirm } from "@/hooks/use-confirm"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Edit2, Package, Sparkles, Percent, Layers, X } from "lucide-react"
+import { Plus, Trash2, Edit2, Package, Sparkles, Percent, Layers, X, Search } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export function SystemConfigModule() {
@@ -40,6 +40,12 @@ export function SystemConfigModule() {
   // Offer form state
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null)
   const [offerForm, setOfferForm] = useState({ name: "", discountPercentage: 10 })
+
+  // Search & filter state
+  const [searchSvc, setSearchSvc] = useState("")
+  const [filterSvcCat, setFilterSvcCat] = useState<string | null>(null)
+  const [searchProd, setSearchProd] = useState("")
+  const [filterProdCat, setFilterProdCat] = useState<string | null>(null)
 
   // Combo form state
   const [editingComboId, setEditingComboId] = useState<string | null>(null)
@@ -187,8 +193,34 @@ export function SystemConfigModule() {
               <Plus className="h-4 w-4 mr-2" /> Añadir
             </Button>
           </CardHeader>
-          <CardContent className="space-y-4 max-h-[600px] overflow-y-auto mt-4">
-            {services.map(s => (
+          <CardContent className="mt-2">
+            {/* Buscador */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Buscar servicio..." value={searchSvc} onChange={e => setSearchSvc(e.target.value)}
+                className="pl-9 border-gray-300 text-black font-medium" />
+            </div>
+            {/* Filtros por categoría */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {[null, "Facial", "Corporales", "CyP", "Uñas", "Maderoterapia", "Capilar", "Depilación", "Planes"].map(cat => (
+                <button key={cat ?? "todos"} onClick={() => setFilterSvcCat(cat)}
+                  className={`text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border transition-colors ${
+                    filterSvcCat === cat
+                      ? "bg-[#16A34A] text-white border-[#16A34A]"
+                      : "bg-white text-gray-500 border-gray-300 hover:border-[#16A34A]/50"
+                  }`}>
+                  {cat === null ? "Todos" : getCategoryDisplayName(cat as any)}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-4 max-h-[500px] overflow-y-auto">
+            {services
+              .filter(s =>
+                (!searchSvc || s.name.toLowerCase().includes(searchSvc.toLowerCase())) &&
+                (!filterSvcCat || s.category === filterSvcCat)
+              )
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(s => (
               <div key={s.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-4 sm:p-3 bg-secondary/10 rounded-xl sm:rounded-lg border border-gray-200/50 gap-3 sm:gap-0 w-full">
                 <div className="w-full">
                   <h4 className="font-bold text-foreground leading-tight">{s.name}</h4>
@@ -216,6 +248,7 @@ export function SystemConfigModule() {
                 </div>
               </div>
             ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -228,8 +261,34 @@ export function SystemConfigModule() {
               <Plus className="h-4 w-4 mr-2" /> Añadir
             </Button>
           </CardHeader>
-          <CardContent className="space-y-4 max-h-[600px] overflow-y-auto mt-4">
-            {products.map(p => (
+          <CardContent className="mt-2">
+            {/* Buscador */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Buscar producto..." value={searchProd} onChange={e => setSearchProd(e.target.value)}
+                className="pl-9 border-gray-300 text-black font-medium" />
+            </div>
+            {/* Filtros por marca/categoría */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {[null, ...Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort()].map(cat => (
+                <button key={cat ?? "todos"} onClick={() => setFilterProdCat(cat ?? null)}
+                  className={`text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border transition-colors ${
+                    filterProdCat === (cat ?? null)
+                      ? "bg-[#16A34A] text-white border-[#16A34A]"
+                      : "bg-white text-gray-500 border-gray-300 hover:border-[#16A34A]/50"
+                  }`}>
+                  {cat === null ? "Todas" : cat}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-4 max-h-[500px] overflow-y-auto">
+            {products
+              .filter(p =>
+                (!searchProd || p.name.toLowerCase().includes(searchProd.toLowerCase())) &&
+                (!filterProdCat || p.category === filterProdCat)
+              )
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(p => (
               <div key={p.id} className="flex flex-col sm:flex-row justify-between sm:items-center p-4 sm:p-3 bg-secondary/10 rounded-xl sm:rounded-lg border border-gray-200/50 gap-3 sm:gap-0 w-full">
                 <div className="w-full">
                   <h4 className="font-bold text-foreground leading-tight">{p.name}</h4>
@@ -257,6 +316,7 @@ export function SystemConfigModule() {
                 </div>
               </div>
             ))}
+            </div>
           </CardContent>
         </Card>
       )}
