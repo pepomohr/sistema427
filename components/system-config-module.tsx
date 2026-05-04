@@ -47,6 +47,9 @@ export function SystemConfigModule() {
   const [searchProd, setSearchProd] = useState("")
   const [filterProdCat, setFilterProdCat] = useState<string | null>(null)
 
+  // Brand selector state
+  const [isNewBrand, setIsNewBrand] = useState(false)
+
   // Combo form state
   const [editingComboId, setEditingComboId] = useState<string | null>(null)
   const [comboForm, setComboForm] = useState<Omit<Combo, 'id'>>({ name: "", items: [], priceCash: 0, priceList: 0 })
@@ -82,9 +85,11 @@ export function SystemConfigModule() {
     if (prod) {
       setEditingProductId(prod.id)
       setProdForm({ name: prod.name, priceCash: prod.priceCash, priceList: prod.priceList, stock: prod.stock, category: prod.category })
+      setIsNewBrand(false)
     } else {
       setEditingProductId(null)
-      setProdForm({ name: "", priceCash: 0, priceList: 0, stock: 1, category: "General" })
+      setProdForm({ name: "", priceCash: 0, priceList: 0, stock: 1, category: "" })
+      setIsNewBrand(false)
     }
     setShowProductDialog(true)
   }
@@ -446,7 +451,49 @@ export function SystemConfigModule() {
           <DialogHeader><DialogTitle className="text-[#16A34A]">{editingProductId ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle></DialogHeader>
           <div className="space-y-3 pt-3">
             <Label>Nombre del Insumo/Producto</Label><Input value={prodForm.name} onChange={e=>setProdForm({...prodForm, name: e.target.value})} className="bg-input border-gray-200" />
-            <Label>Marca/Categoría Lógica</Label><Input value={prodForm.category} onChange={e=>setProdForm({...prodForm, category: e.target.value})} className="bg-input border-gray-200" placeholder="Ej: Lidherma, AP, etc." />
+            <Label>Marca/Categoría Lógica</Label>
+            {!isNewBrand ? (
+              <Select
+                value={prodForm.category || "__none__"}
+                onValueChange={(val) => {
+                  if (val === "__nueva__") {
+                    setIsNewBrand(true)
+                    setProdForm({ ...prodForm, category: "" })
+                  } else {
+                    setProdForm({ ...prodForm, category: val === "__none__" ? "" : val })
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-input border-gray-200">
+                  <SelectValue placeholder="Seleccioná una marca..." />
+                </SelectTrigger>
+                <SelectContent className="bg-card">
+                  {Array.from(new Set(products.map(p => p.category).filter(Boolean))).sort().map(cat => (
+                    <SelectItem key={cat} value={cat as string}>{cat}</SelectItem>
+                  ))}
+                  <SelectItem value="__nueva__" className="text-[#16A34A] font-bold">➕ Nueva marca...</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  value={prodForm.category}
+                  onChange={e => setProdForm({ ...prodForm, category: e.target.value })}
+                  className="bg-input border-[#16A34A] font-medium"
+                  placeholder="Nombre de la nueva marca"
+                  autoFocus
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setIsNewBrand(false); setProdForm({ ...prodForm, category: "" }) }}
+                  className="shrink-0 border-gray-300 text-gray-500 px-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Precio Efvo ($)</Label><Input type="number" value={prodForm.priceCash || ""} onChange={e=>setProdForm({...prodForm, priceCash: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
               <div><Label>Precio Lista ($)</Label><Input type="number" value={prodForm.priceList || ""} onChange={e=>setProdForm({...prodForm, priceList: Number(e.target.value)})} className="bg-input border-gray-200" /></div>
