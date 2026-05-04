@@ -803,7 +803,7 @@ export const useClinicStore = create<ClinicStore>((set, get) => ({
   },
 
   addProduct: async (product) => {
-    const { data, error } = await supabase.from('products').insert([{ name: product.name, price_cash: product.priceCash, price_list: product.priceList, stock: product.stock, category: product.category }]).select().single()
+    const { data, error } = await supabase.from('products').insert([{ name: product.name, price_cash: product.priceCash, price_list: product.priceList, stock: product.stock, category: product.category, is_active: false }]).select().single()
     if (error) throw new Error(error.message)
     if (data) set(state => ({ products: [...state.products, { id: data.id, name: data.name, priceCash: data.price_cash || 0, priceList: data.price_list || 0, stock: data.stock || 0, category: data.category }]}))
   },
