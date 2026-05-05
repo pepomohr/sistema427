@@ -65,6 +65,63 @@ export function ReportsModule() {
   const [closureFilterYear, setClosureFilterYear] = useState(now.getFullYear())
   const [selectedClosure, setSelectedClosure] = useState<any>(null)
 
+  // ── Navegación de mes para la pestaña Objetivos ──
+  const [objMonth, setObjMonth] = useState(now.getMonth())
+  const [objYear, setObjYear] = useState(now.getFullYear())
+  const isCurrentObjMonth = objMonth === now.getMonth() && objYear === now.getFullYear()
+  const objMonthLabel = new Date(objYear, objMonth, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  const navigateObjMonth = (dir: 1 | -1) => {
+    let m = objMonth + dir, y = objYear
+    if (m < 0) { m = 11; y-- }
+    if (m > 11) { m = 0; y++ }
+    setObjMonth(m); setObjYear(y)
+  }
+
+  // Ventas del mes seleccionado para objetivos (siempre desde la tabla real)
+  const objMonthSales = useMemo(() =>
+    sales.filter((s: any) => {
+      const d = new Date(s.date)
+      return d.getMonth() === objMonth && d.getFullYear() === objYear
+    }),
+    [sales, objMonth, objYear]
+  )
+
+  // Datos de recepción del mes seleccionado
+  const objRecepData = useMemo(() => {
+    const profIds = new Set(professionals.map((p: any) => p.id))
+    let count = 0, amount = 0
+    objMonthSales.forEach((sale: any) => {
+      ;(sale.items || []).forEach((item: any) => {
+        if (
+          item.type === 'product' &&
+          (!item.soldBy || !profIds.has(item.soldBy)) &&
+          sale.source !== 'web'
+        ) {
+          count += item.quantity || 1
+          amount += (item.priceCashReference || item.price || 0) * (item.quantity || 1)
+        }
+      })
+    })
+    return { count, amount }
+  }, [professionals, objMonthSales])
+
+  // Datos de cada profesional del mes seleccionado
+  const objProfData = useMemo(() =>
+    professionals.filter((p: any) => p.id !== 'clau').map((prof: any) => {
+      const soldItems = objMonthSales.flatMap((s: any) =>
+        (s.items || []).filter((item: any) =>
+          item.type === 'product' &&
+          item.soldBy === prof.id &&
+          !String(item.itemName || '').toLowerCase().includes('gift card')
+        )
+      )
+      const salesCount = soldItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0)
+      const salesAmount = soldItems.reduce((sum: number, item: any) => sum + ((item.priceCashReference || item.price || 0) * (item.quantity || 1)), 0)
+      return { prof, salesCount, salesAmount }
+    }),
+    [professionals, objMonthSales]
+  )
+
   const getAppointmentCommissionBase = (apt: any) => {
     if (!Array.isArray(apt?.services)) return 0
     return apt.services.reduce((sum: number, svc: any) => {
@@ -731,81 +788,62 @@ export function ReportsModule() {
           </Card>
         </TabsContent>
 
-        {/* NUEVA PESTAÑA PARA ADMIN: VER OBJETIVOS DE TODAS */}
+        {/* PESTAÑA OBJETIVOS: navegación por mes + cálculo desde ventas reales */}
         <TabsContent value="objetivos">
           <div className="space-y-6">
-            <h3 className="text-xl font-bold text-[#16A34A] flex items-center gap-2">
-              <Target className="h-6 w-6" /> Panel Global de Objetivos del Staff
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 className="text-xl font-bold text-[#16A34A] flex items-center gap-2">
+                <Target className="h-6 w-6" /> Panel Global de Objetivos del Staff
+              </h3>
+              {/* Navegador de mes */}
+              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm self-start sm:self-auto">
+                <button onClick={() => navigateObjMonth(-1)} className="h-7 w-7 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 font-bold text-gray-600 transition-colors">‹</button>
+                <span className="font-bold text-sm text-gray-800 capitalize min-w-[140px] text-center">{objMonthLabel}</span>
+                <button onClick={() => navigateObjMonth(1)} disabled={isCurrentObjMonth} className="h-7 w-7 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 font-bold text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">›</button>
+                {!isCurrentObjMonth && (
+                  <Badge className="bg-amber-100 text-amber-700 border-none text-[10px] font-bold ml-1">Mes anterior</Badge>
+                )}
+              </div>
+            </div>
 
             {/* RECEPCIÓN */}
-            {(() => {
-              const profIds = new Set(professionals.map(p => p.id))
-              const thisMonth = now.getMonth()
-              const thisYear = now.getFullYear()
-              const monthSales = sales.filter(s => {
-                const d = new Date(s.date)
-                return d.getMonth() === thisMonth && d.getFullYear() === thisYear
-              })
-              // Agrupar por processedBy los productos cuyo soldBy no es un profesional
-              const recepMap: Record<string, { count: number, amount: number }> = {}
-              monthSales.forEach(sale => {
-                const name = 'Recepción'
-                ;(sale.items || []).forEach((item: any) => {
-                  if (
-                    item.type === 'product' &&
-                    (!item.soldBy || !profIds.has(item.soldBy)) &&
-                    sale.source !== 'web'
-                  ) {
-                    if (!recepMap[name]) recepMap[name] = { count: 0, amount: 0 }
-                    recepMap[name].count += item.quantity || 1
-                    recepMap[name].amount += (item.priceCashReference || item.price || 0) * (item.quantity || 1)
-                  }
-                })
-              })
-              const recepEntries = Object.entries(recepMap)
-              if (recepEntries.length === 0) return null
+            {objRecepData.count > 0 && (() => {
+              const { count, amount } = objRecepData
+              const pct = calculateCommissionTab(count)
+              const commission = amount * pct / 100
+              const nextTarget = count < 21 ? 21 : count < 31 ? 31 : 31
+              const progressValue = Math.min((count / nextTarget) * 100, 100)
+              const levelLabel = pct === 10 ? 'Nivel 3 — 10%' : pct === 7.5 ? 'Nivel 2 — 7.5%' : pct === 5 ? 'Nivel 1 — 5%' : 'Sin nivel'
               return (
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Recepción</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {recepEntries.map(([name, data]) => {
-                      const pct = calculateCommissionTab(data.count)
-                      const commission = data.amount * pct / 100
-                      const nextTarget = data.count < 21 ? 21 : data.count < 31 ? 31 : 31
-                      const progressValue = Math.min((data.count / nextTarget) * 100, 100)
-                      const levelLabel = pct === 10 ? 'Nivel 3 — 10%' : pct === 7.5 ? 'Nivel 2 — 7.5%' : pct === 5 ? 'Nivel 1 — 5%' : 'Sin nivel'
-                      return (
-                        <Card key={name} className="bg-white border-blue-100 shadow-sm hover:shadow-md transition-shadow">
-                          <CardContent className="p-5">
-                            <div className="flex justify-between items-center mb-4">
-                              <div className="flex items-center gap-3">
-                                <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg bg-blue-500">
-                                  {name.substring(0, 2).toUpperCase()}
-                                </div>
-                                <div>
-                                  <p className="font-bold text-gray-900">{name}</p>
-                                  <p className="text-xs text-gray-500">Recepción · <span className="font-bold text-gray-800">{data.count} prod.</span></p>
-                                </div>
-                              </div>
-                              <Badge className="bg-blue-50 text-blue-700 border-none px-3 py-1">{levelLabel}</Badge>
+                    <Card className="bg-white border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-5">
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg bg-blue-500">RC</div>
+                            <div>
+                              <p className="font-bold text-gray-900">Recepción</p>
+                              <p className="text-xs text-gray-500">Recepción · <span className="font-bold text-gray-800">{count} prod.</span></p>
                             </div>
-                            <div className="space-y-2 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                              <div className="flex justify-between text-xs font-medium text-gray-500">
-                                <span>${data.amount.toLocaleString('es-AR')} vendidos</span>
-                                <span className="font-bold text-blue-600">{data.count} / {nextTarget}</span>
-                              </div>
-                              <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-blue-500" />
-                              {pct > 0 && (
-                                <p className="text-xs font-bold text-center text-blue-700 mt-1">
-                                  Comisión: ${commission.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                                </p>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
+                          </div>
+                          <Badge className="bg-blue-50 text-blue-700 border-none px-3 py-1">{levelLabel}</Badge>
+                        </div>
+                        <div className="space-y-2 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                          <div className="flex justify-between text-xs font-medium text-gray-500">
+                            <span>${amount.toLocaleString('es-AR')} vendidos</span>
+                            <span className="font-bold text-blue-600">{count} / {nextTarget}</span>
+                          </div>
+                          <Progress value={progressValue} className="h-2.5 bg-gray-200 [&>div]:bg-blue-500" />
+                          {pct > 0 && (
+                            <p className="text-xs font-bold text-center text-blue-700 mt-1">
+                              Comisión: ${commission.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
               )
@@ -815,14 +853,12 @@ export function ReportsModule() {
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Profesionales</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {professionals.filter(p => p.id !== 'clau').map(prof => {
-                  const salesCount = prof.monthlySalesCount || 0;
-                  const salesAmount = prof.monthlySalesAmount || 0;
+                {objProfData.map(({ prof, salesCount, salesAmount }) => {
                   const pct = calculateCommissionTab(salesCount)
                   const commission = salesAmount * pct / 100
                   const atMaxLevel = salesCount >= 31
                   const nextTarget = salesCount < 21 ? 21 : salesCount < 31 ? 31 : salesCount
-                  const progressValue = atMaxLevel ? 100 : Math.min((salesCount / nextTarget) * 100, 100);
+                  const progressValue = atMaxLevel ? 100 : Math.min((salesCount / nextTarget) * 100, 100)
                   const levelLabel = pct === 10 ? 'Nivel 3 — 10%' : pct === 7.5 ? 'Nivel 2 — 7.5%' : pct === 5 ? 'Nivel 1 — 5%' : 'Sin nivel'
                   return (
                     <Card key={prof.id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow">

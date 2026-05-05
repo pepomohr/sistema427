@@ -73,6 +73,70 @@ const getStatusColor = (status: string) => {
   return 'bg-sky-100/50 text-sky-600 border-sky-200';
 }
 
+// Tarjeta de turno reutilizable en la agenda (por hora y por profesional)
+function AgendaCard({ apt, prof, pat, getAppointmentServiceNames, updateAppointment, startAttention, showProf }: {
+  apt: any, prof: any, pat: any,
+  getAppointmentServiceNames: (apt: any) => string,
+  updateAppointment: (id: string, data: any) => void,
+  startAttention: (id: string) => void,
+  showProf: boolean,
+}) {
+  const isAptOutsideScheduleLocal = (apt: any) => {
+    if (!prof?.schedule) return false
+    const aptDate = new Date(apt.date)
+    const dayName = aptDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    const schedule = (prof.schedule as any)?.[dayName]
+    if (!schedule || schedule.length === 0) return false
+    const [h, m] = apt.time.split(':').map(Number)
+    const aptMinutes = h * 60 + m
+    return !schedule.some((interval: any) => {
+      const [sh, sm] = interval.start.split(':').map(Number)
+      const [eh, em] = interval.end.split(':').map(Number)
+      return aptMinutes >= sh * 60 + sm && aptMinutes < eh * 60 + em
+    })
+  }
+  const sNorm = normalizeStatus(apt.status as string)
+  const isAttended = sNorm === 'en_atencion' || sNorm === 'completado' || sNorm === 'pendiente_cobro' || sNorm === 'completed'
+  const isOutside = !isAttended && isAptOutsideScheduleLocal(apt)
+  return (
+    <div className={`relative bg-secondary/10 border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all ${
+      isAttended ? 'opacity-50 grayscale border-gray-100' :
+      isOutside ? 'border-red-400 bg-red-50/60 hover:border-red-500' :
+      'border-gray-200 hover:border-[#16A34A]/30'
+    }`}>
+      {isAttended && <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/20 -translate-y-1/2 rounded-full pointer-events-none z-10" />}
+      <div className="flex items-center gap-4 z-0">
+        <div className="flex flex-col items-center justify-center p-3 bg-gray-100 rounded-lg min-w-[70px]">
+          <span className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-[#16A34A]'}`}>{apt.time ? apt.time.substring(0, 5) : apt.time}</span>
+        </div>
+        <div className="space-y-1 z-0">
+          <p className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-foreground'}`}>
+            {apt.patientName || pat?.name || 'Desconocido'}
+          </p>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {showProf && <><span className="text-gray-600">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span><span className="text-gray-400">•</span></>}
+            <span className="text-[#16A34A] break-words">{getAppointmentServiceNames(apt)}</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between w-full md:w-auto gap-4 z-0">
+        <div className="flex flex-col items-end gap-1">
+          {isOutside && <Badge className="bg-red-500 text-white border-red-600 font-bold text-[10px] uppercase">⚠ Fuera de Horario — Reprogramar</Badge>}
+          {(() => {
+            if (isAttended) return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase">Ya Asistió</Badge>
+            if (sNorm === 'programado' || sNorm === 'scheduled') return <Badge onClick={() => updateAppointment(apt.id, { status: 'confirmado' })} className="bg-sky-100/80 text-sky-600 border-sky-200 font-bold text-[10px] uppercase cursor-pointer hover:bg-emerald-100 hover:text-emerald-700 hover:border-emerald-300 transition-colors">Programado</Badge>
+            if (sNorm === 'confirmado') return <Badge className="bg-emerald-500 text-white font-bold text-[10px] uppercase">Confirmado</Badge>
+            return <Badge variant="outline">{getStatusText(apt.status as string)}</Badge>
+          })()}
+        </div>
+        {!isAttended && sNorm !== 'cancelado' && sNorm !== 'cancelled' && (
+          <Button onClick={() => startAttention(apt.id)} className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg" title="Marcar como Atendido / Llegó">✓</Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pacientes" | "agenda" | "caja" | "comisiones" }) {
   const {
     currentUser, // <-- ACÁ TRAEMOS AL USUARIO LOGUEADO
@@ -1666,75 +1730,38 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
               </Card>
             ) : (
               <div className="space-y-3">
-                {agendaAppointments.map(apt => {
-                  const prof = professionals.find(p => p.id === apt.professionalId);
-                  const pat = patients.find(p => p.id === apt.patientId);
-                  const sNorm = normalizeStatus(apt.status as string);
-                  const isAttended = sNorm === 'en_atencion' || sNorm === 'completado' || sNorm === 'pendiente_cobro' || sNorm === 'completed';
-                  const isOutside = !isAttended && isAptOutsideSchedule(apt);
-
-                  return (
-                    <div
-                      key={apt.id}
-                      className={`relative bg-secondary/10 border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all ${
-                        isAttended ? 'opacity-50 grayscale border-gray-100' :
-                        isOutside ? 'border-red-400 bg-red-50/60 hover:border-red-500' :
-                        'border-gray-200 hover:border-[#16A34A]/30'
-                      }`}
-                    >
-                      {isAttended && <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-white/20 -translate-y-1/2 rounded-full pointer-events-none z-10"></div>}
-                      
-                      <div className="flex items-center gap-4 z-0">
-                        <div className="flex flex-col items-center justify-center p-3 bg-gray-100 rounded-lg min-w-[70px]">
-                          <span className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-[#16A34A]'}`}>{apt.time ? apt.time.substring(0, 5) : apt.time}</span>
-                        </div>
-                        
-                        <div className="space-y-1 z-0">
-                          <p className={`font-bold text-lg ${isAttended ? 'text-gray-500' : 'text-foreground'}`}>
-                            {apt.patientName || pat?.name || 'Desconocido'}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="text-gray-600">Prof: <span className="font-semibold">{prof?.shortName || '-'}</span></span>
-                            <span className="text-gray-400">•</span>
-                            <span className="text-[#16A34A] break-words">{getAppointmentServiceNames(apt)}</span>
+                {(() => {
+                  // Cuando está ordenado por profesional, agrupa con encabezado por profesional
+                  if (agendaSortBy === 'professional') {
+                    const groups: { prof: any, apts: any[] }[] = []
+                    agendaAppointments.forEach(apt => {
+                      const prof = professionals.find(p => p.id === apt.professionalId)
+                      const profId = apt.professionalId || '__sin_prof__'
+                      const existing = groups.find(g => (g.prof?.id || '__sin_prof__') === profId)
+                      if (existing) existing.apts.push(apt)
+                      else groups.push({ prof: prof || null, apts: [apt] })
+                    })
+                    return groups.map(({ prof, apts }) => (
+                      <div key={prof?.id || '__sin_prof__'} className="space-y-2">
+                        {/* Encabezado de profesional */}
+                        <div className="flex items-center gap-3 pt-2 pb-1">
+                          <div className="h-7 w-7 rounded-full flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-sm"
+                            style={{ backgroundColor: prof?.color || '#829177' }}>
+                            {(prof?.shortName || '?').substring(0, 2).toUpperCase()}
                           </div>
+                          <span className="font-bold text-sm text-foreground">{prof?.shortName || 'Sin profesional'}</span>
+                          <div className="flex-1 h-px bg-border" />
+                          <span className="text-[10px] text-muted-foreground font-medium">{apts.length} turno{apts.length !== 1 ? 's' : ''}</span>
                         </div>
+                        {apts.map(apt => <AgendaCard key={apt.id} apt={apt} prof={prof} pat={patients.find(p => p.id === apt.patientId)} getAppointmentServiceNames={getAppointmentServiceNames} updateAppointment={updateAppointment} startAttention={startAttention} showProf={false} />)}
                       </div>
-                      
-                      <div className="flex items-center justify-between w-full md:w-auto gap-4 z-0">
-                        <div className="flex flex-col items-end gap-1">
-                          {isOutside && (
-                            <Badge className="bg-red-500 text-white border-red-600 font-bold text-[10px] uppercase">
-                              ⚠ Fuera de Horario — Reprogramar
-                            </Badge>
-                          )}
-                          {(() => {
-                            if (isAttended) {
-                              return <Badge className="bg-secondary text-gray-500 border-gray-200 text-[10px] uppercase">Ya Asistió</Badge>;
-                            }
-                            if (sNorm === 'programado' || sNorm === 'scheduled') {
-                              return <Badge onClick={() => updateAppointment(apt.id, { status: 'confirmado' })} className="bg-sky-100/80 text-sky-600 border-sky-200 font-bold text-[10px] uppercase cursor-pointer hover:bg-emerald-100 hover:text-emerald-700 hover:border-emerald-300 transition-colors">Programado</Badge>;
-                            }
-                            if (sNorm === 'confirmado') {
-                              return <Badge className="bg-emerald-500 text-white font-bold text-[10px] uppercase">Confirmado</Badge>;
-                            }
-                            return <Badge variant="outline">{getStatusText(apt.status as string)}</Badge>;
-                          })()}
-                        </div>
-                        
-                        {!isAttended && sNorm !== 'cancelado' && sNorm !== 'cancelled' && (
-                          <Button 
-                            onClick={() => startAttention(apt.id)}
-                            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold h-10 w-10 p-0 rounded-full flex-shrink-0 shadow-lg"
-                            title="Marcar como Atendido / Llegó"
-                          >
-                            ✓
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    ))
+                  }
+                  // Ordenado por horario: lista simple
+                  return agendaAppointments.map(apt => (
+                    <AgendaCard key={apt.id} apt={apt} prof={professionals.find(p => p.id === apt.professionalId)} pat={patients.find(p => p.id === apt.patientId)} getAppointmentServiceNames={getAppointmentServiceNames} updateAppointment={updateAppointment} startAttention={startAttention} showProf={true} />
+                  ))
+                })()}
               </div>
             )}
           </div>

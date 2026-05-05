@@ -439,7 +439,7 @@ export function ProfessionalsModule({ view = "atencion", professionalId }: { vie
 
       {activeTab === "agenda" && (
         <div className="space-y-6">
-          <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} className="bg-white rounded-xl shadow-lg border p-4 mx-auto" />
+          <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} className="bg-card rounded-xl shadow-lg border p-4 mx-auto" />
           <div className="flex flex-col gap-2">
              <Button onClick={() => setShowNewPatientDialog(true)} className="bg-white border-2 border-[#16A34A] text-[#16A34A] hover:bg-emerald-50 font-bold w-full h-12 shadow-sm">
                 <UserPlus className="h-5 w-5 mr-2" /> REGISTRAR PACIENTE NUEVO

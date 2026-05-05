@@ -45,11 +45,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'no admin subscriptions', count: total })
   }
 
+  // Valen y Luna son recepción — agrupar bajo "Recepción"
+  const RECEPCION_MEMBERS = ['valen', 'luna', 'valentina']
+  const displayWho = RECEPCION_MEMBERS.some(n => (who || '').toLowerCase().includes(n))
+    ? 'Recepción'
+    : who
+
   const isMax = total >= 30
   const title = 'C427'
   const body = isMax
-    ? `${who} alcanzó el nivel máximo de comisiones con ${total} ventas`
-    : `${who} llegó a ${total} ventas este mes`
+    ? `${displayWho} alcanzó el nivel máximo de comisiones con ${total} ventas`
+    : `${displayWho} llegó a ${total} ventas este mes`
 
   let sent = 0
   for (const sub of subscriptions) {
