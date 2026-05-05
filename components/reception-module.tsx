@@ -1782,25 +1782,28 @@ export function ReceptionModule({ activeView = "pacientes" }: { activeView?: "pa
           {mainTab === "comisiones" && (() => {
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
-            // Cuenta solo productos vendidos directamente por recepción
-            // (soldBy === 'recepcion'), NO los de profesionales que pasan
-            // por recepción al cobrar el turno (esos tienen soldBy = prof.id)
+            // Misma fórmula que usa Nico en Reportes → Objetivos:
+            // cualquier item de tipo producto que NO tenga soldBy de un profesional
+            // (incluye ventas viejas sin soldBy y nuevas con soldBy='recepcion')
+            const profIds = new Set(professionals.map((p: any) => p.id));
             const receptionSalesCount = sales.reduce((total, s) => {
               const saleDate = new Date(s.date);
               if (saleDate.getMonth() !== currentMonth || saleDate.getFullYear() !== currentYear) return total;
+              if (s.source === 'web') return total;
               const receptionItems = (s.items || []).filter(
-                item => item.type === 'product' && item.soldBy === 'recepcion'
+                (item: any) => item.type === 'product' && (!item.soldBy || !profIds.has(item.soldBy))
               );
-              return total + receptionItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+              return total + receptionItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
             }, 0);
 
             const receptionSalesAmount = sales.reduce((total, s) => {
               const saleDate = new Date(s.date);
               if (saleDate.getMonth() !== currentMonth || saleDate.getFullYear() !== currentYear) return total;
+              if (s.source === 'web') return total;
               const receptionItems = (s.items || []).filter(
-                item => item.type === 'product' && item.soldBy === 'recepcion'
+                (item: any) => item.type === 'product' && (!item.soldBy || !profIds.has(item.soldBy))
               );
-              return total + receptionItems.reduce((sum, item) => sum + ((item.priceCashReference || item.price || 0) * (item.quantity || 1)), 0);
+              return total + receptionItems.reduce((sum: number, item: any) => sum + ((item.priceCashReference || item.price || 0) * (item.quantity || 1)), 0);
             }, 0);
 
             // Mismos umbrales que calculateCommissionTab: 1→5%, 21→7.5%, 31→10%
